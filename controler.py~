@@ -1,0 +1,12 @@
+from serial import *
+
+leg0=Serial(port="/dev/ttyUSB0", baudrate=115200, timeout=1, writeTimeout=1)
+leg1=Serial(port="/dev/ttyUSB1", baudrate=115200, timeout=1, writeTimeout=1)
+leg2=Serial(port="/dev/ttyUSB2", baudrate=115200, timeout=1, writeTimeout=1)
+leg3=Serial(port="/dev/ttyUSB3", baudrate=115200, timeout=1, writeTimeout=1)
+
+
+leg0.close()
+leg1.close()
+leg2.close()
+leg3.close()

@@ -1,0 +1,321 @@
+#ifndef SIMULATOR
+#include<Wire.h>
+#include <LiquidCrystal_I2C.h>
+#endif
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+#ifndef ID
+#define ID 0
+#endif
+
+#define VERSION 6
+
+#define POSITION_BUFSIZE 5
+
+struct LinearActuator {
+  int R_PWM;
+  int R_EN;
+  int L_PWM;
+  int L_EN;
+  int POS_MIN;
+  int POS_MAX;
+  int POS_PIN;
+  double position_buffer[POSITION_BUFSIZE];
+  int position_buffer_i;
+  double position;
+  double target;
+  bool enable;
+  unsigned long lastTime;
+  double cError;
+  double lastError;
+  int last_order;
+  unsigned long last_order_time;
+};
+
+double Kp=4500;
+double Ki=10;
+double Kd=5;
+
+#define MAX_PWM 245
+
+//#define PLOT_PID 
+
+#define MAX_RAMPING 400 // correspond to max variation on order per sec.
+
+//#define DEBUG_RAMPING
+
+LinearActuator actuators[3]={ {3,2,5,4,370,960,A0,0,100,false,0,0} ,
+                              {6,7,9,8,370,960,A1,0,100,false,0,0} ,
+                              {10,12,11,13,370,960,A2,0,100,false,0,0} };
+
+
+
+void setup(LinearActuator *a){
+   pinMode(a->R_PWM,OUTPUT); 
+   pinMode(a->L_PWM,OUTPUT); 
+   pinMode(a->R_EN ,OUTPUT); 
+   pinMode(a->L_EN ,OUTPUT); 
+   digitalWrite(a->R_PWM,LOW);
+   digitalWrite(a->L_PWM,LOW);
+   digitalWrite(a->R_EN ,LOW);
+   digitalWrite(a->L_EN ,LOW);
+   a->lastTime = millis();   
+   a->cError=0;
+   a->lastError=0;
+   a->last_order=0;
+   a->last_order_time=millis();
+   for(int i=0;i<POSITION_BUFSIZE;++i)
+     a->position_buffer[i]=0;
+   a->position_buffer_i=0;
+}
+
+int legId;
+
+void setup() {
+  int i;
+  // put your setup code here, to run once:
+  Serial.begin(115200); 
+  for(i=0;i<3;++i){
+    setup(actuators+i);
+  }  
+  lcd.begin();
+  lcd.backlight();
+  lcd.print("Hello, world!");
+
+  legId=ID;
+  // read the id using pin A3
+  //int v=analogRead(A3);
+  //if (v<100) legId=0;
+  //else if (v>1000) legId=3;
+}
+
+int i=0;
+
+int qsort_dbl(const void *a,const void *b){
+  if ((*((double *)a)) < (*((double *)b)))
+    return -1;
+  if ((*((double *)a)) < (*((double *)b)))
+    return 1;
+  return 0;
+}
+
+void updatePosition(LinearActuator *p){
+  //if (p->enable==false) return ;
+  int value=analogRead(p->POS_PIN);
+  if (value<p->POS_MIN) value=p->POS_MIN;
+  if (value>p->POS_MAX) value=p->POS_MAX;
+  p->position_buffer[p->position_buffer_i]=value;
+  p->position_buffer_i=(p->position_buffer_i+1) % POSITION_BUFSIZE;
+  
+  double t[POSITION_BUFSIZE]; // kmean
+  for(int j=0;j<POSITION_BUFSIZE;++j)
+    t[j]=p->position_buffer[j];
+  qsort(t,POSITION_BUFSIZE,sizeof(t[0]),qsort_dbl);
+  
+  p->position = 200 *(1.0- ((double) t[POSITION_BUFSIZE/2] - (double)p->POS_MIN) / (double) (p->POS_MAX-p->POS_MIN));
+}
+
+void moveActuator(LinearActuator *p){
+  updatePosition(p);
+  if (p->enable==false) {
+    p->last_order=0;
+    digitalWrite(p->R_EN ,LOW);
+    digitalWrite(p->L_EN ,LOW);
+    return;
+  }
+  unsigned long current=millis();
+  double elapsed = (double)(current-p->lastTime)/1000.0;
+
+  if (elapsed<0.01) return;
+      
+  double error = (p->target - p->position)/200.0; // error is between -1 and 1
+  if (fabs(error)<0.01){ // we arrive at target
+    p->enable=false;
+    p->last_order=0;
+    digitalWrite(p->R_EN ,LOW);
+    digitalWrite(p->L_EN ,LOW);
+    return;
+  }
+  p->cError += error * elapsed;
+  double rError = (error - p->lastError)/elapsed;
+
+  double out=Kp * error  + Ki * p->cError + Kd * rError;
+  p->lastError=error;
+  p->lastTime = current;
+
+  
+  //Serial.print('\t');
+  //Serial.print("error ");
+#ifdef PLOT_PID
+  Serial.print(error);
+  //Serial.print("order ");
+  Serial.print('\t');
+  Serial.println(out);
+#endif
+  //Serial.print(out); Serial.print(" -> ");
+  digitalWrite(p->R_EN ,HIGH);
+  digitalWrite(p->L_EN ,HIGH);
+  double dts=(double )(current - p->last_order_time) / 1000.0;
+#ifdef DEBUG_RAMPING
+  Serial.print("dts: ") ; Serial.println(dts);
+  Serial.print("out: ") ; Serial.println(out);
+#endif
+  if (out>0){
+    if (out>MAX_PWM) out=MAX_PWM;
+    if (out<10) out=0;
+#ifdef DEBUG_RAMPING
+    Serial.print("out2: "); Serial.println(out);
+#endif
+    if (p->last_order<0){
+      out=100;
+    }
+    else {
+      double delta = (double )(out - p->last_order) / dts;
+#ifdef DEBUG_RAMPING
+      DEBUG_RAMPING(Serial.print("delta: "); Serial.println(delta););
+#endif
+      if (delta>MAX_RAMPING)
+	out = p->last_order + MAX_RAMPING * dts;
+    }
+#ifdef DEBUG_RAMPING
+    Serial.print("out3: "); Serial.println(out););
+#endif
+    analogWrite(p->R_PWM,out);
+    analogWrite(p->L_PWM,0);    
+    
+  } else {
+    if (out<-MAX_PWM) out=-MAX_PWM;
+    if (out>-10) out=0;
+#ifdef DEBUG_RAMPING
+    Serial.print("out2: "); Serial.println(out);
+#endif
+    if (p->last_order>0) {
+      out=-100;
+    } else {
+      double delta = (double )(out - p->last_order) / dts;
+#ifdef DEBUG_RAMPING
+      Serial.print("delta: "); Serial.println(delta);
+#endif
+      if (delta<-MAX_RAMPING)
+	out=p->last_order - MAX_RAMPING * dts;
+    }
+#ifdef DEBUG_RAMPING
+    Serial.print("out3: "); Serial.println(out);
+#endif
+    analogWrite(p->R_PWM,0);
+    analogWrite(p->L_PWM,-out);
+  }
+  p->last_order=out;
+  p->last_order_time=current;
+}
+
+
+char buffer[100];
+int r=0;
+int v;
+
+void update_target(char *order){
+  LinearActuator *p;
+  if (order[0]=='A') p=&(actuators[0]);
+  else if (order[0]=='B') p=&(actuators[1]);
+  else if (order[0]=='C') p=&(actuators[2]);
+  else return;
+  p->target=0;
+  if (order[1]=='_') {
+    //Serial.println("disabled");
+    p->enable=false;
+    p->last_order=0;
+    return;
+  }
+  
+  int i=1;
+  double deci=1;
+  bool d=false;
+  while((order[i]!='\n') && (order[i]!='\0') && (order[i]!='#')){    
+    if (order[i]=='.'){
+      d=true;
+    } else {
+      p->target=p->target*10;
+      p->target+=order[i]-'0';
+      if (d) deci*=10;
+    }
+    i+=1;
+  }
+  p->target = p->target / deci;
+  Serial.print("D new target is: ");Serial.println(p->target);
+  if (p->enable==false){
+    p->enable=true;
+    p->lastTime=millis();
+    p->cError=0;
+    p->lastError=0;
+    p->last_order=0;
+    p->last_order_time=millis();
+  }
+}
+
+long lcdfreq=0;
+
+int lcdi=0;
+
+long statusfreq=0;
+int statusBlink=0;
+
+void loop() {
+  if ((millis()-lcdfreq)>1000){
+    lcd.clear();
+    lcd.print("leg number: ");lcd.print(legId);lcd.print("(");lcd.print(VERSION);lcd.print(")");
+    lcd.setCursor(0,1);
+    if (actuators[lcdi].enable)
+      {lcd.print((char)('A'+lcdi));lcd.print(":");lcd.print(actuators[lcdi].position); lcd.print("/"); lcd.print(actuators[lcdi].target);}
+      else{lcd.print((char)('a'+lcdi)); lcd.print(": disabled");}
+    lcdfreq=millis();
+    lcdi=(lcdi+1)%3;
+  }
+
+  if ((millis()-statusfreq)>200){ // send status every 200ms
+    if (statusBlink==0)
+      lcd.noBacklight();
+    else if (statusBlink==10)
+      lcd.backlight();
+    statusBlink=(statusBlink+1)%20;
+      
+    Serial.print("S ");
+    for(int i=0;i<3;++i){
+      Serial.print(actuators[i].enable?1:0);
+      Serial.print(';');
+      Serial.print(actuators[i].position);
+      Serial.print(';');
+      Serial.print(actuators[i].target);
+      Serial.print(';');
+      Serial.print(actuators[i].last_order);
+      Serial.print(' ');
+    }
+    Serial.println();
+    statusfreq=millis();
+  }
+  v=Serial.read();
+#ifdef SIMULATOR
+  //if (v!=0) fprintf(stderr,"verrin read %c \n",v);
+#endif
+  if (v=='?'){
+    Serial.print("id[");
+    Serial.print(legId);
+    Serial.println("]");
+  }
+  if ((r==0 && v>='A' && v<='C') || (r>0 && (isalpha(v) || isdigit(v) || v=='.' || v=='_' || v=='#'))){
+    if ((v>='A') && (v<='C'))
+      r=0;
+    buffer[r]=v;
+    r+=1;
+  } 
+  //Serial.println(r);
+  if (v=='#'){
+    update_target(buffer);
+    r=0;
+  }
+  
+  moveActuator(actuators+0);
+  moveActuator(actuators+1);
+  moveActuator(actuators+2); 
+}
