@@ -50,13 +50,13 @@ def compute_moves(dist,z,angle,store=None):
     else:
         FRONT_LEFT=2
 
-    print "front left is ",FRONT_LEFT
+    print("front left is ",FRONT_LEFT)
         
     start_points=[None,None,None,None]
     for L in [FL,FR,RL,RR]:
         start_points[L]=list(prod(normed([LEGS[L]['origin'][X],LEGS[L]['origin'][Y]]),dist))+[z] # in robot ref
         if inverse_kinetic_robot_ref(LEGS,L,start_points[L])[0]==True:
-            print "start point is not in possible space!: ",L," ",start_points[L],' origin:',LEGS[L]['origin']
+            print("start point is not in possible space!: ",L," ",start_points[L],' origin:',LEGS[L]['origin'])
             return
         
     direction=normed([round(math.sin(angle),10),round(math.cos(angle),10),0]) # vector giving direction of the walk
@@ -103,15 +103,15 @@ def compute_moves(dist,z,angle,store=None):
     # [6]: backward slighty up 
     # [7]: middle   slighty up 
     # [8]: forward  slighty up
-    print "angle     : ",angle
-    print "dir       : ",direction
-    print "dir back  : ",ybackward
-    print "dir front : ",yforward
+    print("angle     : ",angle)
+    print("dir       : ",direction)
+    print("dir back  : ",ybackward)
+    print("dir front : ",yforward)
     
     for L in [FL,FR,RR,RL]:
         store[L]=[]
-        print L,"back  start: ",start_points[L] , "dir:", prod(direction,ybackward)," => ",plus(start_points[L],prod(direction,ybackward))
-        print L,"front start: ",start_points[L] , "dir:", prod(direction,yforward)," => ",plus(start_points[L],prod(direction,yforward))
+        print(L,"back  start: ",start_points[L] , "dir:", prod(direction,ybackward)," => ",plus(start_points[L],prod(direction,ybackward)))
+        print(L,"front start: ",start_points[L] , "dir:", prod(direction,yforward)," => ",plus(start_points[L],prod(direction,yforward)))
         store[L].append(inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,ybackward))))[1])
         store[L].append(inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,(ybackward+yforward)/2.0))))[1])
         store[L].append(inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,yforward))))[1])
@@ -134,9 +134,9 @@ def compute_moves(dist,z,angle,store=None):
         p=list(plus(start_points[L],prod(direction,yforward)))
         p[2]=z+0.05
         store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
-        print "order for leg:",L
+        print("order for leg:",L)
         for i in range(len(store[L])):
-            print '[',i,']',store[L][i],' ',L," ",to_linear_actuator_order(store[L][i])
+            print('[',i,']',store[L][i],' ',L," ",to_linear_actuator_order(store[L][i]))
 
 
 ######################################################################################
@@ -185,20 +185,20 @@ def move_legs(l):
     
 def move():
     init_walk()
-    wait_move(range(4),5)
+    wait_move(list(range(4)),5)
 #    stop_all_actuators()
-    print "init done, moving leg %d (back right)"%((FRONT_LEFT+2)%4)
-    pause_term and raw_input("-")
+    print("init done, moving leg %d (back right)"%((FRONT_LEFT+2)%4))
+    pause_term and input("-")
 
     move_legs(2)
     
-    print "moving leg %d (front right)"%((FRONT_LEFT+1)%4)
-    pause_term and raw_input("-")
+    print("moving leg %d (front right)"%((FRONT_LEFT+1)%4))
+    pause_term and input("-")
 
     move_legs(1)
     
-    print "move done, moving body"
-    pause_term and raw_input("-")
+    print("move done, moving body")
+    pause_term and input("-")
     
     l=(FRONT_LEFT  )%4
     tell_controler(l,to_linear_actuator_order(orders[l][0]))
@@ -210,21 +210,21 @@ def move():
     tell_controler(l,to_linear_actuator_order(orders[l][0]))
 
     time.sleep(2)
-    wait_move(range(4),5)
+    wait_move(list(range(4)),5)
 
-    print "moving leg %d (back left)"%((FRONT_LEFT+3)%4)
-    pause_term and raw_input("-")
+    print("moving leg %d (back left)"%((FRONT_LEFT+3)%4))
+    pause_term and input("-")
     
     move_legs(3)
 
-    print "moving leg %d (front left)"%((FRONT_LEFT)%4)
-    pause_term and raw_input("-")
+    print("moving leg %d (front left)"%((FRONT_LEFT)%4))
+    pause_term and input("-")
     
 
     move_legs(0)
 
-    print "move done, moving body"
-    pause_term and raw_input("-")
+    print("move done, moving body")
+    pause_term and input("-")
     
     l=(FRONT_LEFT  )%4
     tell_controler(l,to_linear_actuator_order(orders[l][1]))
@@ -236,10 +236,10 @@ def move():
     tell_controler(l,to_linear_actuator_order(orders[l][1]))
 
     time.sleep(2)
-    wait_move(range(4),5)
+    wait_move(list(range(4)),5)
     
-    print "done!"
-    pause_term and raw_input("-")
+    print("done!")
+    pause_term and input("-")
 
 
 def fast_walk():    
@@ -252,12 +252,12 @@ def fast_walk():
     l=(FRONT_LEFT+3)%4
     tell_controler(l,to_linear_actuator_order(orders[l][1]))
 
-    pause_term and raw_input("-")
+    pause_term and input("-")
     
     l=0 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][4]))
     l=2 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][4]))
     
-    pause_term and raw_input("-")
+    pause_term and input("-")
     
     l=0 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][5]))
     l=2 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][5]))
@@ -265,25 +265,25 @@ def fast_walk():
     l=3 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][0]))
     
     wait_move((0,2),2)
-    pause_term and raw_input("-")
+    pause_term and input("-")
     
     l=0 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][2]))
     l=2 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][2]))
     wait_move((0,2),2)
 
-    pause_term and raw_input("-")
+    pause_term and input("-")
     
     l=1 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][3]))
     l=3 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][3]))
 
-    pause_term and raw_input("-")
+    pause_term and input("-")
     
     l=1 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][5]))
     l=3 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][5]))
     l=0 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][0]))
     l=2 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][0]))
 
-    pause_term and raw_input("-")
+    pause_term and input("-")
     
     l=1 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][2]))
     l=3 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][2]))
@@ -291,42 +291,42 @@ def fast_walk():
 
 def print_leg_coords():
     for l in range(4):
-        print l,":",robot_ref_leg_point(LEGS,l,(controlers[l].la[1]['position']+450.0)/1000.0,
+        print(l,":",robot_ref_leg_point(LEGS,l,(controlers[l].la[1]['position']+450.0)/1000.0,
                                         (controlers[l].la[0]['position']+450.0)/1000.0,
-                                        (controlers[l].la[2]['position']+450.0)/1000.0)
+                                        (controlers[l].la[2]['position']+450.0)/1000.0))
 
 def move_body(dx,dy):
     nord=[]
     for l in range(4):
-        print "leg:", l," actuators: ",[d['position'] for d in controlers[l].la]
-        print "order supposed to be: ",orders[l][1]," => ",to_linear_actuator_order(orders[i][1])
+        print("leg:", l," actuators: ",[d['position'] for d in controlers[l].la])
+        print("order supposed to be: ",orders[l][1]," => ",to_linear_actuator_order(orders[i][1]))
         current=robot_ref_leg_point(LEGS,l,(controlers[l].la[1]['position']+450.0)/1000.0,
                                     (controlers[l].la[2]['position']+450.0)/1000.0,
                                     (controlers[l].la[0]['position']+450.0)/1000.0)
-        print "leg is at ",current
+        print("leg is at ",current)
         new_point=[current[0]+dx,current[1]+dy,current[2]]
         err,order=inverse_kinetic_robot_ref(LEGS,l,new_point)
-        print "new position: ",new_point," leads to ",err," : ",order," => ",to_linear_actuator_order(order)
+        print("new position: ",new_point," leads to ",err," : ",order," => ",to_linear_actuator_order(order))
         if err:
-            print "can not make that move: ",current," => ",new_point
+            print("can not make that move: ",current," => ",new_point)
             return
         nord.append(order)
     for l in range(4):
         tell_controler(l,to_linear_actuator_order(nord[l]))
-    wait_move(range(4),5)
+    wait_move(list(range(4)),5)
         
     
 def move_danse(dx,step,delay,count=1):
     orig_position=[0,0,0,0]
     backup_order=['','','','','']
     for l in range(4):
-        print "leg:", l," actuators: ",[d['position'] for d in controlers[l].la]
+        print("leg:", l," actuators: ",[d['position'] for d in controlers[l].la])
         backup_order[l]=to_linear_actuator_order(orders[l][1])
-        print "order supposed to be: ",orders[l][1]," => ",backup_order[l]
+        print("order supposed to be: ",orders[l][1]," => ",backup_order[l])
         current=robot_ref_leg_point(LEGS,l,(controlers[l].la[1]['position']+450.0)/1000.0,
                                     (controlers[l].la[2]['position']+450.0)/1000.0,
                                     (controlers[l].la[0]['position']+450.0)/1000.0)
-        print "leg is at ",current
+        print("leg is at ",current)
         orig_position[l]=current
         
     angle=0
@@ -338,16 +338,16 @@ def move_danse(dx,step,delay,count=1):
         for l in range(4):
             new_point=[orig_position[l][0]+dx*math.cos(angle),orig_position[l][1]+dx*math.sin(angle),orig_position[l][2]]
             err,order=inverse_kinetic_robot_ref(LEGS,l,new_point)
-            print "new position: ",new_point," leads to ",err," : ",order," => ",to_linear_actuator_order(order)
+            print("new position: ",new_point," leads to ",err," : ",order," => ",to_linear_actuator_order(order))
             if err:
-                print "can not make that move: ",current," => ",new_point
+                print("can not make that move: ",current," => ",new_point)
                 return
             new_order.append(to_linear_actuator_order(order))
         for l in range(4):
             tell_controler(l,new_order[l])
         if first:
             first=False
-            wait_move(range(4),4)
+            wait_move(list(range(4)),4)
         else:
             time.sleep(delay)
         angle+=step
@@ -358,17 +358,17 @@ def move_danse(dx,step,delay,count=1):
             
     for l in range(4):
         tell_controler(l,backup_order[l])
-    wait_move(range(4),4)
+    wait_move(list(range(4)),4)
         
 
 
 #stop_all_actuators()
 
-print "load visu"
+print("load visu")
 visu=Visu(controlers)
-print "run visu"
+print("run visu")
 visu.start()
-print "visu ran"
+print("visu ran")
 
 
 class FastWalk:
@@ -395,7 +395,7 @@ class FastWalk:
         l=(FRONT_LEFT+3)%4 ; tell_controler(l,to_linear_actuator_order(orders[l][1]))
         self.stage+=1
     def wait(self):
-        if wait_move(range(4),1) or self.timer(5):
+        if wait_move(list(range(4)),1) or self.timer(5):
             self.stage+=1
     def setup_legs(self):
         l=0 ; tell_controler((FRONT_LEFT+l)%4,to_linear_actuator_order(orders[(FRONT_LEFT+l)%4][4]))
@@ -447,7 +447,7 @@ class FastWalk:
         self.stage+=1
     def loop_walk(self):
         self.stage=self.move_body1
-    def next(self):
+    def __next__(self):
         if type(self.stage)!=int:
             self.stage=self.stages.index(self.stage)
         s=self.stage
@@ -467,31 +467,31 @@ class Walk:
             self.last=time.time()
             return False
         return (time.time()-self.last)>timeout
-    def next(self):
+    def __next__(self):
         s=self.stage
         if self.stage==0:
             init_walk()
-            print "walk: init"
+            print("walk: init")
             self.stage=1
         elif self.stage==1:
-            if wait_move(range(4),1) or self.timer(10):
+            if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage=2
         elif self.stage==2:
             move_legs(2)
-            print "walk: moving back right leg (back to front)"
+            print("walk: moving back right leg (back to front)")
             self.stage=3
         elif self.stage==3:
-            if wait_move(range(4),1) or self.timer(10):
+            if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage=4            
         elif self.stage==4:
-            print "walk: moving front right leg"
+            print("walk: moving front right leg")
             move_legs(1)
             self.stage=5
         elif self.stage==5:
-            if wait_move(range(4),1) or self.timer(10):
+            if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage=6                
         elif self.stage==6:     
-            print "walk: moving body"       
+            print("walk: moving body")       
             l=(FRONT_LEFT  )%4
             tell_controler(l,to_linear_actuator_order(orders[l][0]))
             l=(FRONT_LEFT+1)%4
@@ -503,24 +503,24 @@ class Walk:
             time.sleep(0.5)
             self.stage=7
         elif self.stage==7:
-            if wait_move(range(4),1) or self.timer(5):
+            if wait_move(list(range(4)),1) or self.timer(5):
                 self.stage=8
         elif self.stage==8:
-            print "walk: moving back left leg"
+            print("walk: moving back left leg")
             move_legs(3)
             self.stage=9
         elif self.stage==9:
-            if wait_move(range(4),1) or self.timer(5):
+            if wait_move(list(range(4)),1) or self.timer(5):
                 self.stage=10
         elif self.stage==10:
-            print "walk: moving front left leg"                
+            print("walk: moving front left leg")                
             move_legs(0)
             self.stage=11
         elif self.stage==11:
-            if wait_move(range(4),1) or self.timer(5):
+            if wait_move(list(range(4)),1) or self.timer(5):
                 self.stage=12
         elif self.stage==12:
-            print "walk: moving body"   
+            print("walk: moving body")   
             l=(FRONT_LEFT  )%4
             tell_controler(l,to_linear_actuator_order(orders[l][1]))
             l=(FRONT_LEFT+1)%4
@@ -531,10 +531,10 @@ class Walk:
             tell_controler(l,to_linear_actuator_order(orders[l][1]))
             self.stage=13
         elif self.stage==13:
-            if wait_move(range(4),1) or self.timer(5):
+            if wait_move(list(range(4)),1) or self.timer(5):
                 self.stage=2
         if self.stage!=s:
-            print "walk reset timer"
+            print("walk reset timer")
             self.timer()
         return True
             
@@ -544,13 +544,13 @@ class Walk:
 class SpiderUp:
     def __init__(self):
         self.starting=True
-    def next(self):
+    def __next__(self):
         if self.starting:
             for i in [0,1,2,3]:
                 tell_controler(i,to_linear_actuator_order(orders[i][1]))
             self.starting=False
         else:
-            if wait_move(range(4),1,0.1):
+            if wait_move(list(range(4)),1,0.1):
                 return False
         return True
     
@@ -562,16 +562,16 @@ class UpAndDown:
         self.maxorders=[None,None,None,None]
         compute_moves(x,zmax,angle,self.maxorders)
         self.direction=1
-    def next(self):
-        if wait_move(range(4),10):
+    def __next__(self):
+        if wait_move(list(range(4)),10):
             if self.direction==1:
-                print "move up"
+                print("move up")
                 for i in [0,1,2,3]:
                     tell_controler(i,to_linear_actuator_order(self.maxorders[i][1]))
                 time.sleep(1)
                 self.direction=-1
             else:
-                print "move down"
+                print("move down")
                 for i in [0,1,2,3]:
                     tell_controler(i,to_linear_actuator_order(self.minorders[i][1]))
                 time.sleep(1)
@@ -588,8 +588,8 @@ class Movement(Thread):
             if self.suspend or self.current_move==None:
                 time.sleep(0.5)
                 continue
-            if self.current_move.next()==False: # movement is over
-                print "current movement is over!"
+            if next(self.current_move)==False: # movement is over
+                print("current movement is over!")
                 self.current_move=None
     def quit(self):
         self.stop=True
@@ -615,14 +615,14 @@ def cmd_upgrade(m):
 
 def cmd_help(m):
     """print help"""
-    l=cmds.keys()
+    l=list(cmds.keys())
     l.sort()
     for k in l:
-        print k,
+        print(k, end=' ')
         if cmds[k].__doc__!=None:
-            print ":",cmds[k].__doc__
+            print(":",cmds[k].__doc__)
         else:
-            print
+            print()
 
 def cmd_vpause(m):
     """pause/unpause graphic update"""
@@ -633,14 +633,14 @@ def cmd_dst(m):
     global z,x,angle,WAITMOVE_DST
     if len(m)>1:
         WAITMOVE_DST[0]=float(m[1])
-    print "wait move distance is:",WAITMOVE_DST[0]
+    print("wait move distance is:",WAITMOVE_DST[0])
 def cmd_zdelta(m):
     """get/set z difference between ground and air position"""
     global z,x,angle,MOVE_UP_ZDELTA
     if len(m)>1:
         MOVE_UP_ZDELTA=float(m[1])
         compute_moves(x,z,angle)
-    print "zdelta for move is ",MOVE_UP_ZDELTA
+    print("zdelta for move is ",MOVE_UP_ZDELTA)
 def cmd_order(m):
     """send an order to a controler"""
     if len(m[2])==1:
@@ -697,7 +697,7 @@ def cmd_angle(m):
     if len(m)>1:
         angle=math.radians(float(m[1]))
         compute_moves(x,z,angle)
-    print "angle:",math.degrees(angle)
+    print("angle:",math.degrees(angle))
 def cmd_quit(m):
     """leave program"""
     for c in controlers:
@@ -717,7 +717,7 @@ def cmd_fast(m):
 def cmd_pause(m):
     """toggle pause in motion"""
     pause_term=not pause_term
-    print "pause during moving :",pause_term
+    print("pause during moving :",pause_term)
 def cmd_u(m):
     """start Spider Up movement"""
     movement_handler.setMove(SpiderUp())
@@ -738,7 +738,7 @@ for f in inspect.getmembers(sys.modules[__name__]):
 def readline_completer(text,state):
     l=[]
     if len(text)>0:
-        for c in cmds.keys():
+        for c in list(cmds.keys()):
             if c.startswith(text):
                 l.append(c)
     l.append(None)
@@ -761,20 +761,20 @@ if __name__ == "__main__":
     last_cmd=""
     while True:
         try:
-            m=raw_input(u"\u001b[31m (x=%.2f,z=%.2f/%.2f,angle=%.2f,pause=%s)? \u001b[0m "%(x,z,MOVE_UP_ZDELTA,math.degrees(angle),str(pause_term)))
+            m=input("\u001b[31m (x=%.2f,z=%.2f/%.2f,angle=%.2f,pause=%s)? \u001b[0m "%(x,z,MOVE_UP_ZDELTA,math.degrees(angle),str(pause_term)))
             #readline.add_history(m)
             readline.write_history_file(".history")
             if len(m)==0:
                 m=last_cmd
             last_cmd=m
             m=m.split()
-            if cmds.has_key(m[0]):
+            if m[0] in cmds:
                 cmds[m[0]](m)
             else:
                 movement_handler.setMove(None)
                 stop_all_actuators()
         except Exception as e:
-            print e
+            print(e)
             import traceback
             traceback.print_exc(file=sys.stdout)
 

@@ -14,7 +14,7 @@ while leg0.isOpen()==False or leg1.isOpen()==False or leg2.isOpen()==False or le
         sys.exit(2);
     c+=1
 
-print "all opened"
+print("all opened")
 time.sleep(5)
 # print leg0.write("A100#B200#C70#")
 # print leg1.write(b"A100#B200#C70#")
@@ -58,7 +58,7 @@ time.sleep(5)
 
 
 while True:
-    m=raw_input("?")
+    m=input("?")
     if m[0]=='0':
         leg0.write(m[1:])
     elif m[0]=='1':

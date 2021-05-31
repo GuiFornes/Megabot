@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from Tkinter import *
+from tkinter import *
 
 import math
 import sys
@@ -146,7 +146,9 @@ def vectoriel3D(v1,v2):
         v1[Z]*v2[X] - v1[X]*v2[Z],
         v1[X]*v2[Y] - v1[Y]*v2[X]
     )
-def compute((xa,ya),(xb,yb),da,db):
+def compute(xxx_todo_changeme, xxx_todo_changeme1,da,db):
+    (xa,ya) = xxx_todo_changeme
+    (xb,yb) = xxx_todo_changeme1
     xa=float(xa)
     ya=float(ya)
     xb=float(xb)
@@ -179,10 +181,10 @@ def get_gravity_center(points,weigths):
     total_weigth=0
     tweigths=[]
     for p1 in range(len(points)):
-        np1=points.keys()[p1]
+        np1=list(points.keys())[p1]
         for p2 in range(p1+1,len(points)):
-            np2=points.keys()[p2]
-            if weigths.has_key(np1) and weigths[np1].has_key(np2):
+            np2=list(points.keys())[p2]
+            if np1 in weigths and np2 in weigths[np1]:
                 tweigths.append((np1,np2,weigths[np1][np2]))
     for a,b,w in tweigths:
         m=middle(points[a],points[b])
@@ -452,7 +454,7 @@ def update_robot(robot=None,legs=None):
     irobot['feets']={}
     irobot['centers']={}
     for leg in FL,FR,RL,RR:
-        if not ilegs[leg].has_key('points'):
+        if 'points' not in ilegs[leg]:
             continue
         feet=ilegs[leg]['points']['J']
         feet=(feet[0],feet[1],0,1)
@@ -468,7 +470,7 @@ def update_robot(robot=None,legs=None):
     # compute gravity center of the robot
     irobot['gravities']={}
     for leg in FL,FR,RL,RR:
-        if not ilegs[leg].has_key('gravity'):
+        if 'gravity' not in ilegs[leg]:
             continue
         lg=ilegs[leg]['gravity'][0]
         lg=(lg[0],lg[1],0,1)
@@ -723,7 +725,7 @@ def inverse_kinetic(v,dx,dy):
 
 
 def kinetic_for_gravity_center(v,triangle,direction,legs):
-    print v,triangle,direction,legs
+    print(v,triangle,direction,legs)
     return 0
 
 def onclick(event,leg):
@@ -763,7 +765,7 @@ def onclick(event,leg):
         initial_values.append(int(LEGS[l]['v2'].get())/1000.0)
         initial_values.append(int(LEGS[l]['v3'].get())/1000.0)
     res=minimize(kinetic_for_gravity_center,initial_values,args=(triangle,direction,legs),method='Nelder-Mead',tol=1e-6)
-    print res
+    print(res)
 
 master = Tk()
 

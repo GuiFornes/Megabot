@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from Tkinter import *
+from tkinter import *
 
 import math
 import sys
@@ -167,7 +167,9 @@ def vectoriel3D(v1,v2):
         v1[Z]*v2[X] - v1[X]*v2[Z],
         v1[X]*v2[Y] - v1[Y]*v2[X]
     )
-def compute((xa,ya),(xb,yb),da,db):
+def compute(xxx_todo_changeme, xxx_todo_changeme1,da,db):
+    (xa,ya) = xxx_todo_changeme
+    (xb,yb) = xxx_todo_changeme1
     xa=float(xa)
     ya=float(ya)
     xb=float(xb)
@@ -200,10 +202,10 @@ def get_gravity_center(points,weigths):
     total_weigth=0
     tweigths=[]
     for p1 in range(len(points)):
-        np1=points.keys()[p1]
+        np1=list(points.keys())[p1]
         for p2 in range(p1+1,len(points)):
-            np2=points.keys()[p2]
-            if weigths.has_key(np1) and weigths[np1].has_key(np2):
+            np2=list(points.keys())[p2]
+            if np1 in weigths and np2 in weigths[np1]:
                 tweigths.append((np1,np2,weigths[np1][np2]))
     for a,b,w in tweigths:
         m=middle(points[a],points[b])
@@ -473,7 +475,7 @@ def update_robot(robot=None):
     irobot['feets']={}
     irobot['centers']={}
     for leg in FL,FR,RL,RR:
-        if not ilegs[leg].has_key('points'):
+        if 'points' not in ilegs[leg]:
             continue
         feet=ilegs[leg]['points']['J']
         feet=(feet[0],feet[1],0,1)
@@ -489,7 +491,7 @@ def update_robot(robot=None):
     # compute gravity center of the robot
     irobot['gravities']={}
     for leg in FL,FR,RL,RR:
-        if not ilegs[leg].has_key('gravity'):
+        if 'gravity' not in ilegs[leg]:
             return
         lg=ilegs[leg]['gravity'][0]
         lg=(lg[0],lg[1],0,1)
@@ -559,7 +561,7 @@ def update_top_view():
 
     update_robot()    
     for leg in FL,FR,RL,RR:
-        if ROBOT['feets'].has_key(leg)==False:
+        if (leg in ROBOT['feets'])==False:
             return
         px=ROBOT['feets'][leg][X] * CANVAS_SCALE + shift_x
         py=ROBOT['feets'][leg][Y] * CANVAS_SCALE + shift_y
@@ -746,7 +748,7 @@ from scipy.optimize import minimize
 def inverse_kinetic_fun(v,dx,dy):
     for k in v:
         if k<0.449 or k>0.651:
-            print "!!!!! out of bounds",k
+            print("!!!!! out of bounds",k)
             return None
     p=get_leg_points_V1_V2(v[0],v[1])
     return norm(p2v(p['J'],(dx,dy)))
@@ -805,7 +807,7 @@ def kinetic_for_gravity_center_fix_feet(center,triangle,legs):
         rev=inverse_kinetic(lfeet[X],lfeet[Y])
         malus=0.0
         if rev[3]>0.01:
-            print "OVER MOVE!"
+            print("OVER MOVE!")
             malus=10.0
         robot['LEGS'][l]['v1sim'] = rev[0]*1000.0
         robot['LEGS'][l]['v2sim'] = rev[1]*1000.0
@@ -902,8 +904,8 @@ def onclick(event,leg):
                  tol=1e-6)
     nv=kinetic_for_gravity_center_fix_feet(res.x,triangle,legs)
 #    nv=kinetic_for_gravity_center_fix_feet([0.0,0,0],triangle,legs)
-    print res
-    print nv
+    print(res)
+    print(nv)
     for l in legs:
         LEGS_SLIDER[l]['v1'].set(int(round(nv[1][l]['v1sim'])))
         LEGS_SLIDER[l]['v2'].set(int(round(nv[1][l]['v2sim'])))
@@ -937,7 +939,7 @@ def move_gravity_center(event):
     cy=float(event.y)
     x=(cx-float(top_view['width'])/2.0) / CANVAS_SCALE
     y=-(cy-float(top_view['height'])/2.0) / CANVAS_SCALE
-    print "move robot center to:",x,y
+    print("move robot center to:",x,y)
     res=kinetic_for_gravity_center_fix_feet((x,y),'FL_FR_RL',(FL,FR,RL,RR))
     for l in (FL,FR,RL,RR):
         LEGS_SLIDER[l]['v1'].set(int(res[1][l]['v1sim']))
@@ -1209,7 +1211,7 @@ def update_linears_actuators():
             update(None,l)
             update_angle(None,l)
     if walk['enabled']==True:
-        print walk
+        print(walk)
         #check if sim value are ok with current values:
         if mod==False: # all programmed movements are done
             # prepare the next movement
@@ -1220,19 +1222,19 @@ def update_linears_actuators():
                              #method='Nelder-Mead',\
                              bounds=bounds,
                              tol=1e-6)
-                print "try to move gravity center on the triangle opposite to the moving leg:"
-                print "res is:",res
+                print("try to move gravity center on the triangle opposite to the moving leg:")
+                print("res is:",res)
                 nv=kinetic_for_gravity_center_fix_feet(res.x,TRIANGLES[walk['current_leg']],(FL,FR,RL,RR))
-                print "nv is:",nv
+                print("nv is:",nv)
                 for l in FL,FR,RL,RR:
-                    print "setting actuator values for leg ",l,nv[1][l]
+                    print("setting actuator values for leg ",l,nv[1][l])
                     for v in 'v1','v2','v3':
                         LEGS_SLIDER[l][v].set(round(nv[1][l][v+'sim']))
-                    print "setting actuator values for leg ",[  LEGS_SLIDER[l][v].get() for v in LEGS_SLIDER[l]]
+                    print("setting actuator values for leg ",[  LEGS_SLIDER[l][v].get() for v in LEGS_SLIDER[l]])
                 walk['current_phase']='start_gravity_wait'
                 walk['enabled']=False
             elif walk['current_phase']=='start_gravity_wait':
-                print "raise leg 5 cm over the ground"
+                print("raise leg 5 cm over the ground")
                 feet=ROBOT['feets'][walk['current_leg']]
                 nfeet=list(feet)
                 nfeet[Z]+=0.05
@@ -1242,13 +1244,13 @@ def update_linears_actuators():
                 LEGS_SLIDER[walk['current_leg']]['v2'].set(rev[1]*1000.0)
                 walk['current_phase']='moving_up'
                 walk['enabled']=False
-                print "DEBUG:",walk
+                print("DEBUG:",walk)
             elif walk['current_phase']=='moving_up':
                 # need to compute next leg position according to direction
                 walk['current_phase']='moving'
             elif walk['current_phase']=='moving':
                 np=get_point_projection_on_plane(ROBOT['feets'][FR],ROBOT['feets'][RL],ROBOT['feets'][RR],ROBOT['feets'][walk['current_leg']])
-                print np
+                print(np)
                 lfeet=numpy.matmul(ROBOT['LEGS'][walk['current_leg']]['imatrix'],list(np[0])+[1]).tolist()
                 rev=inverse_kinetic(lfeet[X],lfeet[Y])
                 LEGS_SLIDER[walk['current_leg']]['v1'].set(rev[0]*1000.0)
@@ -1266,7 +1268,7 @@ def update_linears_actuators():
                 walk['current_phase']='start'
 
                  
-            print "DEBUG2:",walk
+            print("DEBUG2:",walk)
                 
                 
                 
@@ -1286,7 +1288,7 @@ conf2.pack(side=LEFT)
 
 def switch_walk():
     global walk,walkButton_variable
-    print "switch"
+    print("switch")
     if walk['enabled']:
         walk['enabled']=False
         walkButton_variable.set("off")
@@ -1317,5 +1319,5 @@ for angle in range(-30,30,5):
             feet=p['J']
             feet=(feet[0],feet[1],0,1)
             rfeet=numpy.matmul(LEGS[FL]['matrix'],feet).tolist()
-            print v1,v2,p['J'][X],p['J'][Y],round(rfeet[X]*1000),round(rfeet[Y]*1000),round(rfeet[Z]*1000)
+            print(v1,v2,p['J'][X],p['J'][Y],round(rfeet[X]*1000),round(rfeet[Y]*1000),round(rfeet[Z]*1000))
 sys.exit(1)

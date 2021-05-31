@@ -3,7 +3,6 @@ import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import OpenGL.GL as ogl
-
 from threading import Thread
 
 import time
@@ -21,7 +20,7 @@ colors = np.array([
 class Visu(Thread):
     def __init__(self,controlers):
         Thread.__init__(self)
-        print "visu 0"
+        print("visu 0")
         self.controlers=controlers
         self.start_time=time.time()
         self.last_displayed=10.0
@@ -66,7 +65,7 @@ class Visu(Thread):
             v3=(self.controlers[l].la[0]['position']+450.0)/1000.0
             for v in [v1,v2,v3]:
                 if v<0.43 or v>0.66:
-                    print "VISU ERROR:",v
+                    print("VISU ERROR:",v)
                     return
             points=robot_ref_leg_points(LEGS,l,v1,v2,v3)
             minz=min(minz,points['J'][Z])
@@ -82,7 +81,7 @@ class Visu(Thread):
             v3=(self.controlers[l].la[0]['target']+450.0)/1000.0
             for v in [v1,v2,v3]:
                 if v<0.43 or v>0.66:
-                    print "VISU ERROR:",v
+                    print("VISU ERROR:",v)
                     return
             points=robot_ref_leg_points(LEGS,l,v1,v2,v3)
             p=[]
@@ -129,7 +128,7 @@ class Visu(Thread):
 
         self.legs=[]
                   
-        print "visu 1"
+        print("visu 1")
         
         pg.setConfigOptions(antialias=True)
 
@@ -139,7 +138,7 @@ class Visu(Thread):
         col=[0,0,0,0]
         i=0
         
-        print "visu 2"
+        print("visu 2")
         
         for c in self.controlers:
             self.plots[c.id]=[]

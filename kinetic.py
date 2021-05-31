@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from Tkinter import *
+from tkinter import *
 
 import math
 import sys
@@ -149,7 +149,7 @@ from scipy.optimize import minimize
 def inverse_kinetic_fun(v,dx,dy,lpl):
     for k in v:
         if k<0.449 or k>0.651:
-            print "!!!!! out of bounds",k
+            print("!!!!! out of bounds",k)
             return None
     p=get_leg_points_V1_V2(v[0],v[1],lpl)
     return norm(p2v(p['J'],(dx,dy)))
@@ -177,14 +177,14 @@ def inverse_kinetic_robot_ref(legs,leg,point):
     v3=v3/1000.0
     if v3<0.45 or v3>0.65:
         error=True
-        print "impossible angle for v3",leg," delta:",math.degrees(legs[leg]['angle_orig'] - angle),' => v3:',v3
+        print("impossible angle for v3",leg," delta:",math.degrees(legs[leg]['angle_orig'] - angle),' => v3:',v3)
     legs[leg]['angle']=angle
     update_transformation_matrices(legs,(leg,))    
     point_leg_ref=numpy.matmul(legs[leg]['imatrix'],point+[1]).tolist()
     r=inverse_kinetic(point_leg_ref[X],point_leg_ref[Y],legs[leg]['lengths'])
     if r[3]>0.1:
         error=True
-        print "too far!"
+        print("too far!")
     return error,(r[0],r[1],v3) # v3 -> A
 
 def robot_ref_leg_point(legs,leg,v1,v2,v3):
@@ -200,7 +200,7 @@ def robot_ref_leg_points(legs,leg,v1,v2,v3):
     # p['J'] is the x,y coords in leg referencial
     update_angle(legs,leg,v3)
     q={}
-    for i in p.keys():
+    for i in list(p.keys()):
         a=(p[i][X],p[i][Y],0,1)
         b=numpy.matmul(legs[leg]['matrix'],a).tolist()
         q[i]=(b[X],b[Y],b[Z])

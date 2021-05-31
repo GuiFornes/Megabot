@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from Tkinter import *
+from tkinter import *
 
 import math
 import sys
@@ -57,13 +57,13 @@ LEG_PARTS_LENGTHS={'ao':150.0,'bc':300.0,'ae':500.0,'de':100.0,'ef':450.0,'fg':2
 
 
 def print_robot(robot):
-    print "ROBOT"
+    print("ROBOT")
     for l in FL,FR,RL,RR:
-        print "leg ",l
-        keys=robot['LEGS'][l].keys()
+        print("leg ",l)
+        keys=list(robot['LEGS'][l].keys())
         keys.sort()
         for k in keys:
-            print "\t",k,":",robot['LEGS'][l][k]
+            print("\t",k,":",robot['LEGS'][l][k])
     
 
 def update_transformation_matrices_for(matrix,imatrix,angle,origin):
@@ -127,10 +127,10 @@ def get_gravity_center(points,weigths):
     total_weigth=0
     tweigths=[]
     for p1 in range(len(points)):
-        np1=points.keys()[p1]
+        np1=list(points.keys())[p1]
         for p2 in range(p1+1,len(points)):
-            np2=points.keys()[p2]
-            if weigths.has_key(np1) and weigths[np1].has_key(np2):
+            np2=list(points.keys())[p2]
+            if np1 in weigths and np2 in weigths[np1]:
                 tweigths.append((np1,np2,weigths[np1][np2]))
     for a,b,w in tweigths:
         m=middle(points[a],points[b])
@@ -390,7 +390,7 @@ def update_robot(robot=None):
     irobot['feets']={}
     irobot['centers']={}
     for leg in FL,FR,RL,RR:
-        if not ilegs[leg].has_key('points'):
+        if 'points' not in ilegs[leg]:
             continue
         feet=ilegs[leg]['points']['J']
         feet=(feet[0],feet[1],0,1)
@@ -406,7 +406,7 @@ def update_robot(robot=None):
     # compute gravity center of the robot
     irobot['gravities']={}
     for leg in FL,FR,RL,RR:
-        if not ilegs[leg].has_key('gravity'):
+        if 'gravity' not in ilegs[leg]:
             return
         lg=ilegs[leg]['gravity'][0]
         lg=(lg[0],lg[1],0,1)
@@ -476,7 +476,7 @@ def update_top_view():
 
     update_robot()    
     for leg in FL,FR,RL,RR:
-        if ROBOT['feets'].has_key(leg)==False:
+        if (leg in ROBOT['feets'])==False:
             return
         px=ROBOT['feets'][leg][X] * CANVAS_SCALE + shift_x
         py=ROBOT['feets'][leg][Y] * CANVAS_SCALE + shift_y
@@ -671,7 +671,7 @@ from scipy.optimize import minimize
 def inverse_kinetic_fun(v,dx,dy):
     for k in v:
         if k<0.449 or k>0.651:
-            print "!!!!! out of bounds",k
+            print("!!!!! out of bounds",k)
             return None
     p=get_leg_points_V1_V2(v[0],v[1])
     return norm(p2v(p['J'],(dx,dy)))
@@ -695,13 +695,13 @@ def inverse_kinetic_robot_ref(legs,leg,point):
         angle+=math.pi*2.0
     delta=legs[leg]['angle_orig'] - angle
     if abs(delta)>math.pi/6:
-        print "impossible angle for v3",leg,math.degrees(delta),legs[leg]['angle_orig'],math.degrees(angle)
+        print("impossible angle for v3",leg,math.degrees(delta),legs[leg]['angle_orig'],math.degrees(angle))
     legs[leg]['angle']=angle
     update_transformation_matrices(legs,(leg,))    
     point_leg_ref=numpy.matmul(legs[leg]['imatrix'],point+[1]).tolist()
     r=inverse_kinetic(point_leg_ref[X],point_leg_ref[Y])
     if r[3]>0.1:
-        print "too far!"
+        print("too far!")
     v3 = (( angle - legs[leg]['angle_orig'] ) * 3 / math.pi + 0.5 ) * (650-450) + 450
     v3 = v3/1000.0
     return (r[0],r[1],v3) # v3 -> A
@@ -711,38 +711,38 @@ PSHORT=[0.597,0.165,-0.5]
 PFAR=[0.597,0.9,-0.5]
 PMIDDLE=[0.597,(PSHORT[Y]+PFAR[Y])/2.0,-0.5]
 
-print [-0.4-PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]]
-print [-0.4-PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]]
-print [-0.4-PFAR[X],0.4+PFAR[Y],PFAR[Z]]
-print [0.4+PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]]
-print [0.4+PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]]
-print [0.4+PFAR[X],0.4+PFAR[Y],PFAR[Z]]
-print [-0.4-PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]]
-print [-0.4-PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]]
-print [-0.4-PFAR[X],-0.4-PFAR[Y],PFAR[Z]]
-print [0.4+PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]]
-print [0.4+PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]]
-print [0.4+PFAR[X],-0.4-PFAR[Y],PFAR[Z]]
+print([-0.4-PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]])
+print([-0.4-PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]])
+print([-0.4-PFAR[X],0.4+PFAR[Y],PFAR[Z]])
+print([0.4+PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]])
+print([0.4+PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]])
+print([0.4+PFAR[X],0.4+PFAR[Y],PFAR[Z]])
+print([-0.4-PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]])
+print([-0.4-PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]])
+print([-0.4-PFAR[X],-0.4-PFAR[Y],PFAR[Z]])
+print([0.4+PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]])
+print([0.4+PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]])
+print([0.4+PFAR[X],-0.4-PFAR[Y],PFAR[Z]])
 
 def to_linear_actuator_order(l):
     k=[(c-0.45)*1000 for c in l]
     return "A%d#B%d#C%d#"%(200-k[2],k[0],k[1])
 
-print 0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]]))
-print 1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]]))
-print 2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PFAR[X],0.4+PFAR[Y],PFAR[Z]]))
+print(0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]])))
+print(1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]])))
+print(2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PFAR[X],0.4+PFAR[Y],PFAR[Z]])))
 
-print 0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FR,[0.4+PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]]))
-print 1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FR,[0.4+PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]]))
-print 2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FR,[0.4+PFAR[X],0.4+PFAR[Y],PFAR[Z]]))
+print(0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FR,[0.4+PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]])))
+print(1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FR,[0.4+PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]])))
+print(2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,FR,[0.4+PFAR[X],0.4+PFAR[Y],PFAR[Z]])))
 
-print 0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]]))
-print 1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]]))
-print 2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PFAR[X],-0.4-PFAR[Y],PFAR[Z]]))
+print(0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]])))
+print(1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]])))
+print(2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PFAR[X],-0.4-PFAR[Y],PFAR[Z]])))
 
-print 0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RR,[0.4+PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]]))
-print 1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RR,[0.4+PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]]))
-print 2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RR,[0.4+PFAR[X],-0.4-PFAR[Y],PFAR[Z]]))
+print(0,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RR,[0.4+PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]])))
+print(1,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RR,[0.4+PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]])))
+print(2,to_linear_actuator_order(inverse_kinetic_robot_ref(LEGS,RR,[0.4+PFAR[X],-0.4-PFAR[Y],PFAR[Z]])))
 sys.exit(1)
 
 import copy
@@ -787,7 +787,7 @@ def kinetic_for_gravity_center_fix_feet(center,triangle,legs,debug=False):
         rev=inverse_kinetic(lfeet[X],lfeet[Y])
         malus=0.0
         if rev[3]>0.01:
-            print "OVER MOVE!"
+            print("OVER MOVE!")
             malus=10.0
         robot['LEGS'][l]['v1sim'] = rev[0]*1000.0
         robot['LEGS'][l]['v2sim'] = rev[1]*1000.0
@@ -920,7 +920,7 @@ def move_gravity_center(event):
     cy=float(event.y)
     x=(cx-float(top_view['width'])/2.0) / CANVAS_SCALE
     y=-(cy-float(top_view['height'])/2.0) / CANVAS_SCALE
-    print "move robot center to:",x,y
+    print("move robot center to:",x,y)
     res=kinetic_for_gravity_center_fix_feet((x,y),'FL_FR_RL',(FL,FR,RL,RR))
     for l in (FL,FR,RL,RR):
         LEGS_SLIDER[l]['v1'].set(int(res[1][l]['v1sim']))
@@ -1173,9 +1173,9 @@ walk_fix['init']={FL:inverse_kinetic_robot_ref(LEGS,FL,[-0.4-PMIDDLE[X],0.4+PMID
                   RL:inverse_kinetic_robot_ref(LEGS,RL,[-0.4-PMIDDLE[X],-0.4-PMIDDLE[Y],PMIDDLE[Z]]),\
                   RR:inverse_kinetic_robot_ref(LEGS,RR,[0.4+PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]])}
 UP=0.1
-print PSHORT
-print PMIDDLE
-print PFAR
+print(PSHORT)
+print(PMIDDLE)
+print(PFAR)
 walk_fix['moves']=[# move the FR legs:
     {FR:inverse_kinetic_robot_ref(LEGS,FR,[0.4+PSHORT[X],0.4+PSHORT[Y],PSHORT[Z]+UP])},
     {FR:inverse_kinetic_robot_ref(LEGS,FR,[0.4+PMIDDLE[X],0.4+PMIDDLE[Y],PMIDDLE[Z]+UP])},
@@ -1208,14 +1208,14 @@ walk_fix['moves']=[# move the FR legs:
     {RR:inverse_kinetic_robot_ref(LEGS,RR,[0.4+PSHORT[X],-0.4-PSHORT[Y],PSHORT[Z]])},
 ]
 
-print "init:"
+print("init:")
 for leg in walk_fix['init']:
-    print "leg :",leg
-    print "A",int((walk_fix['init'][leg][2]-0.45)*100),"#"
-    print "B",int((walk_fix['init'][leg][0]-0.45)*100),"#"
-    print "C",int((walk_fix['init'][leg][1]-0.45)*100),"#"
+    print("leg :",leg)
+    print("A",int((walk_fix['init'][leg][2]-0.45)*100),"#")
+    print("B",int((walk_fix['init'][leg][0]-0.45)*100),"#")
+    print("C",int((walk_fix['init'][leg][1]-0.45)*100),"#")
 
-print "moves",walk_fix['moves']
+print("moves",walk_fix['moves'])
 
 import time
 
@@ -1247,7 +1247,7 @@ def update_linears_actuators():
                     walk['current_phase']='running'
                     walk['step']=0
                 elif walk['current_phase']=='running':
-                    print walk['current_phase'],walk['step']
+                    print(walk['current_phase'],walk['step'])
                     time.sleep(10)
                     if walk['step']>=len(walk_fix['moves']):
                         walk['step']=0
@@ -1257,7 +1257,7 @@ def update_linears_actuators():
                         LEGS_SLIDER[l]['v3'].set(round(walk_fix['moves'][walk['step']][l][2]*1000.0))
                     walk['step']+=1
         if walk['style']=='gravity':
-            print 'walk : ',walk['current_leg'], ' => ',walk['current_phase']
+            print('walk : ',walk['current_leg'], ' => ',walk['current_phase'])
             #check if sim value are ok with current values:
             if mod==False: # all programmed movements are done
                 # prepare the next movement
@@ -1268,20 +1268,20 @@ def update_linears_actuators():
                                  #method='Nelder-Mead',\
                                  bounds=bounds,
                                  tol=1e-6)
-                    print "try to move gravity center on the triangle opposite to the moving leg:"
-                    print "res is:",res
+                    print("try to move gravity center on the triangle opposite to the moving leg:")
+                    print("res is:",res)
                     nv=kinetic_for_gravity_center_fix_feet(res.x,TRIANGLES[walk['current_leg']],(FL,FR,RL,RR),False)
-                    print "kinetic:",res.x,TRIANGLES[walk['current_leg']],(FL,FR,RL,RR)
-                    print "nv is:",nv
+                    print("kinetic:",res.x,TRIANGLES[walk['current_leg']],(FL,FR,RL,RR))
+                    print("nv is:",nv)
                     for l in FL,FR,RL,RR:
-                        print "setting actuator values for leg ",l,nv[1][l]
+                        print("setting actuator values for leg ",l,nv[1][l])
                         for v in 'v1','v2','v3':
                             LEGS_SLIDER[l][v].set(round(nv[1][l][v+'sim']))
-                        print "setting actuator values for leg ",[  LEGS_SLIDER[l][v].get() for v in LEGS_SLIDER[l]]
+                        print("setting actuator values for leg ",[  LEGS_SLIDER[l][v].get() for v in LEGS_SLIDER[l]])
                     walk['current_phase']='start_gravity_wait'
                     #walk['enabled']=False
                 elif walk['current_phase']=='start_gravity_wait':
-                    print "raise leg 5 cm over the ground"
+                    print("raise leg 5 cm over the ground")
                     feet=ROBOT['feets'][walk['current_leg']]
                     nfeet=list(feet)
                     nfeet[Z]+=0.05
@@ -1300,7 +1300,7 @@ def update_linears_actuators():
                     # need to compute next leg position according to direction
                     walk['current_phase']='moving'
                 elif walk['current_phase']=='moving':
-                    print "leg is moved, lower it"
+                    print("leg is moved, lower it")
                     if walk['current_leg']==FL:
                         np=get_point_projection_on_plane(ROBOT['feets'][FR],ROBOT['feets'][RL],ROBOT['feets'][RR],ROBOT['feets'][walk['current_leg']])
                     elif walk['current_leg']==FR:
@@ -1309,7 +1309,7 @@ def update_linears_actuators():
                         np=get_point_projection_on_plane(ROBOT['feets'][FL],ROBOT['feets'][FR],ROBOT['feets'][RR],ROBOT['feets'][walk['current_leg']])
                     elif walk['current_leg']==RR:
                         np=get_point_projection_on_plane(ROBOT['feets'][FL],ROBOT['feets'][FR],ROBOT['feets'][RL],ROBOT['feets'][walk['current_leg']])
-                    print np
+                    print(np)
                     lfeet=numpy.matmul(ROBOT['LEGS'][walk['current_leg']]['imatrix'],list(np[0])+[1]).tolist()
                     rev=inverse_kinetic(lfeet[X],lfeet[Y])
                     LEGS_SLIDER[walk['current_leg']]['v1'].set(rev[0]*1000.0)
@@ -1327,7 +1327,7 @@ def update_linears_actuators():
                     walk['current_phase']='start'
 
 
-                print "DEBUG2:",walk
+                print("DEBUG2:",walk)
                 
                 
                 
@@ -1347,7 +1347,7 @@ conf2.pack(side=LEFT)
 
 def switch_walk():
     global walk,walkButton_variable
-    print "switch"
+    print("switch")
     if walk['enabled']:
         walk['enabled']=False
         walkButton_variable.set("off")

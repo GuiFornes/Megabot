@@ -31,7 +31,7 @@ class SimuControler:
         self.process.kill()
         self.process.wait()
     def write(self,buffer):
-        self.process.stdin.write(buffer)
+        self.process.stdin.write(buffer.encode())
         self.process.stdin.flush()
     def read(self,size):    
         r=select.select([self.process.stdout.fileno()],[],[],0.01)
@@ -91,7 +91,7 @@ class FakeControler:
 
 
 def read_id(s):
-    print "read id in : ",s
+    print("read id in : ",s)
     i=s.find("id[")
     if i==-1:
         return -1
@@ -117,14 +117,14 @@ def find_controler():
     
     for i in range(20):
         pname="/dev/ttyUSB%d"%i
-        print "try ",pname
+        print("try ",pname)
         if pname in blacklist:
             continue
         if os.path.exists(pname)==False:
             continue
         try:
             port=Serial(port=pname, baudrate=115200, timeout=0.2)
-            print 'port ',pname,' opened'
+            print('port ',pname,' opened')
         except Exception as e:
             traceback.print_exc()
             continue
@@ -135,7 +135,7 @@ def find_controler():
         if c==10:
             continue
         time.sleep(1.5)
-        print 'retrieve id...'
+        print('retrieve id...')
         port.write("???")
         time.sleep(1)
         port.write("???")
@@ -143,17 +143,17 @@ def find_controler():
         j=-1
         while t<10 and j==-1:
             j=read_id(port.read(8000))
-        print "find id: ",j
+        print("find id: ",j)
         if j<0 or j>3:
             continue
         if legs[j]!=None:
             legs[j].close()
-        print "set port ",port.port," for leg ",j
+        print("set port ",port.port," for leg ",j)
         legs[j]=port
 
     for i in range(len(legs)):
         if legs[i]==None:
-            print "ADD FAKE CONTROLER!"
+            print("ADD FAKE CONTROLER!")
             legs[i]=SimuControler(i)
     find_mutex.release()
 
@@ -199,7 +199,7 @@ class ControlerHandler(Thread):
             for v in d[1:]:
                 x=v.split(';')
                 if len(x)!=4:
-                    print "error in data values: ",x
+                    print("error in data values: ",x)
                     return
                 if x[0]=='0':
                     self.la[la]['enabled']=False
@@ -211,20 +211,20 @@ class ControlerHandler(Thread):
                 self.la[la]['time']=time.time()
                 la+=1
             if la!=3:
-                print "missing actuator in status for ",self.id
+                print("missing actuator in status for ",self.id)
         elif msg[0]=='D':
-            print "[Debug:",self.id,"][",msg,"]"
+            print("[Debug:",self.id,"][",msg,"]")
 
 
     def print_actuators_status(self):
-        print self.id,self.la
+        print(self.id,self.la)
 
     def moving(self,dst):
         for c in self.la:
             if c['enabled'] and  abs(c['target']-c['position'])>=dst:
                 return True
             if (time.time()-c['time'])>2:
-                print "lost status for leg ",self.id
+                print("lost status for leg ",self.id)
         return False
 
     def stop(self):
@@ -242,7 +242,7 @@ class ControlerHandler(Thread):
                     time.sleep(0.5)
                     continue
                 if legs[self.id]==None:
-                    print "no com"
+                    print("no com")
                     time.sleep(2)
                     continue
                 c=legs[self.id].read(60)
@@ -254,14 +254,14 @@ class ControlerHandler(Thread):
                                 full_msg=self.indata
                                 self.indata=''
                         elif d!='\n':
-                            self.indata+=d
+                            self.indata+= str(d)
                     if full_msg!='':
                         self.parse_msg(full_msg)
             except SerialException as e:
                 legs[self.id]=None
                 find_controler()
             except Exception as e :
-                print "thread ",self.id," receive an exception:",e
+                print("thread ",self.id," receive an exception:",e)
                 traceback.print_exc()
         if legs[self.id]!=None:
             legs[self.id].close()
@@ -280,26 +280,26 @@ def wait_move(cl,timeout,dst=None):
         done=True
         for c in cl:
             done=done and (controlers[c].moving(dst)==False)
-        print "done => ",done
+        print("done => ",done)
         time.sleep(0.1)
         if done==False and (time.time()-n)>timeout:
-            print "wait end by timeout"
+            print("wait end by timeout")
             for c in cl:
-                print "leg ",c," moving:",controlers[c].moving(dst)
+                print("leg ",c," moving:",controlers[c].moving(dst))
                 if controlers[c].moving(dst):
                     for l in controlers[c].la:
-                        print l['enabled'],'/',abs(l['position']-l['target']),',',
-                print 
+                        print(l['enabled'],'/',abs(l['position']-l['target']),',', end=' ')
+                print() 
                     
                 #    controlers[c].print_actuators_status()
             return False
-    print "wait end as there is no move",dst,": ",
+    print("wait end as there is no move",dst,": ", end=' ')
     for c in cl:
-        print c,'moving:',controlers[c].moving(dst),'[',
+        print(c,'moving:',controlers[c].moving(dst),'[', end=' ')
         for l in controlers[c].la:
-            print l['enabled'],'/',abs(l['position']-l['target']),',',
-        print ']'
-    print
+            print(l['enabled'],'/',abs(l['position']-l['target']),',', end=' ')
+        print(']')
+    print()
     return True
     
 
@@ -307,7 +307,7 @@ def wait_move(cl,timeout,dst=None):
 
 def upgrade_controlers(cl=None):
     if cl==None:
-        cl=range(4)
+        cl=list(range(4))
     for c in controlers:
         c.suspend(True)
     time.sleep(0.5)
@@ -321,15 +321,15 @@ def stop_all_actuators():
         tell_controler(i,"A_#B_#C_#")
 
 
-print "find controlers"        
+print("find controlers")        
 find_controler()
-print "done"
+print("done")
 
 
-print "run controler handlers"
+print("run controler handlers")
 controlers=[]
 for i in range(4):
     controlers.append(ControlerHandler(i))
     controlers[-1].start()
 
-print "done"
+print("done")

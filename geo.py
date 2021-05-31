@@ -51,7 +51,9 @@ def vectoriel3D(v1,v2):
         v1[Z]*v2[X] - v1[X]*v2[Z],
         v1[X]*v2[Y] - v1[Y]*v2[X]
     )
-def compute((xa,ya),(xb,yb),da,db):
+def compute(xxx_todo_changeme, xxx_todo_changeme1,da,db):
+    (xa,ya) = xxx_todo_changeme
+    (xb,yb) = xxx_todo_changeme1
     xa=float(xa)
     ya=float(ya)
     xb=float(xb)
