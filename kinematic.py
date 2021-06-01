@@ -1,5 +1,6 @@
 import numpy as np
 import kinetic as k
+import time
 
 
 x_A = - k.LEG_PARTS_LENGTHS['ao']
@@ -32,7 +33,7 @@ def al_kashi_angle(a, b, c):
 
 alpha = al_kashi_angle(AB, AC, BC)
 
-def direct(v1, v2):
+def direct_v1(v1, v2):
   theta1 = alpha + al_kashi_angle(AD, AC, v1)
   x_E = x_A + AE * np.cos(theta1)
   y_E = y_A + AE * np.sin(theta1)
@@ -59,4 +60,15 @@ def direct(v1, v2):
   return x_G + GJ * np.cos(theta6), y_G - GJ * np.sin(theta6)
 
 # Position de repos approximative :
-# print(direct(470,580))
+t = time.time()
+for i in range (10000):
+  direct_v1(495, 585)
+t1 = time.time() - t
+
+t = time.time()
+for i in range (10000):
+  k.get_leg_points_V1_V2(495/1000, 585/1000, k.LEG_PARTS_LENGTHS)['J']
+t2 = time.time() - t
+
+print("direct_v1 prend ", t1*100, " us")
+print("L'algo de Julien prend ", t2*100, " us")
