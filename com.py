@@ -37,9 +37,9 @@ class SimuControler:
         r=select.select([self.process.stdout.fileno()],[],[],0.01)
         if (len(r[0])>0):
             s=self.process.stdout.read(size)
-            return s
+            return s.decode()
         return ''
-    def reset_input_buffer(self):
+    def reset_input_buffer(self):  
         self.process.stdin.flush()
         self.process.stdout.flush()
 
