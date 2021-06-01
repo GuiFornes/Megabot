@@ -64,7 +64,6 @@ ROBOT={'LEGS':LEGS}
 
 LEG_PARTS_LENGTHS={'ao':130.0,'bo':120.0,'bcx':290.0,'bcy':60.0,'ae':500.0,'de':100.0,'ef':450.0,'fg':300.0,'fh':200.0,'gi':520.0,'bf':600.0,'gj':1030.0}
 
-    
 
 def update_transformation_matrices_for(matrix,imatrix,angle,origin):
     m = [ [math.cos(angle) , 0 , -math.sin(angle) , origin[X] ],
