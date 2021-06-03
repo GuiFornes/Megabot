@@ -25,7 +25,7 @@ GJ = k.LEG_PARTS_LENGTHS['gj']
 
 '''
 Retourne la Jacobienne correspondant au modèle cinématique indirect
-Prend en argument la position des points de la patte et l'élongation des verrins
+Prend en argument la position des points de la patte et l'élongation des verrins en m
 '''
 def gen_jacob(pts, v1, v2):
   x_A, y_A = pts['A']
@@ -75,6 +75,30 @@ def gen_jacob(pts, v1, v2):
   Jacob = inv((GJ/GI) * M_I)
 
   return Jacob
+
+'''
+  Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect
+  Prend en argument l'élongation des vérins et la distance de déplacement selon x et y en m
+'''
+def test_jacob(v1, v2, step):
+   
+  pts = k.get_leg_points_V1_V2(v1, v2, k.LEG_PARTS_LENGTHS)
+  x, y = pts['J']
+  Jacob = gen_jacob(pts, v1, v2)
+  Dpos = np.array([step, step])
+  DV = np.dot(Jacob, Dpos)
+  
+  pts = k.get_leg_points_V1_V2(v1 + DV[0], v2 + DV[1], k.LEG_PARTS_LENGTHS)
+  new_x, new_y = pts['J']
+  print("nouvelle position : ", new_x, new_y)
+  err_pos = np.array([new_x - x, new_y - y])
+  print("erreur de position en x : ", err_pos[0] * 1000, " mm")
+  print("erreur de position en y : ", err_pos[1] * 1000, " mm")  
+  err_rel = err_pos / step
+  print("erreur relative en x : ", err_rel[0])
+  print("erreur relative en y : ", err_rel[1])
+  print("\n")
+  return err_rel
 
 def distance_euclidienne(xi, yi, xj, yj):
   return np.sqrt((xj - xi)**2 + (yj - yi)**2)
@@ -127,4 +151,10 @@ def direct_v1(v1, v2):
 # print("direct_v1 prend ", t1*100, " us")
 # print("L'algo de Julien prend ", t2*100, " us")
 
-print(gen_jacob(k.get_leg_points_V1_V2(495/1000, 585/1000, k.LEG_PARTS_LENGTHS), 495/1000, 585/1000))
+
+#print(gen_jacob(k.get_leg_points_V1_V2(495/1000, 585/1000, k.LEG_PARTS_LENGTHS), 495/1000, 585/1000))
+
+
+test_jacob(495/1000, 585/1000, 1/1000)
+test_jacob(495/1000, 585/1000, 10/1000)
+test_jacob(495/1000, 585/1000, 100/1000)
