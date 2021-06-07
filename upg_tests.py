@@ -7,12 +7,11 @@ import time
 
 import kinetic as k
 from upg_kinetic import *
+
 '''
   Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect
   Prend en argument l'élongation des vérins et la distance de déplacement selon x et y en m
 '''
-
-
 def test_jacob(v1, v2, dstep_x, dstep_y):
 
     pts = k.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, k.LEGS[k.FR]['lengths'])
@@ -46,19 +45,17 @@ def test_jacob(v1, v2, dstep_x, dstep_y):
 '''
 Trace la trajectoire de la patte du robot entre 2 points de l'espace en suivant move_xyz
 '''
-
-
-def test_move_xyz(x0, y0, z0, x, y, z, dstep, eps):
+def test_move_xyz(x0, y0, z0, x, y, z, dstep, eps, leg_id):
     # Théorique
     Xt = [x0, x]
     Yt = [y0, y]
     Zt = [z0, z]
 
     #Positions des vérins
-    L = move_xyz(x, y, z, dstep, eps)
-    print (V, L[0])
-    Pos = list(map(direct_xyz, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L]))
-    print((x0, y0, z0), Pos[0])
+    L = move_xyz(x, y, z, dstep, eps, leg_id)
+    #print (V, L[0])
+    Pos = list(map(direct_xyz, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L], [k.FL for v in L]))
+    #print((x0, y0, z0), Pos[0])
     X = [p[0] for p in Pos]
     Y = [p[1] for p in Pos]
     Z = [p[2] for p in Pos]
@@ -69,7 +66,7 @@ def test_move_xyz(x0, y0, z0, x, y, z, dstep, eps):
     ax.plot(Xt, Yt, Zt, label='Théorique')  # Tracé de la courbe 3D
     ax.scatter(X, Y, Z, label='Positions',
                marker='d')  # Tracé des points 3D
-    plt.title("Trajectoire patte FR")
+    plt.title("Trajectoire patte FR avec dstep = " + str(dstep))
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
@@ -82,9 +79,13 @@ def test_move_xyz(x0, y0, z0, x, y, z, dstep, eps):
 t_move = 1
 # test de move_xyz
 if t_move:
-    x0, y0, z0 = direct_xyz(V[0], V[1], V[2])
-    #print(x0, y0, z0)
-    test_move_xyz(x0, y0, z0, 750, -600, -550, 10, 10)
+    x0, y0, z0 = direct_xyz(V[0], V[1], V[2], k.FL)
+    print(x0, y0, z0)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 10, 10, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 20, 10, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 5, 10, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 2, 10, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 1, 10, k.FL)
 
 t_jacob = 0
 # test de l'erreur relative de position en appliquant la Jacobienne

@@ -6,30 +6,33 @@ from numpy import dot
 
 import kinetic as k
 
-x_A = - k.LEGS[k.FR]['lengths']['ao']
+x_A = - k.LEGS[k.FL]['lengths']['ao']
 y_A = 0
-x_B = k.LEGS[k.FR]['lengths']['bo']
+x_B = k.LEGS[k.FL]['lengths']['bo']
 y_B = 0
 
-AB = k.LEGS[k.FR]['lengths']['ao'] + k.LEGS[k.FR]['lengths']['bo']
-AC = np.sqrt((AB + k.LEGS[k.FR]['lengths']['bcx'])**2 + k.LEGS[k.FR]['lengths']['bcy']**2)
-BC = np.sqrt(k.LEGS[k.FR]['lengths']['bcx']**2 + k.LEGS[k.FR]['lengths']['bcy']**2)
-AE = k.LEGS[k.FR]['lengths']['ae']
-AD = AE - k.LEGS[k.FR]['lengths']['de']
-BF = k.LEGS[k.FR]['lengths']['bf']
-FH = k.LEGS[k.FR]['lengths']['fh']
+AB = k.LEGS[k.FL]['lengths']['ao'] + k.LEGS[k.FL]['lengths']['bo']
+AC = np.sqrt((AB + k.LEGS[k.FL]['lengths']['bcx'])**2 + k.LEGS[k.FL]['lengths']['bcy']**2)
+BC = np.sqrt(k.LEGS[k.FL]['lengths']['bcx']**2 + k.LEGS[k.FL]['lengths']['bcy']**2)
+AE = k.LEGS[k.FL]['lengths']['ae']
+AD = AE - k.LEGS[k.FL]['lengths']['de']
+BF = k.LEGS[k.FL]['lengths']['bf']
+FH = k.LEGS[k.FL]['lengths']['fh']
 BH = BF - FH
-FG = k.LEGS[k.FR]['lengths']['fg']
-EF = k.LEGS[k.FR]['lengths']['ef']
+FG = k.LEGS[k.FL]['lengths']['fg']
+EF = k.LEGS[k.FL]['lengths']['ef']
 EG = EF + FG
-GI = k.LEGS[k.FR]['lengths']['gi']
-GJ = k.LEGS[k.FR]['lengths']['gj']
+GI = k.LEGS[k.FL]['lengths']['gi']
+GJ = k.LEGS[k.FL]['lengths']['gj']
 
-KO = k.LEGS[k.FR]['lengths']['yaw_c']
-LM = k.LEGS[k.FR]['lengths']['yaw_b']
-MO = k.LEGS[k.FR]['lengths']['yaw_a']
+KO = k.LEGS[k.FL]['lengths']['yaw_c']
+LM = k.LEGS[k.FL]['lengths']['yaw_b']
+MO = k.LEGS[k.FL]['lengths']['yaw_a']
 LO = np.sqrt(LM**2 + MO**2)
 beta = np.arctan(LM/MO)
+#print(beta)
+
+ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]]) #[[oritentation selon x][orientation selon y]]
 
 V = 460, 565, 500
 
@@ -105,6 +108,7 @@ Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
 '''
 def angle_to_v3(angle):
   #print(angle)
+  #print(beta)
   return np.sqrt(LO**2 + KO**2 - 2*LO*KO*np.cos(angle - beta))
 
 '''
@@ -113,31 +117,35 @@ Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
 '''
 def v3_to_angle(v3):
   #print(v3)
+  #print(beta)
   return np.arccos((KO**2 + LO**2 - v3**2)/(2*KO*LO)) + beta
 
 '''
 Retourne la liste des élongations successives des verrins permettant de placer le bout de la patte en (x,y,z)
 '''
-def move_xyz(x, y, z, dstep, eps):
+def move_xyz(x, y, z, dstep, eps, leg_id):
   L = []
   c = 0
   X = np.sqrt(x**2 + y**2)
   v1, v2, v3 = get_ver()
-  pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FR]['lengths'])
+  pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
   cur_X, cur_Y = pts['J'][0]*1000, pts['J'][1]*1000
   cur_angle = v3_to_angle(v3)
-  cur_x, cur_y = cur_X * np.cos(cur_angle), - cur_X * np.sin(cur_angle)
+  #cur_angle = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
+  cur_x, cur_y = ori[leg_id][0] * cur_X * np.cos(cur_angle), ori[leg_id][1] * cur_X * np.sin(cur_angle)
   dist = distance(x - cur_x, y - cur_y, z - cur_Y)
-  while dist > eps and c < 1000:
+  while dist > eps and c < 300:
     c += 1
     # on détermine dx, dy, dz tq conforme à dstep
     theta1 = np.arctan((y - cur_y)/(x - cur_x))
     theta2 = np.arctan((z - cur_Y)/(X - cur_X))
-    print(theta1, theta2)
+    #print(theta1, theta2)
     dx, dy, dz = deltas(theta1, theta2, dstep)
     #print(dx, dy, dz)
+
     # on calcule les nouveaux v1, v2, v3 (et on les ajoute à L)
     new_v3 = angle_to_v3(np.arctan((cur_y + dy)/(cur_x + dx))) 
+    #new_v3 = k.delta_angle_to_linear_actuator_v3(np.arctan((cur_y + dy)/(cur_x + dx)), k.LEGS[k.FL]['lengths'])
     dX = np.sqrt(dx**2 + dy**2)
     #print(dz)
     deltaXY = np.array([dX/1000, dz/1000])
@@ -152,10 +160,11 @@ def move_xyz(x, y, z, dstep, eps):
     L.append((v1, v2, v3))
 
     # on recalcule les nouvelles positions courantes et la distance à l'objectif
-    pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FR]['lengths'])
+    pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
     cur_X, cur_Y = pts['J'][0]*1000, pts['J'][1]*1000
     cur_angle = v3_to_angle(v3)
-    cur_x, cur_y = cur_X * np.cos(cur_angle), cur_X * np.sin(cur_angle)
+    #cur_angle = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
+    cur_x, cur_y = ori[leg_id][0] * cur_X * np.cos(cur_angle), ori[leg_id][1] * cur_X * np.sin(cur_angle)
     dist = distance(x - cur_x, y - cur_y, z - cur_Y)
   return L
 
@@ -164,12 +173,13 @@ def move_xyz(x, y, z, dstep, eps):
 '''
 Retourne les positions x, y, z du bout de la patte en fonctions des v1, v2, v3
 '''
-def direct_xyz(v1 ,v2, v3):
-  X, Y = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FR]['lengths'])['J']
+def direct_xyz(v1 ,v2, v3, leg_id):
+  X, Y = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])['J']
   #print (X, Y)
   alpha = v3_to_angle(v3)
-  x = X * np.cos(alpha) * 1000
-  y = -X * np.sin(alpha) * 1000
+  #alpha = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
+  x = ori[leg_id][0] * X * np.cos(alpha) * 1000
+  y = ori[leg_id][1] * X * np.sin(alpha) * 1000
   z = Y * 1000
   return x, y, z
 
