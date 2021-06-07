@@ -134,14 +134,16 @@ def move_xyz(x, y, z, dstep, eps, leg_id):
   #cur_angle = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
   cur_x, cur_y = ori[leg_id][0] * cur_X * np.cos(cur_angle), ori[leg_id][1] * cur_X * np.sin(cur_angle)
   dist = distance(x - cur_x, y - cur_y, z - cur_Y)
-  while dist > eps and c < 300:
+  while dist > eps and c < 100:
     c += 1
-    # on détermine dx, dy, dz tq conforme à dstep
-    theta1 = np.arctan((y - cur_y)/(x - cur_x))
-    theta2 = np.arctan((z - cur_Y)/(X - cur_X))
-    #print(theta1, theta2)
-    dx, dy, dz = deltas(theta1, theta2, dstep)
-    #print(dx, dy, dz)
+    U = np.array([(x - cur_x), (y - cur_y), (z - cur_Y)]) 
+    U = eps * U / np.linalg.norm(U)
+    #print(U)
+    dx, dy, dz = U[0], U[1], U[2]
+    if abs(x - cur_x) < eps : dx = 0
+    if abs(y - cur_y) < eps : dy = 0
+    if abs(z - cur_Y) < eps : dz = 0
+    print(dx, dy, dz)
 
     # on calcule les nouveaux v1, v2, v3 (et on les ajoute à L)
     new_v3 = angle_to_v3(np.arctan((cur_y + dy)/(cur_x + dx))) 

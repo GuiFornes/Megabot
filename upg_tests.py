@@ -19,19 +19,18 @@ def test_jacob(v1, v2, dstep_x, dstep_y):
     Jacob = gen_jacob(pts, v1 / 1000, v2 / 1000)
 
     Dpos = np.array([dstep_x / 1000, dstep_y / 1000])
-    DV = np.dot(Jacob, Dpos)
+    DV = Jacob @ Dpos
 
     pts = k.get_leg_points_V1_V2(v1 / 1000 + DV[0], v2 / 1000 + DV[1], k.LEGS[k.FR]['lengths'])
-    print("position initiale : ", x * 1000, y * 1000)
+    #print("position initiale : ", x * 1000, y * 1000)
 
     new_x, new_y = pts['J']
-    print("nouvelle position : ", new_x * 1000, new_y * 1000)
-    print("on s'est déplacé de ", (new_x - x) * 1000, " mm en x et de ", (new_y - y) * 1000,
-          " mm en y")
+    #print("nouvelle position : ", new_x * 1000, new_y * 1000)
+    print("on s'est déplacé de ", (new_x - x) * 1000, " mm en x et de ", (new_y - y) * 1000, " mm en y")
 
     err_pos = np.array([new_x - (x + dstep_x/1000), new_y - (y + dstep_y/1000)])
-    print("erreur de position en x : ", err_pos[0] * 1000, " mm")
-    print("erreur de position en y : ", err_pos[1] * 1000, " mm")
+    #print("erreur de position en x : ", err_pos[0] * 1000, " mm")
+    #print("erreur de position en y : ", err_pos[1] * 1000, " mm")
     err_rel = np.array([None, None])
     if dstep_x != 0: err_rel[0] = err_pos[0]*1000 / dstep_x
     if dstep_y != 0: err_rel[1] = err_pos[1]*1000 / dstep_y
@@ -81,46 +80,53 @@ t_move = 1
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], k.FL)
     print(x0, y0, z0)
-    test_move_xyz(x0, y0, z0, 750, 600, -550, 10, 10, k.FL)
-    test_move_xyz(x0, y0, z0, 750, 600, -550, 20, 10, k.FL)
-    test_move_xyz(x0, y0, z0, 750, 600, -550, 5, 10, k.FL)
-    test_move_xyz(x0, y0, z0, 750, 600, -550, 2, 10, k.FL)
-    test_move_xyz(x0, y0, z0, 750, 600, -550, 1, 10, k.FL)
+    # test_move_xyz(x0, y0, z0, 750, y0, z0, 10, 10, k.FL)
+    # test_move_xyz(x0, y0, z0, x0, 600, z0, 10, 10, k.FL)
+    # test_move_xyz(x0, y0, z0, x0, y0, -550, 10, 10, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -400, 10, 5, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 20, 5, k.FL)
+    test_move_xyz(x0, y0, z0, 750, 600, -550, 5, 5, k.FL)
+    # test_move_xyz(x0, y0, z0, 750, 600, -550, 2, 10, k.FL)
+    # test_move_xyz(x0, y0, z0, 750, 600, -550, 1, 10, k.FL)
 
 t_jacob = 0
 # test de l'erreur relative de position en appliquant la Jacobienne
 if t_jacob:
+    test_jacob(495, 585, 0, 0)
+    test_jacob(505, 585, 0, 0)
+    test_jacob(515, 585, 0, 0)
+
     test_jacob(495, 585, 10, 0)
     test_jacob(505, 585, 10, 0)
     test_jacob(515, 585, 10, 0)
 
-    test_jacob(495, 585, -10, 0)
-    test_jacob(505, 585, -10, 0)
-    test_jacob(515, 585, -10, 0)
+    # test_jacob(495, 585, -10, 0)
+    # test_jacob(505, 585, -10, 0)
+    # test_jacob(515, 585, -10, 0)
 
     test_jacob(495, 585, 0, 10)
     test_jacob(505, 585, 0, 10)
     test_jacob(515, 585, 0, 10)
 
-    test_jacob(495, 585, 0, -10)
-    test_jacob(505, 585, 0, -10)
-    test_jacob(515, 585, 0, -10)
+    # test_jacob(495, 585, 0, -10)
+    # test_jacob(505, 585, 0, -10)
+    # test_jacob(515, 585, 0, -10)
 
-    test_jacob(495, 585, 10, 10)
-    test_jacob(505, 585, 10, 10)
-    test_jacob(515, 585, 10, 10)
+    # test_jacob(495, 585, 10, 10)
+    # test_jacob(505, 585, 10, 10)
+    # test_jacob(515, 585, 10, 10)
 
-    test_jacob(495, 585, 10, -10)
-    test_jacob(505, 585, 10, -10)
-    test_jacob(515, 585, 10, -10)
+    # test_jacob(495, 585, 10, -10)
+    # test_jacob(505, 585, 10, -10)
+    # test_jacob(515, 585, 10, -10)
 
-    test_jacob(495, 585, -10, 10)
-    test_jacob(505, 585, -10, 10)
-    test_jacob(515, 585, -10, 10)
+    # test_jacob(495, 585, -10, 10)
+    # test_jacob(505, 585, -10, 10)
+    # test_jacob(515, 585, -10, 10)
 
-    test_jacob(495, 585, -10, -10)
-    test_jacob(505, 585, -10, -10)
-    test_jacob(515, 585, -10, -10)
+    # test_jacob(495, 585, -10, -10)
+    # test_jacob(505, 585, -10, -10)
+    # test_jacob(515, 585, -10, -10)
 
 ############################################################################
 
