@@ -46,7 +46,7 @@ def solve_indirect(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
 
   J = gen_jacob(pts, v1/1000, v2/1000)
 
-  P = 2 * J.T @ J 
+  P = 2 * J.T @ J  
   q = J.T @ (X0 - Xt)
   lb = np.array([450.0 - v1, 450.0 - v2])
   ub = np.array([650.0 - v1, 650.0 - v2])
@@ -60,54 +60,41 @@ def d3_to_d2(x, y, z, leg_id):
   X = np.sqrt(x**2 + y**2)
   Y = z
   mod = np.pi/2
-  alpha = (np.arctan(y/x) % mod ) + leg_id * mod
+  alpha = (np.arctan(x/y) % mod ) + leg_id * mod
   return X, Y, alpha
 
-def d2_to_d3(X, Y, alpha): # POURQUOI COS/SIN ?
-  x = X * np.cos(alpha)
-  y = X * np.sin(alpha)
+def d2_to_d3(X, Y, alpha):
+  x = X * np.sin(alpha)
+  y = X * np.cos(alpha)
   z = Y
   return x, y, z
 
-def test_d_to_d():
-  leg_id = 0
-  X = 10.0
-  Y = 8.0
-  alpha = 0.5
-  print(X, Y, alpha)
-  x, y, z = d2_to_d3(X, Y, alpha)
-  print(x, y, z)
-  X, Y, alpha = d3_to_d2(x, y, z, leg_id)
-  print(X, Y, alpha)
+
+def distance_3_points(A, B, C):
+  '''
+  Retourne la matrice des distances de A à B et à C
+  '''
+  return 2 * np.array([[A[0] - B[0], A[1] - B[1]], [A[0] - C[0], A[1] - C[1]]])
 
 
-
-'''
-Retourne la Jacobienne correspondant au modèle cinématique indirect
-Prend en argument la position des points de la patte et l'élongation des verrins en m
-'''
 def gen_jacob(pts, v1, v2):
-  x_A, y_A = pts['A']
-  x_B, y_B = pts['B']
-  x_C, y_C = pts['C']
-  x_D, y_D = pts['D']
+  '''
+  Retourne la Jacobienne correspondant au modèle cinématique indirect
+  Prend en argument la position des points de la patte et l'élongation des verrins en m
+  '''
   x_E, y_E = pts['E']
   x_F, y_F = pts['F']
   x_G, y_G = pts['G']
   x_H, y_H = pts['H']
   x_I, y_I = pts['I']
 
-  A = np.array([
-    [2*(x_D - x_A), 2*(y_D - y_A)], 
-    [2*(x_D - x_C), 2*(y_D - y_C)]])
+  A = distance_3_points(pts['D'], pts['A'], pts['C'])
   B = np.array([0, 2*v1])
   M_D = inv(A) @ B
 
   M_E = (AE/AD) * M_D
 
-  A = np.array([
-    [2*(x_F - x_E), 2*(y_F - y_E)], 
-    [2*(x_F - x_B), 2*(y_F - y_B)]])
+  A = distance_3_points(pts['F'], pts['E'], pts['B'])
   B = np.array([
     [2*(x_F - x_E), 2*(y_F - y_E)], 
     [0, 0]])
@@ -117,9 +104,7 @@ def gen_jacob(pts, v1, v2):
 
   M_H = (BH/BF) * M_F
 
-  A = np.array([
-    [2*(x_I - x_G), 2*(y_I - y_G)],
-    [2*(x_I - x_H), 2*(y_I - y_H)]])
+  A = distance_3_points(pts['I'], pts['G'], pts['H'])
   B = np.array([
     [2*(x_I - x_G), 2*(y_I - y_G)],
     [0, 0]])
@@ -137,28 +122,36 @@ def gen_jacob(pts, v1, v2):
 
 
 
-'''
-Fonction auxiliaire de move_xyz
-Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
-'''
+
 def angle_to_v3(angle):
-  #print(angle)
-  #print(beta)
+  '''
+  Fonction auxiliaire de move_xyz
+  Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
+    
+  >>> angle_to_v3(np.pi/4) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
+  0.0
+  >>> v3_to_angle(angle_to_v3(np.pi/4)) - np.pi/4 < 0.0000001 
+  True
+  '''
   return np.sqrt(LO**2 + KO**2 - 2*LO*KO*np.cos(angle - beta))
 
-'''
-Fonction auxiliaire de move_xyz
-Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
-'''
 def v3_to_angle(v3):
-  #print(v3)
-  #print(beta)
+  '''
+  Fonction auxiliaire de move_xyz
+  Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
+      
+  >>> v3_to_angle(500) - (al_kashi_angle(LO, KO, 500) + beta)
+  0.0
+  >>> angle_to_v3(v3_to_angle(500)) - 500 < 0.0000001 
+  True
+  '''
   return np.arccos((KO**2 + LO**2 - v3**2)/(2*KO*LO)) + beta
 
-'''
-Retourne la liste des élongations successives des verrins permettant de placer le bout de la patte en (x,y,z)
-'''
+
 def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
+  '''
+  Retourne la liste des élongations successives des verrins permettant de placer le bout de la patte en (x,y,z)
+  '''
   L = []
   c = 0
 
@@ -186,26 +179,45 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
 
 
 
-'''
-Retourne les positions x, y, z du bout de la patte en fonctions des v1, v2, v3
-'''
 def direct_xyz(v1 ,v2, v3, leg_id):
+  '''
+  Retourne les positions x, y, z du bout de la patte en fonctions des v1, v2, v3
+  '''
   X, Y = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])['J']
-  #print (X, Y)
   alpha = v3_to_angle(v3)
-  #alpha = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
-  x = ori[leg_id][0] * X * np.cos(alpha) * 1000
-  y = ori[leg_id][1] * X * np.sin(alpha) * 1000
+  x = ori[leg_id][0] * X * np.sin(alpha) * 1000
+  y = ori[leg_id][1] * X * np.cos(alpha) * 1000
   z = Y * 1000
   return x, y, z
 
 
 
-'''
-Calcule la distance euclidienne dans l'espace en 3 dimensions (ou 2D selon le nombre de coordonnées passées en paramètre)
-'''
 def distance(x, y, z=0):
+  '''
+  Calcule la distance euclidienne dans l'espace en 3 dimensions (ou 2D selon le nombre de coordonnées passées en paramètre)
+  
+  >>> distance(0, 0, 0)
+  0.0
+  >>> distance(1, 0, 0)
+  1.0
+  >>> distance(0, 1, 0)
+  1.0
+  >>> distance(0, 1, 0)
+  1.0
+  >>> distance(0, 0, 1)
+  1.0
+  >>> np.abs(distance(1, 1, 0) - np.sqrt(2)) < 0.0000001 
+  True
+  '''
   return np.sqrt(x**2+y**2+z**2)
+
+
+
+def al_kashi_longueur(a, b, alpha):
+  return np.sqrt(a**2 + b**2 - 2*a*b*np.cos(alpha))
+
+def al_kashi_angle(a, b, c):
+  return np.arccos((a**2 + b**2 - c**2) / (2*a*b))
 
 
 
@@ -213,12 +225,6 @@ def distance(x, y, z=0):
 
 def distance_euclidienne(xi, yi, xj, yj):
   return np.sqrt((xj - xi)**2 + (yj - yi)**2)
-
-def al_kashi_longueur(a,b,alpha):
-  return np.sqrt(a**2 + b**2 + 2*a*b*np.cos(alpha))
-
-def al_kashi_angle(a, b, c):
-  return np.arccos((a**2 + b**2 - c**2) / (2*a*b))
 
 alpha = al_kashi_angle(AB, AC, BC)
 
@@ -271,53 +277,8 @@ def set_ver(v1, v2, v3):
   global V
   V = v1, v2, v3
 
-'''
-Retourne la liste des élongations successives des verrins permettant de placer le bout de la patte en (x,y,z)
-'''
-def old_move_xyz(x, y, z, dstep, eps, leg_id, v1, v2, v3):
-  L = []
-  c = 0
-  X = np.sqrt(x**2 + y**2)
-  pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
-  cur_X, cur_Y = pts['J'][0]*1000, pts['J'][1]*1000
-  cur_angle = v3_to_angle(v3)
-  #cur_angle = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
-  cur_x, cur_y = ori[leg_id][0] * cur_X * np.cos(cur_angle), ori[leg_id][1] * cur_X * np.sin(cur_angle)
-  dist = distance(x - cur_x, y - cur_y, z - cur_Y)
-  while dist > eps and c < 100:
-    c += 1
-    U = np.array([(x - cur_x), (y - cur_y), (z - cur_Y)]) 
-    U = eps * U / np.linalg.norm(U)
-    #print(U)
-    dx, dy, dz = U[0], U[1], U[2]
-    if abs(x - cur_x) < eps : dx = 0
-    if abs(y - cur_y) < eps : dy = 0
-    if abs(z - cur_Y) < eps : dz = 0
-    print(dx, dy, dz)
-
-    # on calcule les nouveaux v1, v2, v3 (et on les ajoute à L)
-    new_v3 = angle_to_v3(np.arctan((cur_y + dy)/(cur_x + dx))) 
-    #new_v3 = k.delta_angle_to_linear_actuator_v3(np.arctan((cur_y + dy)/(cur_x + dx)), k.LEGS[k.FL]['lengths'])
-    dX = np.sqrt(dx**2 + dy**2)
-    #print(dz)
-    deltaXY = np.array([dX/1000, dz/1000])
-    Jacob = gen_jacob(pts, v1/1000, v2/1000)
-    #print(Jacob)
-    dv1v2 = Jacob @ deltaXY
-    #print(dv1v2)
-    v1 += dv1v2[0]*1000
-    v2 += dv1v2[1]*1000
-    v3 = new_v3
-    #print(v1, v2, v3)
-    L.append((v1, v2, v3))
-
-    # on recalcule les nouvelles positions courantes et la distance à l'objectif
-    pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
-    cur_X, cur_Y = pts['J'][0]*1000, pts['J'][1]*1000
-    cur_angle = v3_to_angle(v3)
-    #cur_angle = k.v3_to_delta_angle(v3, k.LEGS[k.FL]['lengths'])
-    cur_x, cur_y = ori[leg_id][0] * cur_X * np.cos(cur_angle), ori[leg_id][1] * cur_X * np.sin(cur_angle)
-    dist = distance(x - cur_x, y - cur_y, z - cur_Y)
-  return L
-
 ############################################################################
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

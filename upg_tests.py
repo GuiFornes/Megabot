@@ -77,9 +77,9 @@ def test_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     plt.show()
 
     # Tracé des positions des vérins
-    plt.plot(V1, T, label='V1' )
-    plt.plot(V2, T, label='V2' )
-    plt.plot(V3, T, label='V3' )
+    plt.plot(T, V1, label='V1' )
+    plt.plot(T, V2, label='V2' )
+    plt.plot(T, V3, label='V3' )
     plt.title("Elongations des vérins dans le mouvement")
     # plt.plot.set_xlabel('L (en mm)')
     # plt.plot.set_ylabel('T')
@@ -111,7 +111,7 @@ if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], k.FL)
     print(x0, y0, z0)
     test_move_xyz(x0, y0, z0, 750, y0, z0, 1, 1, 5, k.FL)
-    test_move_xyz(x0, y0, z0, x0, 600, z0, 1, 1, 5, k.FL)
+    test_move_xyz(x0, y0, z0, x0, 700, z0, 1, 1, 5, k.FL)
     test_move_xyz(x0, y0, z0, x0, y0, -550, 1, 1, 5, k.FL)
     test_move_xyz(x0, y0, z0, 750, 600, -400, 1, 1, 5, k.FL)
 
@@ -169,11 +169,13 @@ if t_comp:
 
     t = time.time()
     for i in range(10000):
-        k.get_leg_points_V1_V2(495 / 1000, 585 / 1000 ,
-                               k.LEGS[k.FR]['lengths'])['J']
+        k.get_leg_points_V1_V2(495 / 1000, 585 / 1000 , k.LEGS[k.FR]['lengths'])['J']
     t2 = time.time() - t
 
     print("direct_v1 prend ", t1 * 100, " us")
     print("L'algo de Julien prend ", t2 * 100, " us")
+
+    print("direct v1 retourne : ", direct_v1(495, 585))
+    print("L'algo de Julien retourne :", k.get_leg_points_V1_V2(495 / 1000, 585 / 1000 , k.LEGS[k.FR]['lengths'])['J'])
 
 ############################################################################
