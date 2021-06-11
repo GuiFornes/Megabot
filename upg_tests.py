@@ -111,7 +111,7 @@ if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], k.FL)
     print(x0, y0, z0)
     test_move_xyz(x0, y0, z0, 750, y0, z0, 1, 1, 5, k.FL)
-    test_move_xyz(x0, y0, z0, x0, 600, z0, 1, 1, 5, k.FL)
+    test_move_xyz(x0, y0, z0, x0, 700, z0, 1, 1, 5, k.FL)
     test_move_xyz(x0, y0, z0, x0, y0, -550, 1, 1, 5, k.FL)
     test_move_xyz(x0, y0, z0, 750, 600, -400, 1, 1, 5, k.FL)
 
