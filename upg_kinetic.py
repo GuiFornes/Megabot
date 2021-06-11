@@ -28,8 +28,6 @@ KO = k.LEGS[k.FL]['lengths']['yaw_c']
 LM = k.LEGS[k.FL]['lengths']['yaw_b']
 MO = k.LEGS[k.FL]['lengths']['yaw_a']
 LO = np.sqrt(LM**2 + MO**2)
-beta = np.arctan(LM/MO)
-#print(beta)
 
 ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]]) #[[oritentation selon x][orientation selon y]]
 
@@ -37,45 +35,48 @@ V = 460, 565, 500
 
 
 def solve_indirect(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
-  X, Y, alpha = d3_to_d2(x, y, z, leg_id)
+  X, Y, calpha = d3_to_d2(x, y, z)
   Xt = np.array([X/1000, Y/1000])
-  new_v3 = angle_to_v3(alpha)
+  #dv3 = (- np.sqrt(1-calpha**2) / v3 ) * np.arctan(x/y)-np.arctan(x0-y0)
+  new_v3 = cos_angle_to_v3(calpha)
 
-  X, Y, alpha = d3_to_d2(x0, y0, z0, leg_id)
+  X, Y, calpha = d3_to_d2(x0, y0, z0)
   X0 = np.array([X/1000, Y/1000])
 
   J = gen_jacob(pts, v1/1000, v2/1000)
 
   P = 2 * J.T @ J  
   q = J.T @ (X0 - Xt)
+  G = np.array([
+    [1, 1],
+    [1, 1],
+  ])
+  h = np.array([0.01, 0.01])
   lb = np.array([450.0 - v1, 450.0 - v2])
   ub = np.array([650.0 - v1, 650.0 - v2])
-  dV = solve_qp(P, q, lb=lb, ub=ub)
+  dV = solve_qp(P, q, G, h, lb=lb, ub=ub)
 
   return v1+dV[0]*1000, v2+dV[1]*1000, new_v3
 
 
   
-def d3_to_d2(x, y, z, leg_id):
+def d3_to_d2(x, y, z):
   X = np.sqrt(x**2 + y**2)
   Y = z
-  mod = np.pi/2
-  alpha = (np.arctan(x/y) % mod ) + leg_id * mod
-  return X, Y, alpha
+  calpha = y/X
+  return X, Y, calpha
 
-def d2_to_d3(X, Y, alpha):
-  x = X * np.sin(alpha)
-  y = X * np.cos(alpha)
+def d2_to_d3(X, Y, calpha):
+  x = X * np.sqrt(1-calpha**2)
+  y = X * calpha
   z = Y
   return x, y, z
-
 
 def distance_3_points(A, B, C):
   '''
   Retourne la matrice des distances de A à B et à C
   '''
   return 2 * np.array([[A[0] - B[0], A[1] - B[1]], [A[0] - C[0], A[1] - C[1]]])
-
 
 def gen_jacob(pts, v1, v2):
   '''
@@ -114,7 +115,9 @@ def gen_jacob(pts, v1, v2):
   D = np.array([0, 2*v2])
   V1 = inv(A) @ (B @ M_G + C @ M_H)
   V2 = inv(A) @ D 
-  M_I = np.array([[V1[0], V2[0]], [V1[1], V2[1]]])
+  M_I = np.array([
+    [V1[0], V2[0]],
+    [V1[1], V2[1]]])
 
   Jacob = inv((GJ/GI) * M_I)
 
@@ -122,30 +125,31 @@ def gen_jacob(pts, v1, v2):
 
 
 
-
-def angle_to_v3(angle):
+def cos_angle_to_v3(cangle):
   '''
   Fonction auxiliaire de move_xyz
-  Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
-    
-  >>> angle_to_v3(np.pi/4) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
+  Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis  
+
+  >>> cos_angle_to_v3(np.cos(np.pi/4)) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
   0.0
-  >>> v3_to_angle(angle_to_v3(np.pi/4)) - np.pi/4 < 0.0000001 
+  >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4))) - np.cos(np.pi/4) < 0.0000001 
   True
   '''
-  return np.sqrt(LO**2 + KO**2 - 2*LO*KO*np.cos(angle - beta))
+  return np.sqrt(LO**2 + KO**2 - 2*LO*KO * (cangle * MO/LO + np.sqrt(1-cangle**2)*np.sqrt(1-(MO/LO)**2)))
 
-def v3_to_angle(v3):
+def v3_to_cos_angle(v3):
   '''
   Fonction auxiliaire de move_xyz
   Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
       
-  >>> v3_to_angle(500) - (al_kashi_angle(LO, KO, 500) + beta)
+  >>> v3_to_cos_angle(500) - np.cos(al_kashi_angle(LO, KO, 500) + beta)
   0.0
-  >>> angle_to_v3(v3_to_angle(500)) - 500 < 0.0000001 
+  >>> angle_to_cos_v3(v3_to_cos_angle(500)) - 500 < 0.0000001 
   True
   '''
-  return np.arccos((KO**2 + LO**2 - v3**2)/(2*KO*LO)) + beta
+  return (KO**2 + LO**2 - v3**2)/(2*KO*LO) * MO/LO - np.sqrt(1 - ((KO**2 + LO**2 - v3**2)/(2*KO*LO))**2) * np.sqrt(1-(MO/LO)**2)
+
+
 
 
 def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
@@ -157,14 +161,12 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
 
   pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
   X, Y = pts['J'][0]*1000, pts['J'][1]*1000
-  x0, y0, z0 = d2_to_d3(X, Y, v3_to_angle(v3))
+  x0, y0, z0 = d2_to_d3(X, Y, v3_to_cos_angle(v3))
   dist = distance(x - x0, y - y0, z - z0)
-
   while dist > eps and c < 300:
     c += 1
-
-    U = np.array([(x - x0), (y - y0), (z - z0)]) 
-    U = dstep / 100 * U #/ np.linalg.norm(U)**p
+    U = np.array([(x - x0), (y - y0), (z - z0)])
+    U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
     v1, v2, v3 = solve_indirect(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
@@ -172,7 +174,7 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     
     pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
     X, Y = pts['J'][0]*1000, pts['J'][1]*1000
-    x0, y0, z0 = d2_to_d3(X, Y, v3_to_angle(v3))
+    x0, y0, z0 = d2_to_d3(X, Y, v3_to_cos_angle(v3))
     dist = distance(x - x0, y - y0, z - z0)
 
   return L
@@ -184,9 +186,9 @@ def direct_xyz(v1 ,v2, v3, leg_id):
   Retourne les positions x, y, z du bout de la patte en fonctions des v1, v2, v3
   '''
   X, Y = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])['J']
-  alpha = v3_to_angle(v3)
-  x = ori[leg_id][0] * X * np.sin(alpha) * 1000
-  y = ori[leg_id][1] * X * np.cos(alpha) * 1000
+  calpha = v3_to_cos_angle(v3)
+  x = ori[leg_id][0] * X * np.sqrt(1-calpha**2) * 1000
+  y = ori[leg_id][1] * X * calpha * 1000
   z = Y * 1000
   return x, y, z
 
@@ -265,17 +267,31 @@ def deltas(theta1, theta2, dstep):
   dy = deltaX * np.sin(theta1)
   return dx, dy, dz
 
-'''
-Retourne les positions des verrins
-'''
-def get_ver():
-  #return 485, 545, 515
-  #return (controlers[l].la[1]['position']+450.0)/1000.0, (controlers[l].la[0]['position']+450.0)/1000.0, (controlers[l].la[2]['position']+450.0)/1000.0
-  return V
+beta = np.cos(MO/LO)
 
-def set_ver(v1, v2, v3):
-  global V
-  V = v1, v2, v3
+def angle_to_v3(angle):
+  '''
+  Fonction auxiliaire de move_xyz
+  Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
+    
+  >>> angle_to_v3(np.pi/4) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
+  0.0
+  >>> v3_to_angle(angle_to_v3(np.pi/4)) - np.pi/4 < 0.0000001 
+  True
+  '''
+  return np.sqrt(LO**2 + KO**2 - 2*LO*KO*np.cos(angle - beta))
+
+def v3_to_angle(v3):
+  '''
+  Fonction auxiliaire de move_xyz
+  Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
+      
+  >>> v3_to_angle(500) - (al_kashi_angle(LO, KO, 500) + beta)
+  0.0
+  >>> angle_to_v3(v3_to_angle(500)) - 500 < 0.0000001 
+  True
+  '''
+  return np.arccos((KO**2 + LO**2 - v3**2)/(2*KO*LO)) + beta
 
 ############################################################################
 
