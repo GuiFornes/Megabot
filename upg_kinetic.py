@@ -34,42 +34,52 @@ ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]]) #[[oritentation selon x][orient
 V = 460, 565, 500
 
 
-def solve_indirect(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
-  X, Y, calpha = d3_to_d2(x, y, z)
-  Xt = np.array([X/1000, Y/1000])
-  #dv3 = (- np.sqrt(1-calpha**2) / v3 ) * np.arctan(x/y)-np.arctan(x0-y0)
+def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
+  X, Z, calpha = d3_to_d2(x, y, z)
+  Xt = np.array([X/1000, Z/1000])
   new_v3 = cos_angle_to_v3(calpha)
 
-  X, Y, calpha = d3_to_d2(x0, y0, z0)
-  X0 = np.array([X/1000, Y/1000])
+  X, Z, calpha = d3_to_d2(x0, y0, z0)
+  X0 = np.array([X/1000, Z/1000])
 
-  J = gen_jacob(pts, v1/1000, v2/1000)
+  J = gen_jacob_plan(pts, v1/1000, v2/1000)
 
   P = 2 * J.T @ J  
   q = J.T @ (X0 - Xt)
-  G = np.array([
-    [1, 1],
-    [1, 1],
-  ])
-  h = np.array([0.01, 0.01])
-  lb = np.array([450.0 - v1, 450.0 - v2])
-  ub = np.array([650.0 - v1, 650.0 - v2])
-  dV = solve_qp(P, q, G, h, lb=lb, ub=ub)
+  lb = np.array([(450.0 - v1)/1000, (450.0 - v2)/1000])
+  ub = np.array([(650.0 - v1)/1000, (650.0 - v2)/1000])
+  dV = solve_qp(P, q, lb=lb, ub=ub)
 
   return v1+dV[0]*1000, v2+dV[1]*1000, new_v3
 
 
+
+def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
+  Xt = np.array([x, y, z]) / 1000
+  X0 = np.array([x0, y0, z0]) / 1000
+
+  J = gen_matrix_leg(v1, v2, v3, np.arctan(x0/y0), k.FL) # MARCHE PAS POUR AUTRE QUE k.FL
+
+  P = 2 * J.T @ J  
+  q = J.T @ (X0 - Xt)
+  lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3]) / 1000
+  ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3]) / 1000
+  dV = solve_qp(P, q, lb=lb, ub=ub)
+
+  return v1+dV[0]*1000, v2+dV[1]*1000, v3+dV[2]*1000
   
+
+
 def d3_to_d2(x, y, z):
   X = np.sqrt(x**2 + y**2)
-  Y = z
+  Z = z
   calpha = y/X
-  return X, Y, calpha
+  return X, Z, calpha
 
-def d2_to_d3(X, Y, calpha):
+def d2_to_d3(X, Z, calpha):
   x = X * np.sqrt(1-calpha**2)
   y = X * calpha
-  z = Y
+  z = Z
   return x, y, z
 
 def distance_3_points(A, B, C):
@@ -78,9 +88,9 @@ def distance_3_points(A, B, C):
   '''
   return 2 * np.array([[A[0] - B[0], A[1] - B[1]], [A[0] - C[0], A[1] - C[1]]])
 
-def gen_jacob(pts, v1, v2):
+def gen_jacob_plan(pts, v1, v2):
   '''
-  Retourne la Jacobienne correspondant au modèle cinématique indirect
+  Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte 
   Prend en argument la position des points de la patte et l'élongation des verrins en m
   '''
   x_E, y_E = pts['E']
@@ -123,7 +133,36 @@ def gen_jacob(pts, v1, v2):
 
   return Jacob
 
+def gen_matrix_leg(v1, v2, v3, alpha, leg_id): # ATTENTION A ORI
+  '''
+  Génère la matrice de passage de (dx, dy, dz) vers (dv1, dv2, dv3)
+  '''
+  pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
 
+  A = mat_A(pts, v1, v2, v3, alpha)
+  B = mat_B(pts, alpha, leg_id)
+  
+  return A @ inv(B)
+
+def mat_A(pts, v1, v2, v3, alpha):  
+  Jacob = gen_jacob_plan(pts, v1/1000, v2/1000)
+
+  A = np.array([
+  [Jacob[0][0], Jacob[0][1], 0],
+  [Jacob[1][0], Jacob[1][1], 0],
+  [0, 0, -np.sin(alpha)/v3]])
+
+  return A
+
+def mat_B(pts, alpha, leg_id):
+  X = distance(pts['J'][0]*1000, pts['J'][1]*1000)
+
+  B = np.array([
+  [np.cos(np.pi/2 - alpha) * ori[leg_id][0], 0, X * np.sin(np.pi/2 - alpha) * ori[leg_id][0]],
+  [-np.sin(np.pi/2 - alpha) * ori[leg_id][1], 0, X * np.cos(np.pi/2 - alpha) * ori[leg_id][1]],
+  [0, 1, 0]])
+
+  return B
 
 def cos_angle_to_v3(cangle):
   '''
@@ -160,8 +199,8 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
   c = 0
 
   pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
-  X, Y = pts['J'][0]*1000, pts['J'][1]*1000
-  x0, y0, z0 = d2_to_d3(X, Y, v3_to_cos_angle(v3))
+  X, Z = pts['J'][0]*1000, pts['J'][1]*1000
+  x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
   dist = distance(x - x0, y - y0, z - z0)
   while dist > eps and c < 300:
     c += 1
@@ -169,12 +208,12 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
-    v1, v2, v3 = solve_indirect(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
+    v1, v2, v3 = solve_indirect_cart(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
     L.append((v1, v2, v3))
     
     pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
-    X, Y = pts['J'][0]*1000, pts['J'][1]*1000
-    x0, y0, z0 = d2_to_d3(X, Y, v3_to_cos_angle(v3))
+    X, Z = pts['J'][0]*1000, pts['J'][1]*1000
+    x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
     dist = distance(x - x0, y - y0, z - z0)
 
   return L
@@ -185,11 +224,11 @@ def direct_xyz(v1 ,v2, v3, leg_id):
   '''
   Retourne les positions x, y, z du bout de la patte en fonctions des v1, v2, v3
   '''
-  X, Y = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])['J']
+  X, Z = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])['J']
   calpha = v3_to_cos_angle(v3)
   x = ori[leg_id][0] * X * np.sqrt(1-calpha**2) * 1000
   y = ori[leg_id][1] * X * calpha * 1000
-  z = Y * 1000
+  z = Z * 1000
   return x, y, z
 
 

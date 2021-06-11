@@ -16,7 +16,7 @@ def test_jacob(v1, v2, dstep_x, dstep_y):
 
     pts = k.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, k.LEGS[k.FR]['lengths'])
     x, y = pts['J'][0], pts['J'][1] 
-    Jacob = gen_jacob(pts, v1 / 1000, v2 / 1000)
+    Jacob = gen_jacob_plan(pts, v1 / 1000, v2 / 1000)
 
     Dpos = np.array([dstep_x / 1000, dstep_y / 1000])
     DV = Jacob @ Dpos
@@ -103,9 +103,30 @@ def test_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     # ax2.set_xlabel('time (s)')
 
 
+def test_A(dX, dZ, dalpha, v1, v2, v3):
+  alpha = v3_to_angle(v3)
+  print (alpha)
+  pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
+  A = mat_A(pts, v1, v2, v3, alpha)
+
+  dPos = np.array([dX/1000, dZ/1000, dalpha])
+  dV = A @ dPos
+
+  new_v1, new_v2 = v1 + dV[0]*1000, v2 + dV[1]*1000
+  new_pts = k.get_leg_points_V1_V2(new_v1/1000, new_v2/1000, k.LEGS[k.FL]['lengths'])
+
+  new_alpha = v3_to_angle(v3 + dV[2]*1000)
+  print (dV)
+  print(new_alpha)
+  err_rel = (abs(new_pts['J'][0] - pts['J'][0])*1000 - dX)/dX, (abs(new_pts['J'][1] - pts['J'][1])*1000 - dZ)/dZ, (abs(new_alpha - alpha) - dalpha)/dalpha
+
+  return err_rel
+
+print (test_A(1, -1, 0.1, V[0], V[1], V[2]))
+
 ################################# TESTS ####################################
 
-t_move = 1
+t_move = 0
 # test de move_xyz
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], k.FL)
