@@ -92,6 +92,9 @@ def gen_jacob_plan(pts, v1, v2):
   '''
   Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte 
   Prend en argument la position des points de la patte et l'élongation des verrins en m
+
+  >>> gen_jacob_plan(k.get_leg_points_V1_V2(0.495, 0.585, k.LEGS[k.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
+  array([0., 0.])
   '''
   x_E, y_E = pts['E']
   x_F, y_F = pts['F']
@@ -103,7 +106,7 @@ def gen_jacob_plan(pts, v1, v2):
   B = np.array([0, 2*v1])
   M_D = inv(A) @ B
 
-  M_E = (AE/AD) * M_D
+  M_E = (k.LEGS[k.FL]['lengths']['ae']/(k.LEGS[k.FL]['lengths']['ae'] - k.LEGS[k.FL]['lengths']['de'])) * M_D
 
   A = distance_3_points(pts['F'], pts['E'], pts['B'])
   B = np.array([
@@ -111,7 +114,7 @@ def gen_jacob_plan(pts, v1, v2):
     [0, 0]])
   M_F = (inv(A) @ B) @ M_E
 
-  M_G = (EG/EF) * M_F
+  M_G =((k.LEGS[k.FL]['lengths']['ef']+k.LEGS[k.FL]['lengths']['fg']) / k.LEGS[k.FL]['lengths']['ef']) * M_F
 
   M_H = (BH/BF) * M_F
 
@@ -129,7 +132,7 @@ def gen_jacob_plan(pts, v1, v2):
     [V1[0], V2[0]],
     [V1[1], V2[1]]])
 
-  Jacob = inv((GJ/GI) * M_I)
+  Jacob = inv((k.LEGS[k.FL]['lengths']['gj']/k.LEGS[k.FL]['lengths']['gi']) * M_I)
 
   return Jacob
 
@@ -155,11 +158,12 @@ def mat_A(pts, v1, v2, v3, alpha):
   return A
 
 def mat_B(pts, alpha, leg_id):
-  X = distance(pts['J'][0]*1000, pts['J'][1]*1000)
+  X = pts['J'][0]*1000
+  Z = pts['J'][1]*1000
 
   B = np.array([
   [np.cos(np.pi/2 - alpha) * ori[leg_id][0], 0, X * np.sin(np.pi/2 - alpha) * ori[leg_id][0]],
-  [-np.sin(np.pi/2 - alpha) * ori[leg_id][1], 0, X * np.cos(np.pi/2 - alpha) * ori[leg_id][1]],
+  [-np.sin(np.pi/2 - alpha) * ori[leg_id][1], 0, Z * np.cos(np.pi/2 - alpha) * ori[leg_id][1]],
   [0, 1, 0]])
 
   return B
@@ -169,7 +173,7 @@ def cos_angle_to_v3(cangle):
   Fonction auxiliaire de move_xyz
   Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis  
 
-  >>> cos_angle_to_v3(np.cos(np.pi/4)) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
+  >>> cos_angle_to_v3(np.cos(np.pi/4)) - al_kashi_longueur(KO, LO, np.pi/4 - np.arccos(MO/LO))
   0.0
   >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4))) - np.cos(np.pi/4) < 0.0000001 
   True
@@ -181,9 +185,9 @@ def v3_to_cos_angle(v3):
   Fonction auxiliaire de move_xyz
   Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
       
-  >>> v3_to_cos_angle(500) - np.cos(al_kashi_angle(LO, KO, 500) + beta)
+  >>> v3_to_cos_angle(500) - np.cos(al_kashi_angle(LO, KO, 500) + np.arccos(MO/LO))
   0.0
-  >>> angle_to_cos_v3(v3_to_cos_angle(500)) - 500 < 0.0000001 
+  >>> cos_angle_to_v3(v3_to_cos_angle(500)) - 500 < 0.0000001
   True
   '''
   return (KO**2 + LO**2 - v3**2)/(2*KO*LO) * MO/LO - np.sqrt(1 - ((KO**2 + LO**2 - v3**2)/(2*KO*LO))**2) * np.sqrt(1-(MO/LO)**2)
@@ -208,13 +212,14 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
-    v1, v2, v3 = solve_indirect_cart(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
-    L.append((v1, v2, v3))
-    
+    v1, v2, v3 = solve_indirect_cyl(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
     pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
     X, Z = pts['J'][0]*1000, pts['J'][1]*1000
+    x1, y1, z1 = x0+dx, y0+dy, z0+dz
     x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
+
     dist = distance(x - x0, y - y0, z - z0)
+    L.append((v1, v2, v3))
 
   return L
 
@@ -337,3 +342,50 @@ def v3_to_angle(v3):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+
+def gen_jacob_direct(pts, v1, v2):
+  '''
+  Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
+  Prend en argument la position des points de la patte et l'élongation des verrins en m
+
+  >>> gen_jacob_plan(k.get_leg_points_V1_V2(0.495, 0.585, k.LEGS[k.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
+  array([0., 0.])
+  '''
+  x_E, y_E = pts['E']
+  x_F, y_F = pts['F']
+  x_G, y_G = pts['G']
+  x_H, y_H = pts['H']
+  x_I, y_I = pts['I']
+
+  A = distance_3_points(pts['D'], pts['A'], pts['C'])
+  B = np.array([0, 2*v1])
+  M_D = inv(A) @ B
+
+  M_E = (k.LEGS[k.FL]['lengths']['ae']/(k.LEGS[k.FL]['lengths']['ae'] - k.LEGS[k.FL]['lengths']['de'])) * M_D
+
+  A = distance_3_points(pts['F'], pts['E'], pts['B'])
+  B = np.array([
+    [2*(x_F - x_E), 2*(y_F - y_E)],
+    [0, 0]])
+  M_F = (inv(A) @ B) @ M_E
+
+  M_G =((k.LEGS[k.FL]['lengths']['ef']+k.LEGS[k.FL]['lengths']['fg']) / k.LEGS[k.FL]['lengths']['ef']) * M_F
+
+  M_H = (BH/BF) * M_F
+
+  A = distance_3_points(pts['I'], pts['G'], pts['H'])
+  B = np.array([
+    [2*(x_I - x_G), 2*(y_I - y_G)],
+    [0, 0]])
+  C = np.array([
+    [0, 0],
+    [2*(x_I - x_H), 2*(y_I - y_H)]])
+  D = np.array([0, 2*v2])
+  V1 = inv(A) @ (B @ M_G + C @ M_H)
+  V2 = inv(A) @ D
+  M_I = np.array([
+    [V1[0], V2[0]],
+    [V1[1], V2[1]]])
+
+  return (k.LEGS[k.FL]['lengths']['gj']/k.LEGS[k.FL]['lengths']['gi']) * M_I
+
