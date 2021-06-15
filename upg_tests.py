@@ -126,7 +126,7 @@ print (test_A(1, -1, 0.1, V[0], V[1], V[2]))
 
 ################################# TESTS ####################################
 
-t_move = 0
+t_move = 1
 # test de move_xyz
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], k.FL)

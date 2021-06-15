@@ -92,6 +92,11 @@ def gen_jacob_plan(pts, v1, v2):
   '''
   Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte 
   Prend en argument la position des points de la patte et l'élongation des verrins en m
+
+  
+  >>> gen_jacob_plan(k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths']), v1/1000, v2/1000) @ np.array([0, 0]) == np.array([0, 0])
+  True
+
   '''
   x_E, y_E = pts['E']
   x_F, y_F = pts['F']
@@ -155,11 +160,12 @@ def mat_A(pts, v1, v2, v3, alpha):
   return A
 
 def mat_B(pts, alpha, leg_id):
-  X = distance(pts['J'][0]*1000, pts['J'][1]*1000)
+  X = pts['J'][0]*1000
+  Z = pts['J'][1]*1000
 
   B = np.array([
-  [np.cos(np.pi/2 - alpha) * ori[leg_id][0], 0, X * np.sin(np.pi/2 - alpha) * ori[leg_id][0]],
-  [-np.sin(np.pi/2 - alpha) * ori[leg_id][1], 0, X * np.cos(np.pi/2 - alpha) * ori[leg_id][1]],
+  [np.cos(alpha), 0, -X * np.sin(alpha)],
+  [np.sin(alpha), 0, Z * np.cos(alpha)],
   [0, 1, 0]])
 
   return B
@@ -169,10 +175,10 @@ def cos_angle_to_v3(cangle):
   Fonction auxiliaire de move_xyz
   Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis  
 
-  >>> cos_angle_to_v3(np.cos(np.pi/4)) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
-  0.0
-  >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4))) - np.cos(np.pi/4) < 0.0000001 
-  True
+  # >>> cos_angle_to_v3(np.cos(np.pi/4)) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
+  # 0.0
+  # >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4))) - np.cos(np.pi/4) < 0.0000001 
+  # True
   '''
   return np.sqrt(LO**2 + KO**2 - 2*LO*KO * (cangle * MO/LO + np.sqrt(1-cangle**2)*np.sqrt(1-(MO/LO)**2)))
 
@@ -181,10 +187,10 @@ def v3_to_cos_angle(v3):
   Fonction auxiliaire de move_xyz
   Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
       
-  >>> v3_to_cos_angle(500) - np.cos(al_kashi_angle(LO, KO, 500) + beta)
-  0.0
-  >>> angle_to_cos_v3(v3_to_cos_angle(500)) - 500 < 0.0000001 
-  True
+  # >>> v3_to_cos_angle(500) - np.cos(al_kashi_angle(LO, KO, 500) + beta)
+  # 0.0
+  # >>> cos_angle_to_v3(v3_to_cos_angle(500)) - 500 < 0.0000001 
+  # True
   '''
   return (KO**2 + LO**2 - v3**2)/(2*KO*LO) * MO/LO - np.sqrt(1 - ((KO**2 + LO**2 - v3**2)/(2*KO*LO))**2) * np.sqrt(1-(MO/LO)**2)
 
@@ -208,7 +214,7 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
-    v1, v2, v3 = solve_indirect_cart(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
+    v1, v2, v3 = solve_indirect_cyl(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
     L.append((v1, v2, v3))
     
     pts = k.get_leg_points_V1_V2(v1/1000, v2/1000, k.LEGS[k.FL]['lengths'])
