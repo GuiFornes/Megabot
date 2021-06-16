@@ -129,7 +129,7 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
   X, Z, calpha = d3_to_d2(x, y, z)
   Xt = np.array([X, Z]) / 1000
   new_v3 = cos_angle_to_v3(calpha)
-  
+
   X, Z, calpha = d3_to_d2(x0, y0, z0)
   X0 = np.array([X, Z]) / 1000
 
@@ -151,6 +151,7 @@ def mat_A(pts, v1, v2, v3, alpha):
   '''
   Fonction auxiliaire de gen_jacob_3
   Génère la matrice A conformément à nos équations (cf. indirect.pdf)
+  Toutes les longueurs en m
   '''
   Jacob = gen_jacob_2(pts, v1, v2)
 
@@ -165,6 +166,7 @@ def mat_B(pts, alpha, leg_id):
   '''
   Fonction auxiliaire de gen_jacob_3
   Génère la matrice B conformément à nos équations (cf. indirect.pdf)
+  Toutes les longueurs en m
   '''
   X = pts['J'][0]
 
@@ -181,7 +183,7 @@ def gen_jacob_3(v1, v2, v3, alpha, leg_id):
   Prend en argument l'élongation des verrins en m et l'angle alpha en radian
   La jacobienne doit être appliquée sur des élongations en m et retourne des position en m
   '''
-  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, kin.LEGS[kin.FL]['lengths'])
+  pts = kin.get_leg_points_V1_V2(v1, v2, kin.LEGS[kin.FL]['lengths'])
   A = mat_A(pts, v1, v2, v3, alpha)
   B = mat_B(pts, alpha, leg_id)
   
@@ -230,7 +232,7 @@ def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
-    v1, v2, v3 = solve_indirect_cyl(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
+    v1, v2, v3 = solve_indirect_cart(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
     L.append((v1, v2, v3))
     
     pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, kin.LEGS[kin.FL]['lengths'])
