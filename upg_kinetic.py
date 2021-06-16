@@ -151,13 +151,14 @@ def mat_A(pts, v1, v2, v3, alpha):
   '''
   Fonction auxiliaire de gen_jacob_3
   Génère la matrice A conformément à nos équations (cf. indirect.pdf)
+  >>>
   '''
   Jacob = gen_jacob_2(pts, v1/1000, v2/1000)
 
   A = np.array([
   [Jacob[0][0], Jacob[0][1], 0],
   [Jacob[1][0], Jacob[1][1], 0],
-  [0, 0, np.sin(alpha - np.arccos(MO/LO)) * KO * LO / v3]])
+  [0, 0, np.sin(alpha - np.arccos(MO/LO)) * (KO/1000) * (LO/1000) / (v3/1000)]])
 
   return A
 

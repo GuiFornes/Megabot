@@ -19,7 +19,7 @@ def test_jacob_2(v1, v2, dstep_x, dstep_y):
 
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FR]['lengths'])
     x, y = pts['J'][0], pts['J'][1] 
-    Jacob = gen_jacob_plan(pts, v1 / 1000, v2 / 1000)
+    Jacob = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
 
     Dpos = np.array([dstep_x / 1000, dstep_y / 1000])
     DV = Jacob @ Dpos
@@ -90,23 +90,45 @@ def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     plt.show()
 
 def test_A(dX, dZ, dalpha, v1, v2, v3):
-  alpha = v3_to_angle(v3)
-  print (alpha)
-  pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])
-  A = mat_A(pts, v1, v2, v3, alpha)
+  lpl = kin.LEGS[kin.FL]['lengths']
+  # alpha = np.cos(v3_to_cos_angle(v3))
+  # print (alpha)
+  # pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+  # A = mat_A(pts, v1, v2, v3, alpha)
+  #
+  # dPos = np.array([dX/1000, dZ/1000, dalpha])
+  # dV = A @ dPos
+  #
+  # new_v1, new_v2 = v1 + dV[0]*1000, v2 + dV[1]*1000
+  # new_pts = kin.get_leg_points_V1_V2(new_v1 / 1000, new_v2 / 1000, lpl)
+  #
+  # new_alpha = np.arccos(v3_to_cos_angle(v3 + dV[2]*1000))
+  # print (dV)
+  # print(new_alpha)
+  # err_rel = (abs(new_pts['J'][0] - pts['J'][0])*1000 - dX)/dX, (abs(new_pts['J'][1] - pts['J'][1])*1000 - dZ)/dZ, \
+  #           (abs(new_alpha - alpha) - dalpha)/dalpha
 
+
+  alpha = np.cos(v3_to_cos_angle(v3))
+  pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
   dPos = np.array([dX/1000, dZ/1000, dalpha])
-  dV = A @ dPos
 
-  new_v1, new_v2 = v1 + dV[0]*1000, v2 + dV[1]*1000
-  new_pts = kin.get_leg_points_V1_V2(new_v1 / 1000, new_v2 / 1000, kin.LEGS[kin.FL]['lengths'])
+  # en utilisant mat A :
+  A = mat_A(pts, v1, v2, v3, alpha)
+  dVa = A @ dPos
+  v1a = v1 + dVa[0]*1000
+  v2a = v2 + dVa[1]*1000
+  v3a = v3 + dVa[2]*1000
+  print(direct_xyz(v1a, v2a, v3a, kin.FL))
 
-  new_alpha = v3_to_angle(v3 + dV[2]*1000)
-  print (dV)
-  print(new_alpha)
-  err_rel = (abs(new_pts['J'][0] - pts['J'][0])*1000 - dX)/dX, (abs(new_pts['J'][1] - pts['J'][1])*1000 - dZ)/dZ, (abs(new_alpha - alpha) - dalpha)/dalpha
-
-  return err_rel
+  # en séparant jacob 2D et v3
+  J = gen_jacob_2(pts, v1, v2)
+  dPos2d = np.array([dPos[0], dPos[1]])
+  dVj = J @ dPos2d
+  v1j = v1 + dVj[0]*1000
+  v2j = v2 + dVj[1]*1000
+  v3j = cos_angle_to_v3(np.cos(alpha + dalpha))
+  print(direct_xyz(v1j, v2j, v3j, kin.FL))
 
 
 def test_jacob_2_direct():
@@ -270,7 +292,7 @@ def make_a_circle(v1, v2, r, n, leg_id):
     #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
     #print("VERINS_________actual :", v1, v2)
     dX = np.array([X-X0, Z-Z0])
-    J = gen_jacob_plan(pts, v1/1000, v2/1000)
+    J = gen_jacob_2(pts, v1/1000, v2/1000)
     P = 2 * J.T @ J
     q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
     lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
@@ -353,7 +375,7 @@ def make_a_penalty(v1, v2, d, eps, leg_id):
     print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
     print("VERINS_________actual :", v1, v2)
     dX = np.array([X - X0, Z - Z0])
-    J = gen_jacob_plan(pts, v1 / 1000, v2 / 1000)
+    J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
     P = 2 * J.T @ J
     q = J.T @ (np.array([X0 / 1000, Z0 / 1000]) - np.array([X / 1000, Z / 1000]))
     lb = np.array([(450.0 - v1), (450.0 - v2)]) / 1000
@@ -465,7 +487,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
-t_move = 1
+t_move = 0
 # test de normalized_move_xyz
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], kin.FL)
@@ -514,7 +536,7 @@ if t_jacob:
     # test_jacob_2(505, 585, -10, -10)
     # test_jacob_2(515, 585, -10, -10)
 
-t_a = 0
+t_a = 1
 if t_a:
     print (test_A(1, -1, 0.1, V[0], V[1], V[2]))
 
