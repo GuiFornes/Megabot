@@ -19,7 +19,7 @@ def test_jacob_2(v1, v2, dstep_x, dstep_y):
 
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FR]['lengths'])
     x, y = pts['J'][0], pts['J'][1] 
-    Jacob = gen_jacob_plan(pts, v1 / 1000, v2 / 1000)
+    Jacob = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
 
     Dpos = np.array([dstep_x / 1000, dstep_y / 1000])
     DV = Jacob @ Dpos
@@ -236,7 +236,7 @@ def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
     print("selon minimize, V =", r[0], r[1], "________________________________position atteinte en x, y =",
           kin.get_leg_points_V1_V2(r[0], r[1], lpl)['J'])
 
-    J = gen_jacob_plan(pts, v1, v2)
+    J = gen_jacob_2(pts, v1, v2)
     dV = J @ dX
     print("selon la methode jacobienne, V =", v1 + dV[0], v2 + dV[1], "___________________position atteinte en x, y =",
           kin.get_leg_points_V1_V2(v1 + dV[0], v2 + dV[1], lpl)['J'])
@@ -250,48 +250,12 @@ def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
           kin.get_leg_points_V1_V2(v1 + dV[0], v2 + dV[1], lpl)['J'])
     print("\n")
 
-def make_a_circle(v1, v2, r, n, leg_id):
-  lpl = kin.LEGS[leg_id]['lengths']
-  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
-  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
-  alpha = np.cos(np.pi/4)
-  res = []
-
-  # drawing the circle
-  Lx=np.zeros(n+1)
-  Lz=np.zeros(n+1)
-  for k in range(n+1):
-    X = X0 + r * np.cos(2*k*np.pi/n) - r
-    Z = Z0 + r * np.sin(2*k*np.pi/n)
-    Lx[k], Lz[k] = X, Z
-  # running around the circle
-  for k in range(1, n+1):
-    X, Z = Lx[k], Lz[k]
-    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
-    #print("VERINS_________actual :", v1, v2)
-    dX = np.array([X-X0, Z-Z0])
-    J = gen_jacob_plan(pts, v1/1000, v2/1000)
-    P = 2 * J.T @ J
-    q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
-    lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
-    ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
-    dV = J @ dX
-    #print(dV)
-    #dV = solve_qp(P, q, lb=lb, ub=ub)
-    #print(dV)
-    v1 += dV[0]
-    v2 += dV[1]
-    res.append((v1, v2))
-    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
-    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
-  return res
-
 def gen_jacob_direct(pts, v1, v2):
   '''
   Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
   Prend en argument la position des points de la patte et l'élongation des verrins en m
 
-  >>> gen_jacob_plan(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
+  >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
   array([0., 0.])
   '''
   x_E, y_E = pts['E']
@@ -353,7 +317,7 @@ def make_a_penalty(v1, v2, d, eps, leg_id):
     print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
     print("VERINS_________actual :", v1, v2)
     dX = np.array([X - X0, Z - Z0])
-    J = gen_jacob_plan(pts, v1 / 1000, v2 / 1000)
+    J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
     P = 2 * J.T @ J
     q = J.T @ (np.array([X0 / 1000, Z0 / 1000]) - np.array([X / 1000, Z / 1000]))
     lb = np.array([(450.0 - v1), (450.0 - v2)]) / 1000

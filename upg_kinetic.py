@@ -47,8 +47,9 @@ def distance_3_points(A, B, C):
 
 def gen_jacob_2(pts, v1, v2):
   '''
-  Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte 
+  Retourne la jacobienne correspondant au modèle cinématique indirect dans le plan de la patte 
   Prend en argument la position des points de la patte et l'élongation des verrins en m
+  La jacobienne doit être appliqué sur des élongations en m et retourne des position en m
 
   >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
   array([0., 0.])
@@ -123,15 +124,14 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
   '''
   Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
   en minimisant les erreurs d'élongation sur v1 et v2 (utilise Jacob_2)
+  Toutes les longueurs sont en mm (entrées comme sorties)
   '''
   X, Z, calpha = d3_to_d2(x, y, z)
-  Xt = np.array([X/1000, Z/1000])
+  Xt = np.array([X, Z]) / 1000
   new_v3 = cos_angle_to_v3(calpha)
-
-  dv3 = np.sin(alpha - np.arccos(MO/LO)) * KO * LO / v3 * dalpha
-
+  
   X, Z, calpha = d3_to_d2(x0, y0, z0)
-  X0 = np.array([X/1000, Z/1000])
+  X0 = np.array([X, Z]) / 1000
 
   J = gen_jacob_2(pts, v1/1000, v2/1000)
 
@@ -152,12 +152,12 @@ def mat_A(pts, v1, v2, v3, alpha):
   Fonction auxiliaire de gen_jacob_3
   Génère la matrice A conformément à nos équations (cf. indirect.pdf)
   '''
-  Jacob = gen_jacob_2(pts, v1/1000, v2/1000)
+  Jacob = gen_jacob_2(pts, v1, v2)
 
   A = np.array([
   [Jacob[0][0], Jacob[0][1], 0],
   [Jacob[1][0], Jacob[1][1], 0],
-  [0, 0, np.sin(alpha - np.arccos(MO/LO)) * KO * LO / v3]])
+  [0, 0, np.sin(alpha - np.arccos(MO/LO)) * (KO/1000) * (LO/1000) / v3]])
 
   return A
 
@@ -166,7 +166,7 @@ def mat_B(pts, alpha, leg_id):
   Fonction auxiliaire de gen_jacob_3
   Génère la matrice B conformément à nos équations (cf. indirect.pdf)
   '''
-  X = pts['J'][0]*1000
+  X = pts['J'][0]
 
   B = np.array([
   [np.cos(np.pi/2 - alpha), 0, X * np.sin(np.pi/2 - alpha)],
@@ -177,7 +177,9 @@ def mat_B(pts, alpha, leg_id):
 
 def gen_jacob_3(v1, v2, v3, alpha, leg_id):
   '''
-  Génère la matrice de passage de (dx, dy, dz) vers (dv1, dv2, dv3)
+  Retourne la jacobienne correspondant au modèle cinématique indirect dans le repère cartésien centré en O 
+  Prend en argument l'élongation des verrins en m et l'angle alpha en radian
+  La jacobienne doit être appliquée sur des élongations en m et retourne des position en m
   '''
   pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, kin.LEGS[kin.FL]['lengths'])
   A = mat_A(pts, v1, v2, v3, alpha)
@@ -191,11 +193,12 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
   '''
   Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
   en minimisant les erreurs d'élongation sur v1, v2 et v3 (utilise Jacob_3)
+  Toutes les longueurs sont en mm (entrées comme sorties)
   '''
   Xt = np.array([x, y, z]) / 1000
   X0 = np.array([x0, y0, z0]) / 1000
 
-  J = gen_jacob_3(v1, v2, v3, np.arctan(x0/y0), kin.FL) # MARCHE PAS POUR AUTRE QUE kin.FL
+  J = gen_jacob_3(v1/1000, v2/1000, v3/1000, np.arctan(x0/y0), kin.FL)
 
   P = 2 * J.T @ J  
   q = J.T @ (X0 - Xt)
@@ -227,7 +230,7 @@ def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
-    v1, v2, v3 = solve_indirect_cart(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
+    v1, v2, v3 = solve_indirect_cyl(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
     L.append((v1, v2, v3))
     
     pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, kin.LEGS[kin.FL]['lengths'])
@@ -238,6 +241,182 @@ def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     dist = distance(x - x0, y - y0, z - z0)
 
   return L
+
+def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
+  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
+  alpha = np.cos(np.pi/4)
+  res = []
+
+  # Calcul des points du cercle
+  Lx=np.zeros(n+1)
+  Lz=np.zeros(n+1)
+  for k in range(n+1):
+    X = X0 + r * np.cos(2*k*np.pi/n) - r
+    Z = Z0 + r * np.sin(2*k*np.pi/n)
+    Lx[k], Lz[k] = X, Z
+
+  # Parcours du cercle
+  for k in range(1, n+1):
+    X, Z = Lx[k], Lz[k]
+    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    #print("VERINS_________actual :", v1, v2)
+    dX = np.array([X-X0, Z-Z0])
+    J = gen_jacob_2(pts, v1/1000, v2/1000)
+
+    if solved: # Utilisation du solveur
+      P = 2 * J.T @ J
+      q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
+      lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
+      ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
+      dV = solve_qp(P, q, lb=lb, ub=ub) * 1000
+    else: # Utilisation de la jacobienne sans solveur
+      dV = J @ dX
+
+    v1 += dV[0]
+    v2 += dV[1]
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
+
+def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
+  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
+  alpha = np.cos(np.pi/4)
+  res = []
+
+  # drawing the circle
+  Lx=np.zeros(n+1)
+  Lz=np.zeros(n+1)
+  for k in range(n+1):
+    X = X0 + r * np.cos(2*k*np.pi/n) - r
+    Z = Z0 + r * np.sin(2*k*np.pi/n)
+    Lx[k], Lz[k] = X, Z
+
+  # running around the circle
+  for k in range(1, n+1):
+    X, Z = Lx[k], Lz[k]
+    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    #print("VERINS_________actual :", v1, v2)
+    dX = np.array([X-X0, Z-Z0])
+    J = gen_jacob_2(pts, v1/1000, v2/1000)
+    P = 2 * J.T @ J
+    q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
+    lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
+    ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
+    dV = J @ dX
+    print(dV)
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
+def draw_approx_circle_2(v1, v2, r, n, leg_id):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
+  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
+  alpha = np.cos(np.pi/4)
+  res = []
+  # drawing the circle
+  Lx=np.zeros(n+1)
+  Lz=np.zeros(n+1)
+  for k in range(n+1):
+    X = X0 + r * np.cos(2*k*np.pi/n) - r
+    Z = Z0 + r * np.sin(2*k*np.pi/n)
+    Lx[k], Lz[k] = X, Z
+  # running around the circle
+  for k in range(1, n+1):
+    X, Z = Lx[k], Lz[k]
+    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    #print("VERINS_________actual :", v1, v2)
+    dX = np.array([X-X0, Z-Z0])
+    J = gen_jacob_2(pts, v1/1000, v2/1000)
+    P = 2 * J.T @ J
+    q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
+    lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
+    ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
+    dV = J @ dX
+    #print(dV)
+    #dV = solve_qp(P, q, lb=lb, ub=ub)
+    #print(dV)
+    v1 += dV[0]
+    v2 += dV[1]
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
+def draw_approx_circle_2(v1, v2, r, n, leg_id):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
+  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
+  alpha = np.cos(np.pi/4)
+  res = []
+  # drawing the circle
+  Lx=np.zeros(n+1)
+  Lz=np.zeros(n+1)
+  for k in range(n+1):
+    X = X0 + r * np.cos(2*k*np.pi/n) - r
+    Z = Z0 + r * np.sin(2*k*np.pi/n)
+    Lx[k], Lz[k] = X, Z
+  # running around the circle
+  for k in range(1, n+1):
+    X, Z = Lx[k], Lz[k]
+    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    #print("VERINS_________actual :", v1, v2)
+    dX = np.array([X-X0, Z-Z0])
+    J = gen_jacob_2(pts, v1/1000, v2/1000)
+    P = 2 * J.T @ J
+    q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
+    lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
+    ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
+    dV = J @ dX
+    #print(dV)
+    #dV = solve_qp(P, q, lb=lb, ub=ub)
+    #print(dV)
+    v1 += dV[0]
+    v2 += dV[1]
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
+
+
+def make_a_circle_3(v1, v2, r, n, leg_id):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
+  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
+  alpha = np.cos(np.pi/4)
+  res = []
+  # drawing the circle
+  Lx=np.zeros(n+1)
+  Lz=np.zeros(n+1)
+  for k in range(n+1):
+    X = X0 + r * np.cos(2*k*np.pi/n) - r
+    Z = Z0 + r * np.sin(2*k*np.pi/n)
+    Lx[k], Lz[k] = X, Z
+  # running around the circle
+  for k in range(1, n+1):
+    X, Z = Lx[k], Lz[k]
+    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    #print("VERINS_________actual :", v1, v2)
+    dX = np.array([X-X0, Z-Z0])
+    J = gen_jacob_2(pts, v1/1000, v2/1000)
+    P = 2 * J.T @ J
+    q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
+    lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
+    ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
+    dV = J @ dX
+    #print(dV)
+    #dV = solve_qp(P, q, lb=lb, ub=ub)
+    #print(dV)
+    v1 += dV[0]
+    v2 += dV[1]
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
 
 def direct_xyz(v1 ,v2, v3, leg_id):
   '''
