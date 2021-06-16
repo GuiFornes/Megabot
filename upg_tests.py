@@ -7,11 +7,13 @@ import time
 
 import kinetic as kin
 from upg_kinetic import *
+from upg_deprecated import *
 
 ############################# FONCTIONS DE TEST ################################
-def test_jacob(v1, v2, dstep_x, dstep_y):
+
+def test_jacob_2(v1, v2, dstep_x, dstep_y):
     '''
-      Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect
+      Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect plan
       Prend en argument l'élongation des vérins et la distance de déplacement selon x et y en m
     '''
 
@@ -42,9 +44,9 @@ def test_jacob(v1, v2, dstep_x, dstep_y):
     return err_rel
 
 
-def test_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
+def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     '''
-    Trace la trajectoire de la patte du robot entre 2 points de l'espace en suivant move_xyz
+    Trace la trajectoire de la patte du robot entre 2 points de l'espace en suivant normalized_move_xyz
     '''
     # Théorique
     Xt = [x0, x]
@@ -52,7 +54,7 @@ def test_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     Zt = [z0, z]
 
     # Positions des vérins
-    L = move_xyz(x, y, z, V[0], V[1], V[2], dstep, p, eps, leg_id)
+    L = normalized_move_xyz(x, y, z, V[0], V[1], V[2], dstep, p, eps, leg_id)
     V1 = [v[0] for v in L]
     V2 = [v[1] for v in L]
     V3 = [v[2] for v in L]
@@ -85,27 +87,7 @@ def test_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     plt.plot(T, V2, label='V2' )
     plt.plot(T, V3, label='V3' )
     plt.title("Elongations des vérins dans le mouvement")
-    # plt.plot.set_xlabel('L (en mm)')
-    # plt.plot.set_ylabel('T')
     plt.show()
-
-    # fig = plt.figure()
-    # fig.subplots_adjust(top=0.8)
-    # ax = fig.add_subplot(221)
-
-
-
-
-    # ax1.set_ylabel('volts')
-    # ax1.set_title('a sine wave')
-
-    # t = np.arange(0.0, 1.0, 0.01)
-    # s = np.sin(2 * np.pi * t)
-    # line, = ax1.plot(t, s, lw=2)
-
-    # ax2 = fig.add_subplot(212)
-    # ax2.set_xlabel('time (s)')
-
 
 def test_A(dX, dZ, dalpha, v1, v2, v3):
   alpha = v3_to_angle(v3)
@@ -127,10 +109,10 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
   return err_rel
 
 
-def test_jacob_direct():
-    """
-    Comparaison des resultats en J du modèle direct utilisant une jacobienne et de celui utilisant la géométrie
-    """
+def test_jacob_2_direct():
+    '''
+    Comparaison des resultats en J du modèle direct plan utilisant une jacobienne et de celui utilisant la géométrie
+    '''
     leg_id = kin.FL
     V = np.array([495, 585, 515])
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], leg_id)
@@ -152,7 +134,7 @@ def test_jacob_direct():
 
 
 def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
-    """
+    '''
     Test des précisions pas à pas pour chaque point de la patte en suivant une méthode géométrique exacte et une methode
     approchée utilisant la jacobienne
     @param v1: position initiale du vérin 1
@@ -161,7 +143,7 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     @param dv2: déplacement du vérin 2
     @param leg_id: id de la patte
     @return:
-    """
+    '''
     pts = kin.get_leg_points_V1_V2(v1, v2, kin.LEGS[leg_id]['lengths'])
     x_E, y_E = pts['E']
     x_F, y_F = pts['F']
@@ -238,9 +220,9 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
 
 
 def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
-    """
+    '''
     test de comparaison des méthodes de cinématique indirecte
-    """
+    '''
     leg_id = kin.FL
     lpl = kin.LEGS[leg_id]['lengths']
     pts = kin.get_leg_points_V1_V2(v1, v2, lpl)
@@ -268,6 +250,124 @@ def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
           kin.get_leg_points_V1_V2(v1 + dV[0], v2 + dV[1], lpl)['J'])
     print("\n")
 
+def make_a_circle(v1, v2, r, n, leg_id):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, lpl)
+  X0, Z0 = pts['J'][0]*1000, pts['J'][1]*1000
+  alpha = np.cos(np.pi/4)
+  res = []
+
+  # drawing the circle
+  Lx=np.zeros(n+1)
+  Lz=np.zeros(n+1)
+  for k in range(n+1):
+    X = X0 + r * np.cos(2*k*np.pi/n) - r
+    Z = Z0 + r * np.sin(2*k*np.pi/n)
+    Lx[k], Lz[k] = X, Z
+  # running around the circle
+  for k in range(1, n+1):
+    X, Z = Lx[k], Lz[k]
+    #print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    #print("VERINS_________actual :", v1, v2)
+    dX = np.array([X-X0, Z-Z0])
+    J = gen_jacob_plan(pts, v1/1000, v2/1000)
+    P = 2 * J.T @ J
+    q = J.T @ (np.array([X0/1000, Z0/1000]) - np.array([X/1000, Z/1000]))
+    lb = np.array([(450.0 - v1), (450.0 - v2)])/1000
+    ub = np.array([(650.0 - v1), (650.0 - v2)])/1000
+    dV = J @ dX
+    #print(dV)
+    #dV = solve_qp(P, q, lb=lb, ub=ub)
+    #print(dV)
+    v1 += dV[0]
+    v2 += dV[1]
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
+
+def gen_jacob_direct(pts, v1, v2):
+  '''
+  Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
+  Prend en argument la position des points de la patte et l'élongation des verrins en m
+
+  >>> gen_jacob_plan(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
+  array([0., 0.])
+  '''
+  x_E, y_E = pts['E']
+  x_F, y_F = pts['F']
+  x_G, y_G = pts['G']
+  x_H, y_H = pts['H']
+  x_I, y_I = pts['I']
+
+  A = distance_3_points(pts['D'], pts['A'], pts['C'])
+  B = np.array([0, 2*v1])
+  M_D = inv(A) @ B
+
+  M_E = (kin.LEGS[kin.FL]['lengths']['ae']/(kin.LEGS[kin.FL]['lengths']['ae'] - kin.LEGS[kin.FL]['lengths']['de'])) * M_D
+
+  A = distance_3_points(pts['F'], pts['E'], pts['B'])
+  B = np.array([
+    [2*(x_F - x_E), 2*(y_F - y_E)],
+    [0, 0]])
+  M_F = (inv(A) @ B) @ M_E
+
+  M_G =((kin.LEGS[kin.FL]['lengths']['ef']+kin.LEGS[kin.FL]['lengths']['fg']) / kin.LEGS[kin.FL]['lengths']['ef']) * M_F
+
+  M_H = (BH/BF) * M_F
+
+  A = distance_3_points(pts['I'], pts['G'], pts['H'])
+  B = np.array([
+    [2*(x_I - x_G), 2*(y_I - y_G)],
+    [0, 0]])
+  C = np.array([
+    [0, 0],
+    [2*(x_I - x_H), 2*(y_I - y_H)]])
+  D = np.array([0, 2*v2])
+  V1 = inv(A) @ (B @ M_G + C @ M_H)
+  V2 = inv(A) @ D
+  M_I = np.array([
+    [V1[0], V2[0]],
+    [V1[1], V2[1]]])
+
+  return (kin.LEGS[kin.FL]['lengths']['gj']/kin.LEGS[kin.FL]['lengths']['gi']) * M_I
+
+def make_a_penalty(v1, v2, d, eps, leg_id):
+  lpl = kin.LEGS[leg_id]['lengths']
+  pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+  X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  alpha = np.cos(np.pi / 4)
+  res = []
+
+  # drawing the shoot trajectoire
+  Lx = np.zeros(d//eps + 1)
+  Lz = np.zeros(d//eps + 1)
+  for k in range(d//eps + 1):
+    X = X0 + k * eps
+    Z = Z0
+    Lx[k], Lz[k] = X, Z
+  print(Lx, Lz)
+  # shooting that penalty
+  for k in range(1, d//eps + 1):
+    X, Z = Lx[k], Lz[k]
+    print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
+    print("VERINS_________actual :", v1, v2)
+    dX = np.array([X - X0, Z - Z0])
+    J = gen_jacob_plan(pts, v1 / 1000, v2 / 1000)
+    P = 2 * J.T @ J
+    q = J.T @ (np.array([X0 / 1000, Z0 / 1000]) - np.array([X / 1000, Z / 1000]))
+    lb = np.array([(450.0 - v1), (450.0 - v2)]) / 1000
+    ub = np.array([(650.0 - v1), (650.0 - v2)]) / 1000
+    dV = J @ dX
+    # print(dV)
+    # dV = solve_qp(P, q, lb=lb, ub=ub)
+    # print(dV)
+    v1 += dV[0]
+    v2 += dV[1]
+    res.append((v1, v2))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+  return res
 
 def test_circle_move_XZ(v1, v2, r, n, leg_id):
     '''
@@ -314,8 +414,6 @@ def test_circle_move_XZ(v1, v2, r, n, leg_id):
     # plt.plot.set_xlabel('L (en mm)')
     # plt.plot.set_ylabel('T')
     plt.show()
-
-
 
 def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     '''
@@ -368,53 +466,53 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 ################################# TESTS ####################################
 
 t_move = 1
-# test de move_xyz
+# test de normalized_move_xyz
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], kin.FL)
     print(x0, y0, z0)
-    test_move_xyz(x0, y0, z0, 750, y0, z0, 1, 1, 5, kin.FL)
-    test_move_xyz(x0, y0, z0, x0, 700, z0, 1, 1, 5, kin.FL)
-    test_move_xyz(x0, y0, z0, x0, y0, -550, 1, 1, 5, kin.FL)
-    test_move_xyz(x0, y0, z0, 750, 600, -400, 1, 1, 5, kin.FL)
+    test_normalized_move_xyz(x0, y0, z0, 750, y0, z0, 1, 1, 5, kin.FL)
+    test_normalized_move_xyz(x0, y0, z0, x0, 700, z0, 1, 1, 5, kin.FL)
+    test_normalized_move_xyz(x0, y0, z0, x0, y0, -550, 1, 1, 5, kin.FL)
+    test_normalized_move_xyz(x0, y0, z0, 750, 600, -400, 1, 1, 5, kin.FL)
 
 t_jacob = 0
 # test de l'erreur relative de position en appliquant la Jacobienne
 if t_jacob:
-    test_jacob(495, 585, 0, 0)
-    test_jacob(505, 585, 0, 0)
-    test_jacob(515, 585, 0, 0)
+    test_jacob_2(495, 585, 0, 0)
+    test_jacob_2(505, 585, 0, 0)
+    test_jacob_2(515, 585, 0, 0)
 
-    test_jacob(495, 585, 10, 0)
-    test_jacob(505, 585, 10, 0)
-    test_jacob(515, 585, 10, 0)
+    test_jacob_2(495, 585, 10, 0)
+    test_jacob_2(505, 585, 10, 0)
+    test_jacob_2(515, 585, 10, 0)
 
-    # test_jacob(495, 585, -10, 0)
-    # test_jacob(505, 585, -10, 0)
-    # test_jacob(515, 585, -10, 0)
+    # test_jacob_2(495, 585, -10, 0)
+    # test_jacob_2(505, 585, -10, 0)
+    # test_jacob_2(515, 585, -10, 0)
 
-    test_jacob(495, 585, 0, 10)
-    test_jacob(505, 585, 0, 10)
-    test_jacob(515, 585, 0, 10)
+    test_jacob_2(495, 585, 0, 10)
+    test_jacob_2(505, 585, 0, 10)
+    test_jacob_2(515, 585, 0, 10)
 
-    # test_jacob(495, 585, 0, -10)
-    # test_jacob(505, 585, 0, -10)
-    # test_jacob(515, 585, 0, -10)
+    # test_jacob_2(495, 585, 0, -10)
+    # test_jacob_2(505, 585, 0, -10)
+    # test_jacob_2(515, 585, 0, -10)
 
-    # test_jacob(495, 585, 10, 10)
-    # test_jacob(505, 585, 10, 10)
-    # test_jacob(515, 585, 10, 10)
+    # test_jacob_2(495, 585, 10, 10)
+    # test_jacob_2(505, 585, 10, 10)
+    # test_jacob_2(515, 585, 10, 10)
 
-    # test_jacob(495, 585, 10, -10)
-    # test_jacob(505, 585, 10, -10)
-    # test_jacob(515, 585, 10, -10)
+    # test_jacob_2(495, 585, 10, -10)
+    # test_jacob_2(505, 585, 10, -10)
+    # test_jacob_2(515, 585, 10, -10)
 
-    # test_jacob(495, 585, -10, 10)
-    # test_jacob(505, 585, -10, 10)
-    # test_jacob(515, 585, -10, 10)
+    # test_jacob_2(495, 585, -10, 10)
+    # test_jacob_2(505, 585, -10, 10)
+    # test_jacob_2(515, 585, -10, 10)
 
-    # test_jacob(495, 585, -10, -10)
-    # test_jacob(505, 585, -10, -10)
-    # test_jacob(515, 585, -10, -10)
+    # test_jacob_2(495, 585, -10, -10)
+    # test_jacob_2(505, 585, -10, -10)
+    # test_jacob_2(515, 585, -10, -10)
 
 t_a = 0
 if t_a:
@@ -422,7 +520,7 @@ if t_a:
 
 t_jacob_direct = 0
 if t_jacob_direct:
-    test_jacob_direct()
+    test_jacob_2_direct()
     test_precision_jacobienne_en_direct(0.495, 0.555, 0.015, -0.015, kin.FL)
 
 test_comp_indirect = 0
