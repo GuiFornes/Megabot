@@ -367,7 +367,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
-t_move = 0
+t_move = 1
 # test de move_xyz
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], kin.FL)
@@ -432,7 +432,7 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_different_moves = 1
+t_different_moves = 0
 if t_different_moves:
     test_circle_move_XZ(450, 500, 200, 50, kin.FL)
     test_penalty_move_XZ(450, 500, 500, 10, kin.FL)

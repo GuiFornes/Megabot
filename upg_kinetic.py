@@ -36,7 +36,11 @@ V = 460, 565, 500
 def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
   X, Z, calpha = d3_to_d2(x, y, z)
   Xt = np.array([X/1000, Z/1000])
-  new_v3 = cos_angle_to_v3(calpha)
+  #new_v3 = cos_angle_to_v3(calpha)
+  X0, Z0, calpha0 = d3_to_d2(x0, y0, z0)
+
+  dalpha = np.arccos(calpha) - np.arccos(calpha0)
+  dv3 = np.sin(alpha - np.arccos(MO/LO)) * KO * LO / v3 * dalpha
 
   X, Z, calpha = d3_to_d2(x0, y0, z0)
   X0 = np.array([X/1000, Z/1000])
@@ -49,6 +53,7 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
   ub = np.array([(650.0 - v1)/1000, (650.0 - v2)/1000])
   dV = solve_qp(P, q, lb=lb, ub=ub)
 
+  new_v3 = v3 + dv3
   return v1+dV[0]*1000, v2+dV[1]*1000, new_v3
 
 
@@ -146,29 +151,27 @@ def gen_matrix_leg(v1, v2, v3, alpha, leg_id): # ATTENTION A ORI
   Génère la matrice de passage de (dx, dy, dz) vers (dv1, dv2, dv3)
   '''
   pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, kin.LEGS[kin.FL]['lengths'])
-
   A = mat_A(pts, v1, v2, v3, alpha)
   B = mat_B(pts, alpha, leg_id)
   
   return A @ inv(B)
 
-def mat_A(pts, v1, v2, v3, alpha):  
+def mat_A(pts, v1, v2, v3, alpha):
   Jacob = gen_jacob_plan(pts, v1/1000, v2/1000)
 
   A = np.array([
   [Jacob[0][0], Jacob[0][1], 0],
   [Jacob[1][0], Jacob[1][1], 0],
-  [0, 0, -np.sin(alpha)/v3]])
+  [0, 0, np.sin(alpha - np.arccos(MO/LO)) * KO * LO / v3]])
 
   return A
 
 def mat_B(pts, alpha, leg_id):
   X = pts['J'][0]*1000
-  Z = pts['J'][1]*1000
 
   B = np.array([
-  [np.cos(alpha), 0, -X * np.sin(alpha)],
-  [np.sin(alpha), 0, Z * np.cos(alpha)],
+  [np.cos(np.pi/2 - alpha), 0, X * np.sin(np.pi/2 - alpha)],
+  [np.sin(np.pi/2 - alpha), 0, -X * np.cos(np.pi/2 - alpha)],
   [0, 1, 0]])
 
   return B
@@ -217,7 +220,7 @@ def move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     U = dstep / 100 * U # / np.linalg.norm(U)**p
     dx, dy, dz = U[0], U[1], U[2]
 
-    v1, v2, v3 = solve_indirect_cyl(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
+    v1, v2, v3 = solve_indirect_cart(x0+dx, y0+dy, z0+dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
     L.append((v1, v2, v3))
     
     pts = kin.get_leg_points_V1_V2(v1/1000, v2/1000, kin.LEGS[kin.FL]['lengths'])
