@@ -151,7 +151,7 @@ def test_jacob_2_direct():
         deltaX[1]
     ])
     print("position selon jacob_direct :", x0+deltax[0], y0+deltax[1], z0+deltax[2])
-    print("position selon direct julien :", direct_xyz(V[0], V[1], V[2], leg_id))
+    print("position selon direct Julien :", direct_xyz(V[0], V[1], V[2], leg_id))
     print("")
 
 
@@ -355,13 +355,13 @@ def make_a_penalty(v1, v2, d, eps, leg_id):
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
   return res
 
-def test_circle_move_XZ(v1, v2, r, n, leg_id):
+def test_circle_2(v1, v2, r, n, leg_id):
     '''
     Trace la trajectoire de la patte du robot réalisant des petits cercles
     '''
     # Positions des vérins
     lpl = kin.LEGS[kin.FL]['lengths']
-    L = make_a_circle(v1, v2, r, n, leg_id)
+    L = draw_circle_2(v1, v2, r, n, leg_id)
     V1 = [v[0] for v in L]
     V2 = [v[1] for v in L]
     T = np.linspace(0, 1, len(L))
@@ -374,7 +374,7 @@ def test_circle_move_XZ(v1, v2, r, n, leg_id):
 
     # Tracé de la position du bout de la patte
     fig = plt.figure()
-    # cercle théorique
+    # Cercle théorique
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     Lx = np.zeros(n + 1)
@@ -386,11 +386,12 @@ def test_circle_move_XZ(v1, v2, r, n, leg_id):
     plt.plot(Lx, Lz)
 
     plt.scatter(Xp, Yp, label='Positions',
-               marker='d')  # Tracé des points 3D
+               marker='.',s=3, c='red')  # Tracé des points 3D
     plt.title("Trajectoire patte FL rotation circulaire dand le plan XZ")
 
     plt.xlabel('X')
     plt.ylabel('Y')
+    plt.axis('equal')
     plt.show()
 
     # Tracé des positions des vérins
@@ -399,6 +400,61 @@ def test_circle_move_XZ(v1, v2, r, n, leg_id):
     plt.title("Elongations des vérins dans le mouvement")
     # plt.plot.set_xlabel('L (en mm)')
     # plt.plot.set_ylabel('T')
+    plt.show()
+
+def test_circle_3(v1, v2, v3, r, n, leg_id):
+    '''
+    Trace la trajectoire de la patte du robot réalisant des petits cercles
+    '''
+    # Positions des vérins
+    lpl = kin.LEGS[kin.FL]['lengths']
+    L = draw_circle_3(v1, v2, v3, r, n, leg_id)
+    V1 = [v[0] for v in L]
+    V2 = [v[1] for v in L]
+    V3 = [v[2] for v in L]
+    T = np.linspace(0, 1, len(L))
+
+    # Positions du bout de la patte
+    Pos = list(map(direct_xyz, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L], [kin.FL for v in L]))
+    Xp = [p[0] for p in Pos]
+    Yp = [p[1] for p in Pos]
+    Zp = [p[2] for p in Pos]
+
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+    x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3))
+    res = []
+
+    # Calcul des points du cercle théorique
+    Lx = []
+    Ly = []
+    Lz = []
+    for k in range(n + 1):
+        Lx.append(x0 + r * np.cos(2 * k * np.pi / n) - r)
+        Ly.append(y0 + r * np.sin(2 * k * np.pi / n))
+        Lz.append(z0)
+
+    # Tracé de la position du bout de la patte
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.plot(Lx, Ly, Lz, label='Théorique')  # Tracé de la courbe 3D
+    ax.scatter(Xp, Yp, Zp, label='Positions',
+               marker='.', s=3, c='red')  # Tracé des points 3D
+    plt.title("Trajectoire cercle dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_xbound(200, 700)
+    ax.set_ybound(400, 900)
+    ax.set_zbound(-200, -700)
+    plt.tight_layout()
+    plt.show()
+
+    # Tracé des positions des vérins
+    plt.plot(T, V1, label='V1' )
+    plt.plot(T, V2, label='V2' )
+    plt.plot(T, V3, label='V3' )
+    plt.title("Elongations des vérins dans le mouvement")
     plt.show()
 
 def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
@@ -433,12 +489,13 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     plt.plot(Lx, Lz)
 
     plt.scatter(Xp, Yp, label='Positions',
-                marker='d')  # Tracé des points 3D
+                marker='.', c = 'red', s = 3)  # Tracé des points 3D
     plt.title("Trajectoire rectiligne de la patte FL dans le plan XZ")
 
     plt.xlabel('X')
 
     plt.ylabel('Y')
+    plt.axis('equal')
     plt.show()
 
     # Tracé des positions des vérins
@@ -451,7 +508,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
-t_move = 1
+t_move = 0
 # test de normalized_move_xyz
 if t_move:
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], kin.FL)
@@ -516,9 +573,10 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_different_moves = 0
+t_different_moves = 1
 if t_different_moves:
-    test_circle_move_XZ(450, 500, 200, 50, kin.FL)
+    test_circle_2(450, 500, 200, 200, kin.FL)
+    test_circle_3(550, 600, 515, 200, 200, kin.FL)
     test_penalty_move_XZ(450, 500, 500, 10, kin.FL)
 ############################################################################
 
