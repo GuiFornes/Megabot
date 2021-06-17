@@ -42,7 +42,6 @@ def test_jacob_2(v1, v2, dstep_x, dstep_y):
 
     return err_rel
 
-
 def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     """
     Trace la trajectoire de la patte du robot entre 2 points de l'espace en suivant normalized_move_xyz
@@ -129,7 +128,6 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
   v3j = cos_angle_to_v3(np.cos(alpha + dalpha))
   print(direct_xyz(v1j, v2j, v3j, kin.FL))
 
-
 def test_jacob_2_direct():
     """
     Comparaison des resultats en J du modèle direct plan utilisant une jacobienne et de celui utilisant la géométrie
@@ -152,7 +150,6 @@ def test_jacob_2_direct():
     print("position selon jacob_direct :", x0+deltax[0], y0+deltax[1], z0+deltax[2])
     print("position selon direct Julien :", direct_xyz(V[0], V[1], V[2], leg_id))
     print("")
-
 
 def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     """
@@ -238,7 +235,6 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     print('initial J:', pts['J'])
     print("real J:", pts_end['J'])
     print("jacob J", J, "\n")
-
 
 def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
     """
@@ -401,7 +397,7 @@ def test_circle_2(v1, v2, r, n, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
-def draw_move_leg(traj, v1, v2, v3, leg_id):
+def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False):
     """
         Trace la trajectoire de la patte du robot suivant traj avec move_leg
     """
@@ -411,7 +407,7 @@ def draw_move_leg(traj, v1, v2, v3, leg_id):
     Zt = [p[2] for p in traj]
 
     # Elongations des vérins
-    Ver = move_leg(traj, v1, v2, v3, leg_id)
+    Ver = move_leg(traj, v1, v2, v3, leg_id, upgrade=upgrade)
     V1 = [v[0] for v in Ver]
     V2 = [v[1] for v in Ver]
     V3 = [v[2] for v in Ver]
@@ -442,6 +438,18 @@ def draw_move_leg(traj, v1, v2, v3, leg_id):
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
 
+    ErrX ,ErrY, ErrZ = [], [], []
+    for k in range(len(Ver)):
+        ErrX.append(Xp[k]-Xt[k])
+        ErrY.append(Yp[k]-Yt[k])
+        ErrZ.append(Zp[k]-Zt[k])
+    plt.plot(ErrX, label="x error")
+    plt.plot(ErrY, label="y error")
+    plt.plot(ErrZ, label="z error")
+    plt.legend()
+    plt.ylabel('error in the movement (mm)')
+    plt.xlabel('steps')
+    plt.show()
 def test_circle_3(v1, v2, v3, r, n, leg_id):
     """
         Trace la trajectoire de la patte du robot réalisant des petits cercles
@@ -615,14 +623,17 @@ if test_comp_indirect:
 
 t_different_moves = 1
 if t_different_moves:
-    draw_move_leg(draw_circle(200, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL)
+    draw_move_leg(draw_circle(200, 20, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True)
+    draw_move_leg(draw_circle(200, 20, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
     # test_penalty_move_XZ(450, 500, 500, 10, kin.FL)
+
 ############################################################################
 
 
 ################################ DEPRECATED ################################
+
 
 t_comp = 0
 # comparaison en temps de nos modèles directs (v1 / Julien)

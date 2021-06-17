@@ -216,7 +216,7 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
 
 ################################ MOVE ######################################
 
-def move_leg(traj, v1, v2, v3, leg_id, display=False):
+def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False):
     """
     Retourne la liste des élongations des vérins permettant au bout de la patte de suivre traj
     Prend en argument la succession de positions formant traj, les élongations initiales des vérins et l'id de la patte
@@ -224,7 +224,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False):
     Toutes les longueurs sont en mm (entrée comme sortie)
     """
     R = [(v1, v2, v3)]
-
+    err = 0
     # Parcours de traj
     for i in range(1, len(traj)):
         pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
@@ -234,8 +234,10 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False):
         if display:
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
             print("VERINS_________actual :", v1, v2, v3)
-
         dX = np.array([traj[i][0] - x0, traj[i][1] - y0, traj[i][2] - z0])
+        if upgrade:
+            dX += err
+            err = np.array([traj[i-1][0] - x0, traj[i-1][1] - y0, traj[i-1][2] - z0])
         J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3)), leg_id)
         dV = J @ dX
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
@@ -320,8 +322,6 @@ def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
         pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     return res
-
-
 
 
 def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
