@@ -12,11 +12,10 @@ from upg_deprecated import *
 ############################# FONCTIONS DE TEST ################################
 
 def test_jacob_2(v1, v2, dstep_x, dstep_y):
-    '''
-      Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect plan
-      Prend en argument l'élongation des vérins et la distance de déplacement selon x et y en m
-    '''
-
+    """
+    Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect plan
+    Prend en argument l'élongation des vérins et la distance de déplacement selon x et y en m
+    """
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FR]['lengths'])
     x, y = pts['J'][0], pts['J'][1] 
     Jacob = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
@@ -45,9 +44,9 @@ def test_jacob_2(v1, v2, dstep_x, dstep_y):
 
 
 def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
-    '''
+    """
     Trace la trajectoire de la patte du robot entre 2 points de l'espace en suivant normalized_move_xyz
-    '''
+    """
     # Théorique
     Xt = [x0, x]
     Yt = [y0, y]
@@ -132,9 +131,9 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
 
 
 def test_jacob_2_direct():
-    '''
+    """
     Comparaison des resultats en J du modèle direct plan utilisant une jacobienne et de celui utilisant la géométrie
-    '''
+    """
     leg_id = kin.FL
     V = np.array([495, 585, 515])
     x0, y0, z0 = direct_xyz(V[0], V[1], V[2], leg_id)
@@ -156,7 +155,7 @@ def test_jacob_2_direct():
 
 
 def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
-    '''
+    """
     Test des précisions pas à pas pour chaque point de la patte en suivant une méthode géométrique exacte et une methode
     approchée utilisant la jacobienne
     @param v1: position initiale du vérin 1
@@ -165,7 +164,7 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     @param dv2: déplacement du vérin 2
     @param leg_id: id de la patte
     @return:
-    '''
+    """
     pts = kin.get_leg_points_V1_V2(v1, v2, kin.LEGS[leg_id]['lengths'])
     x_E, y_E = pts['E']
     x_F, y_F = pts['F']
@@ -242,9 +241,9 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
 
 
 def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
-    '''
+    """
     test de comparaison des méthodes de cinématique indirecte
-    '''
+    """
     leg_id = kin.FL
     lpl = kin.LEGS[leg_id]['lengths']
     pts = kin.get_leg_points_V1_V2(v1, v2, lpl)
@@ -273,13 +272,13 @@ def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
     print("\n")
 
 def gen_jacob_direct(pts, v1, v2):
-  '''
+  """
   Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
   Prend en argument la position des points de la patte et l'élongation des verrins en m
 
   >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
   array([0., 0.])
-  '''
+  """
   x_E, y_E = pts['E']
   x_F, y_F = pts['F']
   x_G, y_G = pts['G']
@@ -356,9 +355,9 @@ def make_a_penalty(v1, v2, d, eps, leg_id):
   return res
 
 def test_circle_2(v1, v2, r, n, leg_id):
-    '''
+    """
     Trace la trajectoire de la patte du robot réalisant des petits cercles
-    '''
+    """
     # Positions des vérins
     lpl = kin.LEGS[kin.FL]['lengths']
     L = draw_circle_2(v1, v2, r, n, leg_id)
@@ -402,10 +401,51 @@ def test_circle_2(v1, v2, r, n, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
+def draw_move_leg(traj, v1, v2, v3, leg_id):
+    """
+        Trace la trajectoire de la patte du robot suivant traj avec move_leg
+    """
+    # Trajectoire
+    Xt = [p[0] for p in traj]
+    Yt = [p[1] for p in traj]
+    Zt = [p[2] for p in traj]
+
+    # Elongations des vérins
+    Ver = move_leg(traj, v1, v2, v3, leg_id)
+    V1 = [v[0] for v in Ver]
+    V2 = [v[1] for v in Ver]
+    V3 = [v[2] for v in Ver]
+    T = np.linspace(0, 1, len(Ver))
+
+    # Positions du bout de la patte
+    Pos = list(map(direct_xyz, [v[0] for v in Ver], [v[1] for v in Ver], [v[2] for v in Ver], [kin.FL for v in Ver]))
+    Xp = [p[0] for p in Pos]
+    Yp = [p[1] for p in Pos]
+    Zp = [p[2] for p in Pos]
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.plot(Xt, Yt, Zt, label='Théorique')  # Tracé de la courbe théorique
+    ax.scatter(Xp, Yp, Zp, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_xbound(0, 1000)
+    ax.set_ybound(0, 1000)
+    ax.set_zbound(0, -1000)
+    plt.show()
+
+    plt.plot(T, V1, label='V1' )
+    plt.plot(T, V2, label='V2' )
+    plt.plot(T, V3, label='V3' )
+    plt.title("Elongations des vérins dans le mouvement")
+    plt.show()
+
 def test_circle_3(v1, v2, v3, r, n, leg_id):
-    '''
-    Trace la trajectoire de la patte du robot réalisant des petits cercles
-    '''
+    """
+        Trace la trajectoire de la patte du robot réalisant des petits cercles
+        """
     # Positions des vérins
     lpl = kin.LEGS[kin.FL]['lengths']
     L = draw_circle_3(v1, v2, v3, r, n, leg_id)
@@ -458,9 +498,9 @@ def test_circle_3(v1, v2, v3, r, n, leg_id):
     plt.show()
 
 def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
-    '''
+    """
     Trace la trajectoire de la patte du robot réalisant des petits cercles
-    '''
+    """
     # Positions des vérins
     lpl = kin.LEGS[kin.FL]['lengths']
     L = make_a_penalty(v1, v2, d, eps, leg_id)
@@ -575,9 +615,10 @@ if test_comp_indirect:
 
 t_different_moves = 1
 if t_different_moves:
-    test_circle_2(450, 500, 200, 200, kin.FL)
-    test_circle_3(550, 600, 515, 200, 200, kin.FL)
-    test_penalty_move_XZ(450, 500, 500, 10, kin.FL)
+    draw_move_leg(draw_circle(200, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL)
+    # test_circle_2(450, 500, 200, 200, kin.FL)
+    # test_circle_3(550, 600, 515, 200, 200, kin.FL)
+    # test_penalty_move_XZ(450, 500, 500, 10, kin.FL)
 ############################################################################
 
 

@@ -38,15 +38,15 @@ V = 460, 565, 500
 ################################# 2D #######################################
 
 def distance_3_points(A, B, C):
-    '''
+    """
     Fonction auxiliaire de gen_jacob_2
     Retourne la matrice des distances de A à B et à C
-    '''
+    """
     return 2 * np.array([[A[0] - B[0], A[1] - B[1]], [A[0] - C[0], A[1] - C[1]]])
 
 
 def gen_jacob_2(pts, v1, v2):
-    '''
+    """
     Retourne la jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
     Prend en argument la position des points de la patte et l'élongation des verrins en m
     La jacobienne doit être appliqué sur des élongations en m et retourne des position en m
@@ -59,7 +59,7 @@ def gen_jacob_2(pts, v1, v2):
     #
     # >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
 
-    '''
+    """
     x_E, y_E = pts['E']
     x_F, y_F = pts['F']
     x_G, y_G = pts['G']
@@ -104,9 +104,9 @@ def gen_jacob_2(pts, v1, v2):
 
 
 def d3_to_d2(x, y, z):
-    '''
+    """
     Retourne (X, Z, alpha) les coordonnées cylindriques du bout de la patte
-    '''
+    """
     X = np.sqrt(x ** 2 + y ** 2)
     Z = z
     calpha = y / X
@@ -114,9 +114,9 @@ def d3_to_d2(x, y, z):
 
 
 def d2_to_d3(X, Z, calpha):
-    '''
+    """
     Retourne (x, y, z) les coordonnées cartésiennes du bout de la patte
-    '''
+    """
     x = X * np.sqrt(1 - calpha ** 2)
     y = X * calpha
     z = Z
@@ -124,11 +124,11 @@ def d2_to_d3(X, Z, calpha):
 
 
 def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
-    '''
+    """
     Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
     en minimisant les erreurs d'élongation sur v1 et v2 (utilise Jacob_2)
     Toutes les longueurs sont en mm (entrées comme sorties)
-    '''
+    """
     X, Z, calpha = d3_to_d2(x, y, z)
     Xt = np.array([X, Z]) / 1000
     new_v3 = cos_angle_to_v3(calpha)
@@ -150,11 +150,11 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
 ################################# 3D #######################################
 
 def mat_A(pts, v1, v2, v3, alpha):
-    '''
+    """
     Fonction auxiliaire de gen_jacob_3
     Génère la matrice A conformément à nos équations (cf. indirect.pdf)
     Toutes les longueurs en m
-    '''
+    """
     Jacob = gen_jacob_2(pts, v1, v2)
 
     A = np.array([
@@ -166,11 +166,11 @@ def mat_A(pts, v1, v2, v3, alpha):
 
 
 def mat_B(pts, alpha, leg_id):
-    '''
+    """
     Fonction auxiliaire de gen_jacob_3
     Génère la matrice B conformément à nos équations (cf. indirect.pdf)
     Toutes les longueurs en m
-    '''
+    """
     X = pts['J'][0]
 
     B = np.array([
@@ -182,11 +182,11 @@ def mat_B(pts, alpha, leg_id):
 
 
 def gen_jacob_3(v1, v2, v3, alpha, leg_id):
-    '''
+    """
     Retourne la jacobienne correspondant au modèle cinématique indirect dans le repère cartésien centré en O
     Prend en argument l'élongation des verrins en m et l'angle alpha en radian
     La jacobienne doit être appliquée sur des élongations en m et retourne des position en m
-    '''
+    """
     pts = kin.get_leg_points_V1_V2(v1, v2, kin.LEGS[kin.FL]['lengths'])
     A = mat_A(pts, v1, v2, v3, alpha)
     B = mat_B(pts, alpha, leg_id)
@@ -195,11 +195,11 @@ def gen_jacob_3(v1, v2, v3, alpha, leg_id):
 
 
 def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
-    '''
+    """
     Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
     en minimisant les erreurs d'élongation sur v1, v2 et v3 (utilise Jacob_3)
     Toutes les longueurs sont en mm (entrées comme sorties)
-    '''
+    """
     Xt = np.array([x, y, z]) / 1000
     X0 = np.array([x0, y0, z0]) / 1000
 
@@ -216,11 +216,48 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
 
 ################################ MOVE ######################################
 
+def move_leg(traj, v1, v2, v3, leg_id, display=False):
+    """
+    Retourne la liste des élongations des vérins permettant au bout de la patte de suivre traj
+    Prend en argument la succession de positions formant traj, les élongations initiales des vérins et l'id de la patte
+    Les élongations initiales des vérins doivent placer la patte au premier point de traj
+    Toutes les longueurs sont en mm (entrée comme sortie)
+    """
+    R = [(v1, v2, v3)]
+
+    # Parcours de traj
+    for i in range(1, len(traj)):
+        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
+        X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
+        x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
+
+        if display:
+            print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
+            print("VERINS_________actual :", v1, v2, v3)
+
+        dX = np.array([traj[i][0] - x0, traj[i][1] - y0, traj[i][2] - z0])
+        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3)), leg_id)
+        dV = J @ dX
+        v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
+        R.append((v1, v2, v3))
+    return R
+
+def draw_circle(r, n, v1, v2, v3, leg_id):
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
+    X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+    x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3))
+    R = []
+    for k in range(n + 1):
+        R.append((x0 + r * np.cos(2 * k * np.pi / n) - r,
+                  y0 + r * np.sin(2 * k * np.pi / n),
+                  z0))
+    return R
+
 def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
-    '''
-    Retourne la liste des élongations successives des verrins permettant de placer le bout de la patte en (x,y,z)
+    """
+    Retourne la liste des élongations successives des vérins permettant de placer le bout de la patte en (x,y,z)
     Effectue une normalisation du déplacement
-    '''
+    """
     L = []
     c = 0
 
@@ -285,6 +322,8 @@ def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
     return res
 
 
+
+
 def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
     lpl = kin.LEGS[leg_id]['lengths']
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
@@ -330,10 +369,10 @@ def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
 
 
 def direct_xyz(v1, v2, v3, leg_id):
-    '''
+    """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3
     Se base sur le modèle direct de Julien
-    '''
+    """
     X, Z = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])['J']
     calpha = v3_to_cos_angle(v3)
     x = ori[leg_id][0] * X * np.sqrt(1 - calpha ** 2) * 1000
@@ -345,7 +384,7 @@ def direct_xyz(v1, v2, v3, leg_id):
 ################################# OUTILS ###################################
 
 def cos_angle_to_v3(cangle):
-    '''
+    """
     Fonction auxiliaire de normalized_move_xyz
     Retourne l'élongation de v3 en mm en fonction du cosinus de l'angle de la patte au chassis
 
@@ -353,13 +392,13 @@ def cos_angle_to_v3(cangle):
     0.0
     >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4))) - np.cos(np.pi/4) < 0.0000001
     True
-    '''
+    """
     return np.sqrt(
         LO ** 2 + KO ** 2 - 2 * LO * KO * (cangle * MO / LO + np.sqrt(1 - cangle ** 2) * np.sqrt(1 - (MO / LO) ** 2)))
 
 
 def v3_to_cos_angle(v3):
-    '''
+    """
     Fonction auxiliaire de normalized_move_xyz
     Retourne le cosinus de l'angle de la patte au chassis en fonction de l'élongation de v3 en mm
 
@@ -367,13 +406,13 @@ def v3_to_cos_angle(v3):
     0.0
     >>> cos_angle_to_v3(v3_to_cos_angle(500)) - 500 < 0.0000001
     True
-    '''
+    """
     return (KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO) * MO / LO - np.sqrt(
         1 - ((KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO)) ** 2) * np.sqrt(1 - (MO / LO) ** 2)
 
 
 def distance(x, y, z=0):
-    '''
+    """
     Calcule la distance euclidienne dans l'espace en 3 dimensions (ou 2D selon le nombre de coordonnées passées en paramètre)
 
     >>> distance(0, 0, 0)
@@ -388,7 +427,7 @@ def distance(x, y, z=0):
     1.0
     >>> np.abs(distance(1, 1, 0) - np.sqrt(2)) < 0.0000001
     True
-    '''
+    """
     return np.sqrt(x ** 2 + y ** 2 + z ** 2)
 
 
