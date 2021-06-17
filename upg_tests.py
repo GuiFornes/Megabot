@@ -406,8 +406,8 @@ def draw_move_leg(traj, v1, v2, v3, leg_id):
         Trace la trajectoire de la patte du robot suivant traj avec move_leg
     """
     # Trajectoire
-    Xt = [p[0] for p in traj]
-    Yt = [p[1] for p in traj]
+    Xt = [p[0] - 500 for p in traj]
+    Yt = [p[1] - 500 for p in traj]
     Zt = [p[2] for p in traj]
 
     # Elongations des vérins
@@ -444,8 +444,8 @@ def draw_move_leg(traj, v1, v2, v3, leg_id):
 
 def test_circle_3(v1, v2, v3, r, n, leg_id):
     """
-        Trace la trajectoire de la patte du robot réalisant des petits cercles
-        """
+    Trace la trajectoire de la patte du robot réalisant des petits cercles
+    """
     # Positions des vérins
     lpl = kin.LEGS[kin.FL]['lengths']
     L = draw_circle_3(v1, v2, v3, r, n, leg_id)
@@ -615,6 +615,7 @@ if test_comp_indirect:
 
 t_different_moves = 1
 if t_different_moves:
+    lpl = kin.LEGS[kin.FL]['lengths']
     draw_move_leg(draw_circle(200, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)

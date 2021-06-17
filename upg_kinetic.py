@@ -32,6 +32,26 @@ LO = np.sqrt(LM ** 2 + MO ** 2)
 
 ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]])  # [[oritentation selon x][orientation selon y]]
 
+# Matrices de rotation permettant le passage d'une patte à l'autre
+MR = np.array([[[1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1]],
+
+               [[0, -1, 0],
+                [1, 0, 0],
+                [0, 0, 1]],
+
+               [[-1, 0, 0],
+                [0, -1, 0],
+                [0, 0, 1]],
+
+               [[0, 1, 0],
+                [-1, 0, 0],
+                [0, 0, 1]]])
+
+# Décalage entre le centre du robot et le point O de la jambe FL
+L = np.array([500, 500, 0])
+
 V = 460, 565, 500
 
 
@@ -165,7 +185,7 @@ def mat_A(pts, v1, v2, v3, alpha):
     return A
 
 
-def mat_B(pts, alpha, leg_id):
+def mat_B(pts, alpha):
     """
     Fonction auxiliaire de gen_jacob_3
     Génère la matrice B conformément à nos équations (cf. indirect.pdf)
@@ -181,15 +201,15 @@ def mat_B(pts, alpha, leg_id):
     return B
 
 
-def gen_jacob_3(v1, v2, v3, alpha, leg_id):
+def gen_jacob_3(v1, v2, v3, alpha, lpl):
     """
     Retourne la jacobienne correspondant au modèle cinématique indirect dans le repère cartésien centré en O
     Prend en argument l'élongation des verrins en m et l'angle alpha en radian
     La jacobienne doit être appliquée sur des élongations en m et retourne des position en m
     """
-    pts = kin.get_leg_points_V1_V2(v1, v2, kin.LEGS[kin.FL]['lengths'])
+    pts = kin.get_leg_points_V1_V2(v1, v2, lpl)
     A = mat_A(pts, v1, v2, v3, alpha)
-    B = mat_B(pts, alpha, leg_id)
+    B = mat_B(pts, alpha)
 
     return A @ inv(B)
 
@@ -216,6 +236,25 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
 
 ################################ MOVE ######################################
 
+def move_4_legs(traj, V):
+    """
+    Retourne le tableau des élongations successives des 12 vérins (3 par 3) permettant aux
+    extrémités des 4 pattes de suivre les trajectoires qui leur ont été attribuées par traj
+    traj : [traj_0, traj_1, traj_2, traj_3], liste des 4 trajectoires suivies par les 4 pattes avec traj_i = [[x0, y0, z0], [x1, y1, z1], ...]
+    V : [V_0, V_1, V_2, V_3], liste des élongations initiales des 3 vérins dans chacune des 4 pattes avec V_i = [v1, v2, v3]
+    Toutes les longueurs sont en mm, les coordonnées des trajectoires sont exprimées dans le repère du robot
+    """
+    # Calcul des élongations de chacunes des pattes
+    V = []
+    for i in range(4):
+        V.append(move_leg(V[i][0], V[i][1], V[i][2], i))
+    # Mise sous forme
+    R = []
+    for k in range(V[0]):
+        R.append(np.array([V[0][i], V[1][i], V[2][i], V[3][i]]))
+    return R
+
+
 def move_leg(traj, v1, v2, v3, leg_id, display=False):
     """
     Retourne la liste des élongations des vérins permettant au bout de la patte de suivre traj
@@ -227,7 +266,8 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False):
 
     # Parcours de traj
     for i in range(1, len(traj)):
-        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
+        lpl = kin.LEGS[leg_id]['lengths']
+        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
         x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
 
@@ -235,12 +275,14 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False):
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
             print("VERINS_________actual :", v1, v2, v3)
 
-        dX = np.array([traj[i][0] - x0, traj[i][1] - y0, traj[i][2] - z0])
-        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3)), leg_id)
+        T = MR[leg_id].T @ (traj[i] - L)
+        dX = np.array([T[0] - x0, T[1] - y0, T[2] - z0])
+        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3)), lpl)
         dV = J @ dX
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
         R.append((v1, v2, v3))
     return R
+
 
 def draw_circle(r, n, v1, v2, v3, leg_id):
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
@@ -248,10 +290,11 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
     x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3))
     R = []
     for k in range(n + 1):
-        R.append((x0 + r * np.cos(2 * k * np.pi / n) - r,
-                  y0 + r * np.sin(2 * k * np.pi / n),
-                  z0))
+        R.append(np.array([x0+ r * np.cos(2 * k * np.pi / n) - r,
+                           y0 + r * np.sin(2 * k * np.pi / n),
+                           z0]) + L)
     return R
+
 
 def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     """
