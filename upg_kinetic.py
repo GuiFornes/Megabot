@@ -255,7 +255,7 @@ def move_4_legs(traj, V):
     return R
 
 
-def move_leg(traj, v1, v2, v3, leg_id, display=False):
+def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False):
     """
     Retourne la liste des élongations des vérins permettant au bout de la patte de suivre traj
     Prend en argument la succession de positions formant traj, les élongations initiales des vérins et l'id de la patte
@@ -263,6 +263,8 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False):
     Toutes les longueurs sont en mm (entrée comme sortie)
     """
     R = [(v1, v2, v3)]
+    err = 0
+    if upgrade : prev_T = MR[leg_id].T @ (traj[0] - L)
 
     # Parcours de traj
     for i in range(1, len(traj)):
@@ -277,6 +279,10 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False):
 
         T = MR[leg_id].T @ (traj[i] - L)
         dX = np.array([T[0] - x0, T[1] - y0, T[2] - z0])
+        if upgrade:
+            dX += err
+            err = np.array([prev_T[0] - x0, prev_T[1] - y0, prev_T[2] - z0])
+            prev_T = T
         J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3)), lpl)
         dV = J @ dX
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
@@ -363,8 +369,6 @@ def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
         pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     return res
-
-
 
 
 def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
