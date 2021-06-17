@@ -30,8 +30,6 @@ LM = kin.LEGS[kin.FL]['lengths']['yaw_b']
 MO = kin.LEGS[kin.FL]['lengths']['yaw_a']
 LO = np.sqrt(LM ** 2 + MO ** 2)
 
-ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]])  # [[oritentation selon x][orientation selon y]]
-
 # Matrices de rotation permettant le passage d'une patte à l'autre
 MR = np.array([[[1, 0, 0],
                 [0, 1, 0],
@@ -41,12 +39,12 @@ MR = np.array([[[1, 0, 0],
                 [1, 0, 0],
                 [0, 0, 1]],
 
-               [[-1, 0, 0],
-                [0, -1, 0],
-                [0, 0, 1]],
-
                [[0, 1, 0],
                 [-1, 0, 0],
+                [0, 0, 1]],
+
+               [[-1, 0, 0],
+                [0, -1, 0],
                 [0, 0, 1]]])
 
 # Décalage entre le centre du robot et le point O de la jambe FL
@@ -143,7 +141,7 @@ def d2_to_d3(X, Z, calpha):
     return x, y, z
 
 
-def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
+def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     """
     Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
     en minimisant les erreurs d'élongation sur v1 et v2 (utilise Jacob_2)
@@ -151,7 +149,7 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
     """
     X, Z, calpha = d3_to_d2(x, y, z)
     Xt = np.array([X, Z]) / 1000
-    new_v3 = cos_angle_to_v3(calpha)
+    new_v3 = cos_angle_to_v3(calpha, lpl)
 
     X, Z, calpha = d3_to_d2(x0, y0, z0)
     X0 = np.array([X, Z]) / 1000
@@ -214,7 +212,7 @@ def gen_jacob_3(v1, v2, v3, alpha, lpl):
     return A @ inv(B)
 
 
-def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
+def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     """
     Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
     en minimisant les erreurs d'élongation sur v1, v2 et v3 (utilise Jacob_3)
@@ -223,7 +221,7 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
     Xt = np.array([x, y, z]) / 1000
     X0 = np.array([x0, y0, z0]) / 1000
 
-    J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arctan(x0 / y0), kin.FL)
+    J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arctan(x0 / y0), lpl)
 
     P = 2 * J.T @ J
     q = J.T @ (X0 - Xt)
@@ -236,7 +234,7 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, leg_id, pts):
 
 ################################ MOVE ######################################
 
-def move_4_legs(traj, V):
+def move_4_legs(traj, V, upgrade=False):
     """
     Retourne le tableau des élongations successives des 12 vérins (3 par 3) permettant aux
     extrémités des 4 pattes de suivre les trajectoires qui leur ont été attribuées par traj
@@ -245,13 +243,17 @@ def move_4_legs(traj, V):
     Toutes les longueurs sont en mm, les coordonnées des trajectoires sont exprimées dans le repère du robot
     """
     # Calcul des élongations de chacunes des pattes
-    V = []
+    Ver = []
     for i in range(4):
-        V.append(move_leg(V[i][0], V[i][1], V[i][2], i))
-    # Mise sous forme
+        Ver.append(move_leg(traj[i], V[i][0], V[i][1], V[i][2], i, upgrade=upgrade))
+    # Mise sous le format attendu
     R = []
-    for k in range(V[0]):
-        R.append(np.array([V[0][i], V[1][i], V[2][i], V[3][i]]))
+    for k in range(len(Ver[0])):
+        r = [Ver[0][k],
+             Ver[1][k],
+             Ver[2][k],
+             Ver[3][k]]
+        R.append(r)
     return R
 
 
@@ -264,26 +266,26 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False):
     """
     R = [(v1, v2, v3)]
     err = 0
-    if upgrade : prev_T = MR[leg_id].T @ (traj[0] - L)
+    if upgrade : prev_T = MR[leg_id].T @ traj[0] - L
 
     # Parcours de traj
     for i in range(1, len(traj)):
         lpl = kin.LEGS[leg_id]['lengths']
         pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
-        x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
+        x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3, lpl))
 
         if display:
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
             print("VERINS_________actual :", v1, v2, v3)
 
-        T = MR[leg_id].T @ (traj[i] - L)
+        T = MR[leg_id].T @ traj[i] - L
         dX = np.array([T[0] - x0, T[1] - y0, T[2] - z0])
         if upgrade:
             dX += err
             err = np.array([prev_T[0] - x0, prev_T[1] - y0, prev_T[2] - z0])
             prev_T = T
-        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3)), lpl)
+        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
         dV = J @ dX
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
         R.append((v1, v2, v3))
@@ -291,9 +293,10 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False):
 
 
 def draw_circle(r, n, v1, v2, v3, leg_id):
-    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
+    lpl = kin.LEGS[leg_id]['lengths']
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
-    x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3))
+    x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3, lpl))
     R = []
     for k in range(n + 1):
         R.append(np.array([x0+ r * np.cos(2 * k * np.pi / n) - r,
@@ -329,7 +332,6 @@ def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
         x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
 
         dist = distance(x - x0, y - y0, z - z0)
-
     return L
 
 
@@ -415,45 +417,65 @@ def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
     return res
 
 
-def direct_xyz(v1, v2, v3, leg_id):
+def direct_leg(v1, v2, v3):
     """
-    Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3
+    Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel de la patte FL
     Se base sur le modèle direct de Julien
     """
-    X, Z = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])['J']
-    calpha = v3_to_cos_angle(v3)
-    x = ori[leg_id][0] * X * np.sqrt(1 - calpha ** 2) * 1000
-    y = ori[leg_id][1] * X * calpha * 1000
+    lpl = kin.LEGS[kin.FL]['lengths']
+    X, Z = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
+    calpha = v3_to_cos_angle(v3, lpl)
+    x = X * np.sqrt(1 - calpha ** 2) * 1000
+    y = X * calpha * 1000
     z = Z * 1000
     return x, y, z
 
 
+def direct_robot(v1, v2, v3, leg_id):
+    """
+    Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel du robot
+    Se base sur le modèle direct de Julien
+    """
+    lpl = kin.LEGS[leg_id]['lengths']
+    X, Z = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
+    calpha = v3_to_cos_angle(v3, lpl)
+    Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
+    return MR[leg_id] @ (Pos + L)
+
 ################################# OUTILS ###################################
 
-def cos_angle_to_v3(cangle):
+def cos_angle_to_v3(cangle, lpl):
     """
     Fonction auxiliaire de normalized_move_xyz
     Retourne l'élongation de v3 en mm en fonction du cosinus de l'angle de la patte au chassis
 
-    >>> cos_angle_to_v3(np.cos(np.pi/4)) - al_kashi_longueur(KO, LO, np.pi/4 - np.arccos(MO/LO))
+    >>> cos_angle_to_v3(np.cos(np.pi/4), kin.LEGS[0]['lengths']) - al_kashi_longueur(KO, LO, np.pi/4 - np.arccos(MO/LO))
     0.0
-    >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4))) - np.cos(np.pi/4) < 0.0000001
+    >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4), kin.LEGS[0]['lengths'])) - np.cos(np.pi/4) < 0.0000001
     True
     """
+    KO = lpl['yaw_c']
+    LM = lpl['yaw_b']
+    MO = lpl['yaw_a']
+    LO = np.sqrt(LM ** 2 + MO ** 2)
     return np.sqrt(
         LO ** 2 + KO ** 2 - 2 * LO * KO * (cangle * MO / LO + np.sqrt(1 - cangle ** 2) * np.sqrt(1 - (MO / LO) ** 2)))
 
 
-def v3_to_cos_angle(v3):
+def v3_to_cos_angle(v3, lpl):
     """
     Fonction auxiliaire de normalized_move_xyz
     Retourne le cosinus de l'angle de la patte au chassis en fonction de l'élongation de v3 en mm
 
-    >>> v3_to_cos_angle(500) - np.cos(al_kashi_angle(LO, KO, 500) + np.arccos(MO/LO))
+    >>> v3_to_cos_angle(500, kin.LEGS[0]['lengths']) - np.cos(al_kashi_angle(LO, KO, 500) + np.arccos(MO/LO))
     0.0
-    >>> cos_angle_to_v3(v3_to_cos_angle(500)) - 500 < 0.0000001
+    >>> cos_angle_to_v3(v3_to_cos_angle(500), kin.LEGS[0]['lengths']) - 500 < 0.0000001
     True
     """
+    KO = lpl['yaw_c']
+    LM = lpl['yaw_b']
+    MO = lpl['yaw_a']
+    LO = np.sqrt(LM ** 2 + MO ** 2)
     return (KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO) * MO / LO - np.sqrt(
         1 - ((KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO)) ** 2) * np.sqrt(1 - (MO / LO) ** 2)
 

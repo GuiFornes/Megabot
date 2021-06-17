@@ -60,7 +60,7 @@ def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     T = np.linspace(0, 1, len(L))
 
     # Positions du bout de la patte
-    Pos = list(map(direct_xyz, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L], [kin.FL for v in L]))
+    Pos = list(map(direct_leg, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L]))
     Xp = [p[0] for p in Pos]
     Yp = [p[1] for p in Pos]
     Zp = [p[2] for p in Pos]
@@ -108,7 +108,7 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
   #           (abs(new_alpha - alpha) - dalpha)/dalpha
 
 
-  alpha = np.cos(v3_to_cos_angle(v3))
+  alpha = np.arccos(v3_to_cos_angle(v3, lpl))
   pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
   dPos = np.array([dX/1000, dZ/1000, dalpha])
 
@@ -118,7 +118,7 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
   v1a = v1 + dVa[0]*1000
   v2a = v2 + dVa[1]*1000
   v3a = v3 + dVa[2]*1000
-  print(direct_xyz(v1a, v2a, v3a, kin.FL))
+  print(direct_leg(v1a, v2a, v3a))
 
   # en séparant jacob 2D et v3
   J = gen_jacob_2(pts, v1, v2)
@@ -127,7 +127,7 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
   v1j = v1 + dVj[0]*1000
   v2j = v2 + dVj[1]*1000
   v3j = cos_angle_to_v3(np.cos(alpha + dalpha))
-  print(direct_xyz(v1j, v2j, v3j, kin.FL))
+  print(direct_leg(v1j, v2j, v3j))
 
 
 def test_jacob_2_direct():
@@ -136,7 +136,7 @@ def test_jacob_2_direct():
     """
     leg_id = kin.FL
     V = np.array([495, 585, 515])
-    x0, y0, z0 = direct_xyz(V[0], V[1], V[2], leg_id)
+    x0, y0, z0 = direct_leg(V[0], V[1], V[2])
     print("position de départ :", x0, y0, z0)
     deltaV = np.array([5, -5, 5])
     V += deltaV
@@ -150,7 +150,7 @@ def test_jacob_2_direct():
         deltaX[1]
     ])
     print("position selon jacob_direct :", x0+deltax[0], y0+deltax[1], z0+deltax[2])
-    print("position selon direct Julien :", direct_xyz(V[0], V[1], V[2], leg_id))
+    print("position selon direct Julien :", direct_leg(V[0], V[1], V[2]))
     print("")
 
 
@@ -401,6 +401,94 @@ def test_circle_2(v1, v2, r, n, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
+
+def draw_move_4_legs(traj, V, upgrade=False):
+    """
+        Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_4_legs
+    """
+    # Trajectoires
+    Xt0 = [p[0] for p in traj[0]]
+    Yt0 = [p[1] for p in traj[0]]
+    Zt0 = [p[2] for p in traj[0]]
+    Xt1 = [p[0] for p in traj[1]]
+    Yt1 = [p[1] for p in traj[1]]
+    Zt1 = [p[2] for p in traj[1]]
+    Xt2 = [p[0] for p in traj[2]]
+    Yt2 = [p[1] for p in traj[2]]
+    Zt2 = [p[2] for p in traj[2]]
+    Xt3 = [p[0] for p in traj[3]]
+    Yt3 = [p[1] for p in traj[3]]
+    Zt3 = [p[2] for p in traj[3]]
+
+    # Elongations des vérins
+    Ver = move_4_legs(traj, V, upgrade=upgrade)
+    V01 = [v[0][0] for v in Ver]
+    V02 = [v[0][1] for v in Ver]
+    V03 = [v[0][2] for v in Ver]
+    V11 = [v[1][0] for v in Ver]
+    V12 = [v[1][1] for v in Ver]
+    V13 = [v[1][2] for v in Ver]
+    V21 = [v[2][0] for v in Ver]
+    V22 = [v[2][1] for v in Ver]
+    V23 = [v[2][2] for v in Ver]
+    V31 = [v[3][0] for v in Ver]
+    V32 = [v[3][1] for v in Ver]
+    V33 = [v[3][2] for v in Ver]
+    T = np.linspace(0, 1, len(Ver))
+
+    # Positions du bout de la patte
+    Pos0 = list(map(direct_robot, [v for v in V01], [v for v in V02], [v for v in V03], [kin.FL for v in Ver]))
+    Pos1 = list(map(direct_robot, [v for v in V11], [v for v in V12], [v for v in V13], [kin.FR for v in Ver]))
+    Pos2 = list(map(direct_robot, [v for v in V21], [v for v in V22], [v for v in V23], [kin.RL for v in Ver]))
+    Pos3 = list(map(direct_robot, [v for v in V31], [v for v in V32], [v for v in V33], [kin.RR for v in Ver]))
+    Xp0 = [p[0] for p in Pos0]
+    Yp0 = [p[1] for p in Pos0]
+    Zp0 = [p[2] for p in Pos0]
+    Xp1 = [p[0] for p in Pos1]
+    Yp1 = [p[1] for p in Pos1]
+    Zp1 = [p[2] for p in Pos1]
+    Xp2 = [p[0] for p in Pos2]
+    Yp2 = [p[1] for p in Pos2]
+    Zp2 = [p[2] for p in Pos2]
+    Xp3 = [p[0] for p in Pos3]
+    Yp3 = [p[1] for p in Pos3]
+    Zp3 = [p[2] for p in Pos3]
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
+    ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=3, c='blue')  # Tracé des points réels
+    ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
+    ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(2000, -2000)
+    plt.show()
+
+    plt.plot(T, V01, label='V01')
+    plt.plot(T, V02, label='V02')
+    plt.plot(T, V03, label='V03')
+    plt.plot(T, V11, label='V11')
+    plt.plot(T, V12, label='V12')
+    plt.plot(T, V13, label='V13')
+    plt.plot(T, V21, label='V21')
+    plt.plot(T, V22, label='V22')
+    plt.plot(T, V23, label='V23')
+    plt.plot(T, V31, label='V31')
+    plt.plot(T, V32, label='V32')
+    plt.plot(T, V33, label='V33')
+    plt.title("Elongations des vérins dans le mouvement")
+    plt.show()
+
+
 def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False):
     """
         Trace la trajectoire de la patte du robot suivant traj avec move_leg
@@ -418,7 +506,7 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False):
     T = np.linspace(0, 1, len(Ver))
 
     # Positions du bout de la patte
-    Pos = list(map(direct_xyz, [v[0] for v in Ver], [v[1] for v in Ver], [v[2] for v in Ver], [kin.FL for v in Ver]))
+    Pos = list(map(direct_leg, [v[0] for v in Ver], [v[1] for v in Ver], [v[2] for v in Ver]))
     Xp = [p[0] for p in Pos]
     Yp = [p[1] for p in Pos]
     Zp = [p[2] for p in Pos]
@@ -469,7 +557,7 @@ def test_circle_3(v1, v2, v3, r, n, leg_id):
     T = np.linspace(0, 1, len(L))
 
     # Positions du bout de la patte
-    Pos = list(map(direct_xyz, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L], [kin.FL for v in L]))
+    Pos = list(map(direct_leg, [v[0] for v in L], [v[1] for v in L], [v[2] for v in L]))
     Xp = [p[0] for p in Pos]
     Yp = [p[1] for p in Pos]
     Zp = [p[2] for p in Pos]
@@ -565,7 +653,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 t_move = 0
 # test de normalized_move_xyz
 if t_move:
-    x0, y0, z0 = direct_xyz(V[0], V[1], V[2], kin.FL)
+    x0, y0, z0 = direct_leg(V[0], V[1], V[2])
     print(x0, y0, z0)
     test_normalized_move_xyz(x0, y0, z0, 750, y0, z0, 1, 1, 5, kin.FL)
     test_normalized_move_xyz(x0, y0, z0, x0, 700, z0, 1, 1, 5, kin.FL)
@@ -629,8 +717,26 @@ if test_comp_indirect:
 
 t_different_moves = 1
 if t_different_moves:
-    draw_move_leg(draw_circle(200, 20, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True)
-    draw_move_leg(draw_circle(200, 20, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False)
+
+    traj_FL = draw_circle(200, 200, 550, 600, 515, 0)
+    traj_FR = draw_circle(200, 200, 550, 600, 515, 1)
+    for i in range(len(traj_FR)):
+        traj_FR[i] = MR[1] @ traj_FR[i]
+    traj_RL = draw_circle(200, 200, 550, 600, 515, 2)
+    for i in range(len(traj_RL)):
+        traj_RL[i] = MR[2] @ traj_RL[i]
+    traj_RR = draw_circle(200, 200, 550, 600, 515, 3)
+    for i in range(len(traj_RR)):
+        traj_RR[i] = MR[3] @ traj_RR[i]
+    traj_4_legs = np.array([traj_FL, traj_FR, traj_RL, traj_RR])
+    V = np.array([[550, 600, 515],
+                 [550, 600, 515],
+                 [550, 600, 515],
+                 [550, 600, 515]])
+    draw_move_4_legs(traj_4_legs, V)
+
+    # draw_move_leg(draw_circle(200, 20, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True)
+    # draw_move_leg(draw_circle(200, 20, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
     # test_penalty_move_XZ(450, 500, 500, 10, kin.FL)

@@ -10,8 +10,8 @@ from geo import *
 
 FL=0 # front left leg
 FR=1 # front right leg
-RL=3 # rear left leg
-RR=2 # rear right leg
+RL=2 # rear left leg
+RR=3 # rear right leg
 
 ALL_LEGS=(FL,FR,RL,RR)
 
