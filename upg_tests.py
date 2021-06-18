@@ -401,10 +401,97 @@ def test_circle_2(v1, v2, r, n, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
+def draw_12(traj, V):
+    """
+    Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_12
+    """
+    # Trajectoires
+    Xt0 = [p[0] for p in traj]
+    Yt0 = [p[1] for p in traj]
+    Zt0 = [p[2] for p in traj]
+    Xt1 = [p[3] for p in traj]
+    Yt1 = [p[4] for p in traj]
+    Zt1 = [p[5] for p in traj]
+    Xt2 = [p[6] for p in traj]
+    Yt2 = [p[7] for p in traj]
+    Zt2 = [p[8] for p in traj]
+    Xt3 = [p[9] for p in traj]
+    Yt3 = [p[10] for p in traj]
+    Zt3 = [p[11] for p in traj]
+
+    # Elongations des vérins
+    Ver = move_12(traj, V)
+    V1 = [v[0] for v in Ver]
+    V2 = [v[1] for v in Ver]
+    V3 = [v[2] for v in Ver]
+    V4 = [v[3] for v in Ver]
+    V5 = [v[4] for v in Ver]
+    V6 = [v[5] for v in Ver]
+    V7 = [v[6] for v in Ver]
+    V8 = [v[7] for v in Ver]
+    V9 = [v[8] for v in Ver]
+    V10 = [v[9] for v in Ver]
+    V11 = [v[10] for v in Ver]
+    V12 = [v[11] for v in Ver]
+    T = np.linspace(0, 1, len(Ver))
+
+    # Positions des bouts de patte
+    Pos0 = list(map(direct_robot, [v for v in V1], [v for v in V2], [v for v in V3], [kin.FL for v in Ver]))
+    Pos1 = list(map(direct_robot, [v for v in V4], [v for v in V5], [v for v in V6], [kin.FR for v in Ver]))
+    Pos2 = list(map(direct_robot, [v for v in V7], [v for v in V8], [v for v in V9], [kin.RL for v in Ver]))
+    Pos3 = list(map(direct_robot, [v for v in V10], [v for v in V11], [v for v in V12], [kin.RR for v in Ver]))
+    Xp0 = [p[0] for p in Pos0]
+    Yp0 = [p[1] for p in Pos0]
+    Zp0 = [p[2] for p in Pos0]
+    Xp1 = [p[0] for p in Pos1]
+    Yp1 = [p[1] for p in Pos1]
+    Zp1 = [p[2] for p in Pos1]
+    Xp2 = [p[0] for p in Pos2]
+    Yp2 = [p[1] for p in Pos2]
+    Zp2 = [p[2] for p in Pos2]
+    Xp3 = [p[0] for p in Pos3]
+    Yp3 = [p[1] for p in Pos3]
+    Zp3 = [p[2] for p in Pos3]
+
+    # Tracé des trajectoires
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
+    ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=3, c='blue')  # Tracé des points réels
+    ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
+    ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(2000, -2000)
+    plt.show()
+
+    # Tracé des élongations des vérins au cours du temps
+    plt.plot(T, V1, label='V1')
+    plt.plot(T, V2, label='V2')
+    plt.plot(T, V3, label='V3')
+    plt.plot(T, V4, label='V4')
+    plt.plot(T, V5, label='V5')
+    plt.plot(T, V6, label='V6')
+    plt.plot(T, V7, label='V7')
+    plt.plot(T, V8, label='V8')
+    plt.plot(T, V9, label='V9')
+    plt.plot(T, V10, label='V10')
+    plt.plot(T, V11, label='V11')
+    plt.plot(T, V12, label='V12')
+    plt.title("Elongations des vérins dans le mouvement")
+    plt.show()
 
 def draw_move_4_legs(traj, V, upgrade=False):
     """
-        Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_4_legs
+    Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_4_legs
     """
     # Trajectoires
     Xt0 = [p[0] for p in traj[0]]
@@ -715,9 +802,15 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
+t_inverse = 0
+if t_inverse:
+    Ver = [550, 600, 515, 550, 600, 515, 550, 600, 515, 550, 600, 515]
+    traj = draw_circle_12(100, 200, Ver)
+    print(traj)
+    draw_12(traj, Ver)
+
 t_different_moves = 1
 if t_different_moves:
-
     traj_FL = draw_circle(200, 200, 550, 600, 515, 0)
     traj_FR = draw_circle(200, 200, 550, 600, 515, 1)
     for i in range(len(traj_FR)):

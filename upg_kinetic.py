@@ -50,9 +50,6 @@ MR = np.array([[[1, 0, 0],
 # Décalage entre le centre du robot et le point O de la jambe FL
 L = np.array([500, 500, 0])
 
-V = 460, 565, 500
-
-
 ################################# 2D #######################################
 
 def distance_3_points(A, B, C):
@@ -233,6 +230,70 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
 
 
 ################################ MOVE ######################################
+
+def gen_jacob_12(V):
+    J_12 = []
+    for i in range(4):
+        # Calcul de la jacobienne de la patte
+        v1, v2, v3 = V[i*3], V[i*3 + 1], V[i*3 + 2]
+        lpl = kin.LEGS[i]['lengths']
+        alpha = np.arccos(v3_to_cos_angle(v3, lpl))
+        J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ MR[i].T
+
+        # Ajout à J_12
+        L = np.zeros((3, 12))
+        for j in range(3):
+            for k in range(3):
+                L[j][i*3 + k] = J_3[j][k]
+        J_12.append(L[0])
+        J_12.append(L[1])
+        J_12.append(L[2])
+    return J_12
+
+def direct_12(V):
+    """
+    Retourne les positions des extrémités des 4 pattes correspondant aux élongations V des vérins
+    Les distances sont exprimées en mm et les coordonnées sont exprimées dans le référentiel du robot
+    """
+    R = []
+    for i in range(4):
+        R = np.append(R, direct_robot(V[i*3], V[i*3 + 1], V[i*3 + 2], i))
+    return R
+
+def move_12(traj, V):
+    """
+    Retourne le tableau des élongations successives des 12 vérins permettant aux extrémités des 4 pattes de suivre les trajectoires qui leur ont été attribuées par traj
+    traj : liste des positions successives des extrémités des 4 pattes sous la forme [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...]
+    V : liste des élongations initiales des 12 vérins (dans l'ordre FL, FR, RL, RR) sous la forme [v1, v2, v3, v4, ..., v12]
+    V doit correspondre à la première position de traj
+    Toutes les longueurs sont en mm, les coordonnées des trajectoires sont exprimées dans le référentiel du robot
+    """
+    V0 = V
+    R = [V0]
+    for i in range(1, len(traj)):
+        X0 = direct_12(V)
+        dX = traj[i] - X0
+        J = gen_jacob_12(V)
+        dV = J @ dX
+        V0 = V0 + dV
+        #for v in V0: assert 450 < v < 650, 'Elongation de vérin invalide'
+        R.append(V0)
+    return R
+
+def draw_circle_12(n, r, V):
+    traj_FL = draw_circle(n, r, V[0], V[1], V[2], 0)
+    traj_FR = draw_circle(n, r, V[3], V[4], V[5], 1)
+    traj_RL = draw_circle(n, r, V[6], V[7], V[8], 2)
+    traj_RR = draw_circle(n, r, V[9], V[10], V[11], 3)
+    traj = []
+    for i in range(n):
+        t = traj_FL[i]
+        t = np.append(t, MR[1] @ traj_FR[i])
+        t = np.append(t, MR[2] @ traj_RL[i])
+        t = np.append(t, MR[3] @ traj_RR[i])
+        traj.append(t)
+    return traj
+
 
 def move_4_legs(traj, V, upgrade=False):
     """
@@ -451,7 +512,7 @@ def cos_angle_to_v3(cangle, lpl):
 
     >>> cos_angle_to_v3(np.cos(np.pi/4), kin.LEGS[0]['lengths']) - al_kashi_longueur(KO, LO, np.pi/4 - np.arccos(MO/LO))
     0.0
-    >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4), kin.LEGS[0]['lengths'])) - np.cos(np.pi/4) < 0.0000001
+    >>> v3_to_cos_angle(cos_angle_to_v3(np.cos(np.pi/4), kin.LEGS[0]['lengths']), kin.LEGS[0]['lengths']) - np.cos(np.pi/4) < 0.0000001
     True
     """
     KO = lpl['yaw_c']
@@ -469,7 +530,7 @@ def v3_to_cos_angle(v3, lpl):
 
     >>> v3_to_cos_angle(500, kin.LEGS[0]['lengths']) - np.cos(al_kashi_angle(LO, KO, 500) + np.arccos(MO/LO))
     0.0
-    >>> cos_angle_to_v3(v3_to_cos_angle(500), kin.LEGS[0]['lengths']) - 500 < 0.0000001
+    >>> cos_angle_to_v3(v3_to_cos_angle(500, kin.LEGS[0]['lengths']), kin.LEGS[0]['lengths']) - 500 < 0.0000001
     True
     """
     KO = lpl['yaw_c']
