@@ -431,7 +431,7 @@ def draw_12(traj, V):
     V12 = [v[11] for v in Ver]
     T = np.linspace(0, 1, len(Ver))
 
-    # Positions des bouts de patte
+    #Positions des bouts de patte
     Pos0 = list(map(direct_robot, [v for v in V1], [v for v in V2], [v for v in V3], [kin.FL for v in Ver]))
     Pos1 = list(map(direct_robot, [v for v in V4], [v for v in V5], [v for v in V6], [kin.FR for v in Ver]))
     Pos2 = list(map(direct_robot, [v for v in V7], [v for v in V8], [v for v in V9], [kin.RL for v in Ver]))
@@ -796,13 +796,13 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_inverse = 0
+t_inverse = 1
 if t_inverse:
     Ver = [550, 600, 515, 550, 600, 515, 550, 600, 515, 550, 600, 515]
     traj = draw_circle_12(200, 200, Ver)
     draw_12(traj, Ver)
 
-t_artificial_inverse = 1
+t_artificial_inverse = 0
 if t_artificial_inverse:
     traj_FL = draw_circle(200, 200, 550, 600, 515, 0)
     traj_FR = draw_circle(200, 200, 550, 600, 515, 1)

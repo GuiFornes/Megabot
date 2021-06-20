@@ -262,7 +262,7 @@ def move_12(traj, V, solved=True):
     V0 = V
     R = [V0]
     for i in range(1, len(traj)):
-        X0 = direct_12(V)
+        X0 = direct_12(V0)
         dX = traj[i] - X0
         J = gen_jacob_12(V)
         if solved:  # Utilisation du solveur
@@ -280,15 +280,15 @@ def move_12(traj, V, solved=True):
         else:  # Utilisation de la jacobienne sans solveur
             dV = J @ dX
         V0 = V0 + dV
-        for v in V0: assert 449 < v < 651, 'Elongation de vérin invalide'
+        for v in V0: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
         R.append(V0)
     return R
 
 def draw_circle_12(n, r, V):
-    traj_FL = draw_circle(n, r, V[0], V[1], V[2], 0)
-    traj_FR = draw_circle(n, r, V[3], V[4], V[5], 1)
-    traj_RL = draw_circle(n, r, V[6], V[7], V[8], 2)
-    traj_RR = draw_circle(n, r, V[9], V[10], V[11], 3)
+    traj_FL = draw_circle(r, n, V[0], V[1], V[2], 0)
+    traj_FR = draw_circle(r, n, V[3], V[4], V[5], 1)
+    traj_RL = draw_circle(r, n, V[6], V[7], V[8], 2)
+    traj_RR = draw_circle(r, n, V[9], V[10], V[11], 3)
     traj = []
     for i in range(n):
         t = traj_FL[i]
