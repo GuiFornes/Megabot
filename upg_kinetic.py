@@ -59,7 +59,6 @@ def distance_3_points(A, B, C):
     """
     return 2 * np.array([[A[0] - B[0], A[1] - B[1]], [A[0] - C[0], A[1] - C[1]]])
 
-
 def gen_jacob_2(pts, v1, v2):
     """
     Retourne la jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
@@ -117,7 +116,6 @@ def gen_jacob_2(pts, v1, v2):
 
     return Jacob
 
-
 def d3_to_d2(x, y, z):
     """
     Retourne (X, Z, alpha) les coordonnées cylindriques du bout de la patte
@@ -127,7 +125,6 @@ def d3_to_d2(x, y, z):
     calpha = y / X
     return X, Z, calpha
 
-
 def d2_to_d3(X, Z, calpha):
     """
     Retourne (x, y, z) les coordonnées cartésiennes du bout de la patte
@@ -136,7 +133,6 @@ def d2_to_d3(X, Z, calpha):
     y = X * calpha
     z = Z
     return x, y, z
-
 
 def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     """
@@ -161,7 +157,6 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
 
     return v1 + dV[0] * 1000, v2 + dV[1] * 1000, new_v3
 
-
 ################################# 3D #######################################
 
 def mat_A(pts, v1, v2, v3, alpha):
@@ -179,7 +174,6 @@ def mat_A(pts, v1, v2, v3, alpha):
 
     return A
 
-
 def mat_B(pts, alpha):
     """
     Fonction auxiliaire de gen_jacob_3
@@ -195,7 +189,6 @@ def mat_B(pts, alpha):
 
     return B
 
-
 def gen_jacob_3(v1, v2, v3, alpha, lpl):
     """
     Retourne la jacobienne correspondant au modèle cinématique indirect dans le repère cartésien centré en O
@@ -208,7 +201,6 @@ def gen_jacob_3(v1, v2, v3, alpha, lpl):
 
     return A @ inv(B)
 
-
 def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     """
     Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
@@ -220,14 +212,13 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
 
     J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arctan(x0 / y0), lpl)
 
-    P = 2 * J.T @ J
-    q = J.T @ (X0 - Xt)
+    P = J.T @ J
+    q = Xt.T @ J
     lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3]) / 1000
     ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3]) / 1000
     dV = solve_qp(P, q, lb=lb, ub=ub)
 
     return v1 + dV[0] * 1000, v2 + dV[1] * 1000, v3 + dV[2] * 1000
-
 
 ################################ MOVE ######################################
 
@@ -260,7 +251,7 @@ def direct_12(V):
         R = np.append(R, direct_robot(V[i*3], V[i*3 + 1], V[i*3 + 2], i))
     return R
 
-def move_12(traj, V):
+def move_12(traj, V, solved=True):
     """
     Retourne le tableau des élongations successives des 12 vérins permettant aux extrémités des 4 pattes de suivre les trajectoires qui leur ont été attribuées par traj
     traj : liste des positions successives des extrémités des 4 pattes sous la forme [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...]
@@ -274,9 +265,22 @@ def move_12(traj, V):
         X0 = direct_12(V)
         dX = traj[i] - X0
         J = gen_jacob_12(V)
-        dV = J @ dX
+        if solved:  # Utilisation du solveur
+            P = inv(J).T @ inv(J)
+            q = - inv(J).T @ dX
+            lb = np.array([450.0, 450.0, 450.0,
+                           450.0, 450.0, 450.0,
+                           450.0, 450.0, 450.0,
+                           450.0, 450.0, 450.0]) - V0
+            ub = np.array([650.0, 650.0, 650.0,
+                           650.0, 650.0, 650.0,
+                           650.0, 650.0, 650.0,
+                           650.0, 650.0, 650.0]) - V0
+            dV = solve_qp(P, q, lb=lb, ub=ub)
+        else:  # Utilisation de la jacobienne sans solveur
+            dV = J @ dX
         V0 = V0 + dV
-        #for v in V0: assert 450 < v < 650, 'Elongation de vérin invalide'
+        for v in V0: assert 449 < v < 651, 'Elongation de vérin invalide'
         R.append(V0)
     return R
 
@@ -294,7 +298,6 @@ def draw_circle_12(n, r, V):
         traj.append(t)
     return traj
 
-
 def move_4_legs(traj, V, upgrade=False):
     """
     Retourne le tableau des élongations successives des 12 vérins (3 par 3) permettant aux
@@ -306,7 +309,7 @@ def move_4_legs(traj, V, upgrade=False):
     # Calcul des élongations de chacunes des pattes
     Ver = []
     for i in range(4):
-        Ver.append(move_leg(traj[i], V[i][0], V[i][1], V[i][2], i, upgrade=upgrade))
+        Ver.append(move_leg(traj[i], V[i][0], V[i][1], V[i][2], i, upgrade=upgrade, solved=True))
     # Mise sous le format attendu
     R = []
     for k in range(len(Ver[0])):
@@ -317,8 +320,7 @@ def move_4_legs(traj, V, upgrade=False):
         R.append(r)
     return R
 
-
-def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False):
+def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True):
     """
     Retourne la liste des élongations des vérins permettant au bout de la patte de suivre traj
     Prend en argument la succession de positions formant traj, les élongations initiales des vérins et l'id de la patte
@@ -347,11 +349,17 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False):
             err = np.array([prev_T[0] - x0, prev_T[1] - y0, prev_T[2] - z0])
             prev_T = T
         J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
-        dV = J @ dX
+        if solved:  # Utilisation du solveur
+            P = inv(J).T @ inv(J)
+            q = - inv(J).T @ dX
+            lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
+            ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3])
+            dV = solve_qp(P, q, lb=lb, ub=ub)
+        else:  # Utilisation de la jacobienne sans solveur
+            dV = J @ dX
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
         R.append((v1, v2, v3))
     return R
-
 
 def draw_circle(r, n, v1, v2, v3, leg_id):
     lpl = kin.LEGS[leg_id]['lengths']
@@ -364,37 +372,6 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
                            y0 + r * np.sin(2 * k * np.pi / n),
                            z0]) + L)
     return R
-
-
-def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
-    """
-    Retourne la liste des élongations successives des vérins permettant de placer le bout de la patte en (x,y,z)
-    Effectue une normalisation du déplacement
-    """
-    L = []
-    c = 0
-
-    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])
-    X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
-    x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
-    dist = distance(x - x0, y - y0, z - z0)
-    while dist > eps and c < 300:
-        c += 1
-        U = np.array([(x - x0), (y - y0), (z - z0)])
-        U = dstep / 100 * U  # / np.linalg.norm(U)**p
-        dx, dy, dz = U[0], U[1], U[2]
-
-        v1, v2, v3 = solve_indirect_cart(x0 + dx, y0 + dy, z0 + dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
-        L.append((v1, v2, v3))
-
-        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])
-        X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
-        x1, y1, z1 = x0 + dx, y0 + dy, z0 + dz
-        x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
-
-        dist = distance(x - x0, y - y0, z - z0)
-    return L
-
 
 def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
     lpl = kin.LEGS[leg_id]['lengths']
@@ -432,7 +409,6 @@ def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
         pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     return res
-
 
 def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
     lpl = kin.LEGS[leg_id]['lengths']
@@ -477,7 +453,6 @@ def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
         x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3))
     return res
 
-
 def direct_leg(v1, v2, v3):
     """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel de la patte FL
@@ -491,7 +466,6 @@ def direct_leg(v1, v2, v3):
     z = Z * 1000
     return x, y, z
 
-
 def direct_robot(v1, v2, v3, leg_id):
     """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel du robot
@@ -502,6 +476,35 @@ def direct_robot(v1, v2, v3, leg_id):
     calpha = v3_to_cos_angle(v3, lpl)
     Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
     return MR[leg_id] @ (Pos + L)
+
+def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
+    """
+    Retourne la liste des élongations successives des vérins permettant de placer le bout de la patte en (x,y,z)
+    Effectue une normalisation du déplacement
+    """
+    L = []
+    c = 0
+
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])
+    X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
+    x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
+    dist = distance(x - x0, y - y0, z - z0)
+    while dist > eps and c < 300:
+        c += 1
+        U = np.array([(x - x0), (y - y0), (z - z0)])
+        U = dstep / 100 * U  # / np.linalg.norm(U)**p
+        dx, dy, dz = U[0], U[1], U[2]
+
+        v1, v2, v3 = solve_indirect_cart(x0 + dx, y0 + dy, z0 + dz, x0, y0, z0, v1, v2, v3, leg_id, pts)
+        L.append((v1, v2, v3))
+
+        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[kin.FL]['lengths'])
+        X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
+        x1, y1, z1 = x0 + dx, y0 + dy, z0 + dz
+        x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3))
+
+        dist = distance(x - x0, y - y0, z - z0)
+    return L
 
 ################################# OUTILS ###################################
 
@@ -522,7 +525,6 @@ def cos_angle_to_v3(cangle, lpl):
     return np.sqrt(
         LO ** 2 + KO ** 2 - 2 * LO * KO * (cangle * MO / LO + np.sqrt(1 - cangle ** 2) * np.sqrt(1 - (MO / LO) ** 2)))
 
-
 def v3_to_cos_angle(v3, lpl):
     """
     Fonction auxiliaire de normalized_move_xyz
@@ -539,7 +541,6 @@ def v3_to_cos_angle(v3, lpl):
     LO = np.sqrt(LM ** 2 + MO ** 2)
     return (KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO) * MO / LO - np.sqrt(
         1 - ((KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO)) ** 2) * np.sqrt(1 - (MO / LO) ** 2)
-
 
 def distance(x, y, z=0):
     """
@@ -560,14 +561,11 @@ def distance(x, y, z=0):
     """
     return np.sqrt(x ** 2 + y ** 2 + z ** 2)
 
-
 def al_kashi_longueur(a, b, alpha):
     return np.sqrt(a ** 2 + b ** 2 - 2 * a * b * np.cos(alpha))
 
-
 def al_kashi_angle(a, b, c):
     return np.arccos((a ** 2 + b ** 2 - c ** 2) / (2 * a * b))
-
 
 ############################################################################
 
