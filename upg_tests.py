@@ -8,6 +8,8 @@ import time
 import kinetic as kin
 from upg_kinetic import *
 from upg_deprecated import *
+from upg_tools import *
+from upg_jacobian import *
 
 ############################# FONCTIONS DE TEST ################################
 
