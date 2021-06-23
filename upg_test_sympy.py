@@ -23,6 +23,9 @@ R_n = Matrix([[cos(n), -sin(n), 0],
        [0, 0, 1]])
 
 R = R_l * R_m * R_n
+dRdl = diff(R, l)
+dRdm = diff(R, m)
+dRdn = diff(R, n)
 
 PP = [Matrix([xx1, yy1, zz1]), Matrix([xx2, yy2, zz2]), Matrix([xx3, yy3, zz3]), Matrix([xx4, yy4, zz4])]
 P = [Matrix([x1, y1, z1]), Matrix([x2, y2, z2]), Matrix([x3, y3, z3]), Matrix([x4, y4, z4])]
