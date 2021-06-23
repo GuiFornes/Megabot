@@ -5,6 +5,7 @@ from numpy.linalg import inv
 from qpsolvers import solve_qp
 import kinetic as kin
 from upg_tools import *
+from upg_kinetic import *
 
 def distance_3_points(A, B, C):
     """
@@ -145,46 +146,88 @@ def gen_matrix_rota(angle, axis):
                          [np.sin(angle), np.cos(angle), 0],
                          [0, 0, 1]])
 
+def gen_deriv_matrix_rota(angle, axis):
+    if axis == 0: # Rotation selon x
+        return np.array([[0, 0, 0],
+                         [0, -np.sin(angle), -np.cos(angle)],
+                         [0, np.cos(angle), -np.sin(angle)]])
+    elif axis == 1: # Rotation selon y
+        return np.array([[-np.sin(angle), 0, -np.cos(angle)],
+                         [0, 0, 0],
+                         [np.cos(angle), 0, -np.sin(angle)]])
+    else: # Rotation selon z
+        return np.array([[-np.sin(angle), -np.cos(angle), 0],
+                         [np.cos(angle), -np.sin(angle), 0],
+                         [0, 0, 0]])
+
 def gen_R(l, m, n):
     return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
 
-def gen_inv_abs_jacob_12(V, R):
-    inv_abs_J_12 = []
+def gen_dRdl(l, m, n):
+    return gen_deriv_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
+
+def gen_dRdm(l, m, n):
+    return gen_matrix_rota(l, 2) @ gen_deriv_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
+
+def gen_dRdn(l, m, n):
+    return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_deriv_matrix_rota(n, 2)
+
+def gen_jacob_12x18(V, R, dRdl, dRdm, dRdn, X):
+    J_l = np.block([[dRdl, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdl, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdl, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdl]]) @ X
+    J_m = np.block([[dRdm, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdm, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdm, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdm]]) @ X
+    J_n = np.block([[dRdn, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdn, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdn, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdn]]) @ X
+    J_Omega = np.concatenate((-J_l.reshape((12,1)), -J_m.reshape((12,1)), -J_n.reshape((12,1))), axis=1)
+
+    J_O = np.concatenate((-np.eye(3), -np.eye(3), -np.eye(3), -np.eye(3)))
+
+    M = np.concatenate((np.eye(12), J_Omega, J_O), axis=1)
+
+    J_12 = gen_jacob_12(V)
+
+    Big_inv_R = np.block([[R.T, np.zeros((3, 9))],
+                          [np.zeros((3, 3)), R.T, np.zeros((3, 6))],
+                          [np.zeros((3, 6)), R.T, np.zeros((3, 3))],
+                          [np.zeros((3, 9)), R.T]])
+
+    return J_12 @ Big_inv_R @ M
+
+def legs_constraints():
+    C = np.zeros((12, 18))
     for i in range(4):
-        # Calcul de la jacobienne de la patte
-        v1, v2, v3 = V[i*3], V[i*3 + 1], V[i*3 + 2]
-        lpl = kin.LEGS[i]['lengths']
-        alpha = np.arccos(v3_to_cos_angle(v3, lpl))
-        inv_abs_J_3 = R @ inv(gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ MR[i].T)
+        if LEGS[i]['og']:
+            for j in range(3):
+                C[i * 3 + j][i * 3 + j] = 1
+    return C
 
-        # Ajout à inv_abs_J_12
-        L = np.zeros((3, 12))
-        for j in range(3):
-            for k in range(3):
-                L[j][i*3 + k] = inv_abs_J_3[j][k]
-        inv_abs_J_12.append(L[0])
-        inv_abs_J_12.append(L[1])
-        inv_abs_J_12.append(L[2])
-    return inv_abs_J_12
-
-def gen_inv_jacob_O(V, O):
-    inv_J_O = []
-    return inv_J_O
-
-def gen_inv_jacob_18(V, O):
+def gen_jacob_24x18(V, X, l, m, n):
     """
-    Retourne la matrice J de taille 18:12 associée à la relation dX = J @ dV
-    Avec X = (x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x0, y0, z0, l, m, n) le vecteur contenant les positions
-    de chacunes des pattes et du centre du robot dans le référentiel absolu et les angles du châssis du robot
-    V = (v1, v2, ..., v12)
-    O = (x0, y0, z0, l, m, n)
+    A voir
     """
-    R = gen_R(O[3], O[4], O[5])
-    inv_abs_J_12 = gen_inv_abs_jacob_12(V, R)
-    inv_J_O = gen_inv_jacob_O(V, O)
-    inv_J_18 = []
-    for i in range(12):
-        inv_J_18.append(inv_abs_J_12[i])
-    for i in range(6):
-        inv_J_18.append(inv_J_O[i])
-    return inv_J_18
+    R = gen_R(l, m, n)
+    dRdl = gen_dRdl(l, m, n)
+    dRdm = gen_dRdm(l, m, n)
+    dRdn = gen_dRdn(l, m, n)
+    J_12x18 = gen_jacob_12x18(V, R, dRdl, dRdm, dRdn, X)
+    Legs_constraints = legs_constraints()
+    return np.concatenate((J_12x18, Legs_constraints))
+
+def pseudo_inv(M):
+    return inv(M.T @ M) @ M.T
+
+def gen_jacob(V, X, l, m, n):
+    J_24x18 = gen_jacob_24x18(V, X, l, m, n)
+    J_24x15 = J_24x18[0:24, 0:15]
+    J_O = J_24x18[0:24, 15:18]
+    return pseudo_inv(J_O) @ np.concatenate((-J_24x15, np.eye(24)), axis=1)
+
+# V = [550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550]
+# print(gen_jacob(V, direct_12(V), 0, 0, 0))

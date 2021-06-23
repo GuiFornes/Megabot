@@ -16,32 +16,32 @@ ALL_LEGS=(FL,FR,RL,RR)
 
 BODY_FRAME=1.0
 
-LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0), \
-          'lengths':{'ao':135.0,'bo':120.0,'bcx':290.0,'bcy':60.0, \
-                     'ae':500.0,'de':100.0,'ef':450.0,'fg':300.0, \
-                     'fh':200.0,'gi':520.0,'bf':600.0,'gj':1055.0, \
-                     'yaw_a':700.0,'yaw_b':50.0,'yaw_c':280.0}               , \
+LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
+          'lengths':{'ao':135.0,'bo':120.0,'bcx':290.0,'bcy':60.0,
+                     'ae':500.0,'de':100.0,'ef':450.0,'fg':300.0,
+                     'fh':200.0,'gi':520.0,'bf':600.0,'gj':1055.0,
+                     'yaw_a':700.0,'yaw_b':50.0,'yaw_c':280.0},
           'verins':[485, 575, 515],
           'og':1},
-      FR:{'origin':(BODY_FRAME/2.0,BODY_FRAME/2.0,0), \
-          'lengths':{'ao':130.0,'bo':120.0,'bcx':300.0,'bcy':60.0, \
-                     'ae':500.0,'de':100.0,'ef':445.0,'fg':285.0, \
-                     'fh':200.0,'gi':500.0,'bf':603.0,'gj':1035.0, \
-                     'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0}               , \
+      FR:{'origin':(BODY_FRAME/2.0,BODY_FRAME/2.0,0),
+          'lengths':{'ao':130.0,'bo':120.0,'bcx':300.0,'bcy':60.0,
+                     'ae':500.0,'de':100.0,'ef':445.0,'fg':285.0,
+                     'fh':200.0,'gi':500.0,'bf':603.0,'gj':1035.0,
+                     'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},
           'verins': [485, 575, 515],
           'og':1},
-      RL:{'origin':(-BODY_FRAME/2.0,-BODY_FRAME/2.0,0), \
-          'lengths':{'ao':130.0,'bo':120.0,'bcx':295.0,'bcy':60.0, \
-                     'ae':495.0,'de':100.0,'ef':450.0,'fg':300.0, \
-                     'fh':200.0,'gi':515.0,'bf':600.0,'gj':1055.0, \
-                     'yaw_a':700.0,'yaw_b':60.0,'yaw_c':280.0}               , \
+      RL:{'origin':(-BODY_FRAME/2.0,-BODY_FRAME/2.0,0),
+          'lengths':{'ao':130.0,'bo':120.0,'bcx':295.0,'bcy':60.0,
+                     'ae':495.0,'de':100.0,'ef':450.0,'fg':300.0,
+                     'fh':200.0,'gi':515.0,'bf':600.0,'gj':1055.0,
+                     'yaw_a':700.0,'yaw_b':60.0,'yaw_c':280.0},
           'verins': [485, 575, 515],
           'og':1},
-      RR:{'origin':(BODY_FRAME/2.0,-BODY_FRAME/2.0,0), \
-          'lengths':{'ao':130.0,'bo':120.0,'bcx':290.0,'bcy':60.0, \
-                     'ae':495.0,'de':100.0,'ef':445.0,'fg':300.0, \
-                     'fh':200.0,'gi':500.0,'bf':600.0,'gj':1045.0, \
-                     'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},               \
+      RR:{'origin':(BODY_FRAME/2.0,-BODY_FRAME/2.0,0),
+          'lengths':{'ao':130.0,'bo':120.0,'bcx':290.0,'bcy':60.0,
+                     'ae':495.0,'de':100.0,'ef':445.0,'fg':300.0,
+                     'fh':200.0,'gi':500.0,'bf':600.0,'gj':1045.0,
+                     'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},
           'verins': [485, 575, 515],
           'og':1}
       }
@@ -118,6 +118,11 @@ def direct_leg(v1, v2, v3):
     return x, y, z
 
 ############################## INDIRECT ####################################
+
+# def move(traj_center, V):
+#     V0 = V
+#     L = [V0]
+#     X0 = direct_12(V0)
 
 def move_12(traj, V, solved=True):
     """
