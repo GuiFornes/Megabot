@@ -80,6 +80,9 @@ def stand_up(leg_id):
 
 ############################### DIRECT #####################################
 
+def direct_18(V):
+    return 0
+
 def direct_12(V):
     """
     Retourne les positions des extrémités des 4 pattes correspondant aux élongations V des vérins
