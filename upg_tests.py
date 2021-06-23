@@ -3,6 +3,8 @@ from numpy.linalg import inv
 from numpy import dot
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d  # Fonction pour la 3D
+import mpl_toolkits.mplot3d.axes3d as p3
+import matplotlib.animation as animation
 import time
 
 import kinetic as kin
@@ -577,6 +579,7 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False):
     """
         Trace la trajectoire de la patte du robot suivant traj avec move_leg
     """
+    lpl = LEGS[leg_id]['lengths']
     # Trajectoire
     Xt = [p[0] - 500 for p in traj]
     Yt = [p[1] - 500 for p in traj]
@@ -594,38 +597,82 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False):
     Xp = [p[0] for p in Pos]
     Yp = [p[1] for p in Pos]
     Zp = [p[2] for p in Pos]
+    print(Xp[0])
+    # fig = plt.figure()
+    # ax = fig.gca(projection='3d')  # Affichage en 3D
+    # ax.plot(Xt, Yt, Zt, label='Théorique')  # Tracé de la courbe théorique
+    # ax.scatter(Xp, Yp, Zp, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
+    # plt.title("Trajectoire du bout de la patte dans l'espace")
+    # ax.set_xlabel('X')
+    # ax.set_ylabel('Y')
+    # ax.set_zlabel('Z')
+    # ax.set_xbound(0, 1000)
+    # ax.set_ybound(0, 1000)
+    # ax.set_zbound(0, -1000)
+    # plt.show()
 
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')  # Affichage en 3D
-    ax.plot(Xt, Yt, Zt, label='Théorique')  # Tracé de la courbe théorique
-    ax.scatter(Xp, Yp, Zp, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
-    plt.title("Trajectoire du bout de la patte dans l'espace")
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_xbound(0, 1000)
-    ax.set_ybound(0, 1000)
-    ax.set_zbound(0, -1000)
-    plt.show()
+    # plt.plot(T, V1, label='V1' )
+    # plt.plot(T, V2, label='V2' )
+    # plt.plot(T, V3, label='V3' )
+    # plt.title("Elongations des vérins dans le mouvement")
+    # plt.show()
 
-    plt.plot(T, V1, label='V1' )
-    plt.plot(T, V2, label='V2' )
-    plt.plot(T, V3, label='V3' )
-    plt.title("Elongations des vérins dans le mouvement")
-    plt.show()
+    # ErrX ,ErrY, ErrZ = [], [], []
+    # for k in range(len(Ver)):
+    #     ErrX.append(Xp[k]-Xt[k])
+    #     ErrY.append(Yp[k]-Yt[k])
+    #     ErrZ.append(Zp[k]-Zt[k])
+    # plt.plot(ErrX, label="x error")
+    # plt.plot(ErrY, label="y error")
+    # plt.plot(ErrZ, label="z error")
+    # plt.legend()
+    # plt.ylabel('error in the movement (mm)')
+    # plt.xlabel('steps')
+    # plt.show()
 
-    ErrX ,ErrY, ErrZ = [], [], []
-    for k in range(len(Ver)):
-        ErrX.append(Xp[k]-Xt[k])
-        ErrY.append(Yp[k]-Yt[k])
-        ErrZ.append(Zp[k]-Zt[k])
-    plt.plot(ErrX, label="x error")
-    plt.plot(ErrY, label="y error")
-    plt.plot(ErrZ, label="z error")
-    plt.legend()
-    plt.ylabel('error in the movement (mm)')
-    plt.xlabel('steps')
-    plt.show()
+    Pos2 = list(map(lambda v1, v2:kin.get_leg_points_V1_V2(v1, v2, lpl), [v[0]/1000 for v in Ver], [v[1]/1000 for v in Ver]))
+    for i in range(len(traj)):
+        Pos2[i] = dict(map(lambda kv: (kv[0], d2_to_d3(kv[1][0]*1000, kv[1][1]*1000, v3_to_cos_angle(V3[i], lpl))), Pos2[i].items()))
+        # Pos2[i] = dict(map(lambda kv: (kv[0], kv[1]*1000), Pos2[i].items()))
+
+    print(Pos2[0]['A'][0])
+    anim = True
+    if anim:
+        fig = plt.figure()
+        ax = p3.Axes3D(fig)
+        # Initialisation
+        pointO = ax.scatter(xs=0, ys=0, zs=0, s=40)
+        pointJ = ax.scatter(xs=Xp[0], ys=Yp[0], zs=Zp[0], s=40, marker='o')
+
+        ligneOA, = ax.plot(xs=[0, Pos2[0]['A'][0]], ys=[0, Pos2[0]['A'][1]], zs=[0, Pos2[0]['A'][2]])
+        ligneAE, = ax.plot(xs=[Pos2[0]['A'][0], Pos2[0]['E'][0]], ys=[Pos2[0]['A'][1], Pos2[0]['E'][1]], zs=[Pos2[0]['A'][2], Pos2[0]['E'][2]])
+        ligneEG, = ax.plot(xs=[Pos2[0]['E'][0], Pos2[0]['G'][0]], ys=[Pos2[0]['E'][1], Pos2[0]['G'][1]], zs=[Pos2[0]['E'][2], Pos2[0]['G'][2]])
+        ligneGJ, = ax.plot(xs=[Pos2[0]['G'][0], Pos2[0]['J'][0]], ys=[Pos2[0]['G'][1], Pos2[0]['J'][1]], zs=[Pos2[0]['G'][2], Pos2[0]['J'][2]])
+
+        def animateJ(i):
+            pointJ.set_xdata(Xp[i])
+            pointJ.set_ydata(Yp[i])
+            pointJ.set_zdata(Zp[i])
+            return pointJ
+        def animateOA(i):
+            ligneOA.set_data([0, Pos2[i]['A'][0]], [0, Pos2[i]['A'][1]], [0, Pos2[i]['A'][2]])
+            return ligneOA
+        def animateAE(i):
+            ligneAE.set_data([Pos2[i]['A'][0], Pos2[i]['E'][0]], [Pos2[i]['A'][1], Pos2[i]['E'][1]], [Pos2[i]['A'][2], Pos2[i]['E'][2]])
+            return ligneAE
+        def animateEG(i):
+            ligneEG.set_data([Pos2[i]['E'][0], Pos2[i]['G'][0]], [Pos2[i]['E'][1], Pos2[i]['G'][1]], [Pos2[i]['E'][2], Pos2[i]['G'][2]])
+            return ligneEG
+        def animateGJ(i):
+            ligneGJ.set_data([Pos2[i]['G'][0], Pos2[i]['J'][0]], [Pos2[i]['G'][1], Pos2[i]['J'][1]], [Pos2[i]['G'][2], Pos2[i]['J'][2]])
+        fra = len(traj)
+        aniJ = animation.FuncAnimation(fig, animateJ, interval=100, frames=fra, repeat=True)
+        aniOA = animation.FuncAnimation(fig, animateOA, interval=100, frames=fra, repeat=True)
+        aniAE = animation.FuncAnimation(fig, animateAE, interval=100, frames=fra, repeat=True)
+        aniEG = animation.FuncAnimation(fig, animateEG, interval=100, frames=fra, repeat=True)
+        aniGJ = animation.FuncAnimation(fig, animateGJ, interval=100, frames=fra, repeat=True)
+
+        plt.show()
 
 def test_circle_3(v1, v2, v3, r, n, leg_id):
     """
@@ -731,6 +778,9 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
+def test_simulateur():
+    return
+
 ################################# TESTS ####################################
 
 t_move = 0
@@ -798,7 +848,7 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_inverse = 1
+t_inverse = 0
 if t_inverse:
     Ver = [550, 600, 515, 550, 600, 515, 550, 600, 515, 550, 600, 515]
     traj = draw_circle_12(200, 200, Ver)

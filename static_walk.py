@@ -14,6 +14,8 @@ from geo import *
 from com import *
 from visu import *
 
+from upg_kinetic import upg_init_legs
+from upg_kinetic import upg_inverse_kinetic_robot_ref
 
 
 
@@ -68,7 +70,7 @@ def compute_moves(dist,z,angle,store=None):
         y=(ymin+ymax)/2.0
         e=False
         for L in [FL,FR,RL,RR]:
-            e=e or inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,y))))[0]
+            e= e or inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,y))))[0]
         if e==False:
             ymin=y
         else:
@@ -160,8 +162,7 @@ def init_walk():
     tell_controler((FRONT_LEFT+3)%4,to_linear_actuator_order(orders[(FRONT_LEFT+3)%4][1]))
 
 
-    
-        
+
 def move_leg(l):
     tell_controler(l,to_linear_actuator_order(orders[l][3]))
     wait_move(l,5)
@@ -472,11 +473,14 @@ class Walk:
         if self.stage==0:
             init_walk()
             print("walk: init")
+            upg_init_legs(controlers)
             self.stage=1
         elif self.stage==1:
             if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage=2
         elif self.stage==2:
+            print(orders)
+            #print(dcdzveaovqznnpa"naponnpn")
             move_legs(2)
             print("walk: moving back right leg (back to front)")
             self.stage=3

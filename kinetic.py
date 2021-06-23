@@ -184,6 +184,7 @@ def inverse_kinetic_robot_ref(legs,leg,point):
     if r[3]>0.1:
         error=True
         print("too far!")
+    print(r[0], r[1], v3)
     return error,(r[0],r[1],v3) # v3 -> A
 
 def robot_ref_leg_point(legs,leg,v1,v2,v3):
