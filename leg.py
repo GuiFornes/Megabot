@@ -17,7 +17,6 @@ ALL_LEGS=(FL,FR,RL,RR)
 
 TIME_FACTOR=1
 UPDATE_FREQ=100.0
-1
 SPEED={'v1':80,'v2':40,'v3':20}
 
 LEGS={FL:{'origin':(-0.4,0.4,0),         \

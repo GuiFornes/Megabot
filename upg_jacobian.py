@@ -130,3 +130,61 @@ def gen_jacob_12(V):
         J_12.append(L[1])
         J_12.append(L[2])
     return J_12
+
+def gen_matrix_rota(angle, axis):
+    if axis == 0: # Rotation selon x
+        return np.array([[1, 0, 0],
+                         [0, np.cos(angle), -np.sin(angle)],
+                         [0, np.sin(angle), np.cos(angle)]])
+    elif axis == 1: # Rotation selon y
+        return np.array([[np.cos(angle), 0, -np.sin(angle)],
+                         [0, 1, 0],
+                         [np.sin(angle), 0, np.cos(angle)]])
+    else: # Rotation selon z
+        return np.array([[np.cos(angle), -np.sin(angle), 0],
+                         [np.sin(angle), np.cos(angle), 0],
+                         [0, 0, 1]])
+
+def gen_R(l, m, n):
+    return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
+
+def gen_inv_abs_jacob_12(V, R):
+    inv_abs_J_12 = []
+    for i in range(4):
+        # Calcul de la jacobienne de la patte
+        v1, v2, v3 = V[i*3], V[i*3 + 1], V[i*3 + 2]
+        lpl = kin.LEGS[i]['lengths']
+        alpha = np.arccos(v3_to_cos_angle(v3, lpl))
+        inv_abs_J_3 = R @ inv(gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ MR[i].T)
+
+        # Ajout à inv_abs_J_12
+        L = np.zeros((3, 12))
+        for j in range(3):
+            for k in range(3):
+                L[j][i*3 + k] = inv_abs_J_3[j][k]
+        inv_abs_J_12.append(L[0])
+        inv_abs_J_12.append(L[1])
+        inv_abs_J_12.append(L[2])
+    return inv_abs_J_12
+
+def gen_inv_jacob_O(V, O):
+    inv_J_O = []
+    return inv_J_O
+
+def gen_inv_jacob_18(V, O):
+    """
+    Retourne la matrice J de taille 18:12 associée à la relation dX = J @ dV
+    Avec X = (x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, x0, y0, z0, l, m, n) le vecteur contenant les positions
+    de chacunes des pattes et du centre du robot dans le référentiel absolu et les angles du châssis du robot
+    V = (v1, v2, ..., v12)
+    O = (x0, y0, z0, l, m, n)
+    """
+    R = gen_R(O[3], O[4], O[5])
+    inv_abs_J_12 = gen_inv_abs_jacob_12(V, R)
+    inv_J_O = gen_inv_jacob_O(V, O)
+    inv_J_18 = []
+    for i in range(12):
+        inv_J_18.append(inv_abs_J_12[i])
+    for i in range(6):
+        inv_J_18.append(inv_J_O[i])
+    return inv_J_18
