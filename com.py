@@ -15,6 +15,7 @@ WAITMOVE_DST=[50.0]
 ####### COMPUTE ACTUATOR ORDERS ########
 def to_linear_actuator_order(l):
     k=[(c-0.45)*1000.0 for c in l] # m to mm
+    print(l, "olive", k)
     return "A%.2f#B%.2f#C%.2f#\n"%(k[2],k[0],k[1])
 
 
@@ -159,7 +160,7 @@ def find_controler():
 
 
 def tell_controler(number,msg,w=0):
-    #print 'tell controler ',number,' : ',msg
+    print('tell controler ',number,' : ',msg)
     if legs[number]==None:
         return
     try:
@@ -171,6 +172,10 @@ def tell_controler(number,msg,w=0):
         find_controler()
         time.sleep(0.5)
         tell_controler(number,msg,w)
+
+def tell_controlers(V):
+    for i in range(4):
+        tell_controler(i, to_linear_actuator_order([V[3 * i] / 1000, V[3 * i + 1] / 1000, V[3 * i + 2] / 1000]))
 
 class ControlerHandler(Thread):
     def __init__(self,id):

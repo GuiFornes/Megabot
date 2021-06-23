@@ -6,6 +6,7 @@ from qpsolvers import solve_qp
 import kinetic as kin
 from upg_tools import *
 from upg_jacobian import *
+from com import tell_controler, to_linear_actuator_order, wait_move, tell_controlers
 
 FL=0 # front left leg
 FR=1 # front right leg
@@ -52,30 +53,38 @@ def set_verins_3(v1, v2, v3, leg_id):
     """
     actualise les valeurs de vérins courantes stockées dans la structure LEGS avec celles entrées en paramètre.
     """
+    global LEGS
     LEGS[leg_id]['verins'][0] = v1
     LEGS[leg_id]['verins'][1] = v2
     LEGS[leg_id]['verins'][2] = v3
     return
 
 def set_verins_12(V):
+    """actualise les 12 vérins"""
     for i in range(0, len(V), 3):
         set_verins_3(V[i], V[i + 1], V[i + 2], i / 3)
 
 def get_verins_12():
+    """retourne les valeurs des 12 vérins"""
     res = []
     for i in range(0, 12, 3):
-        res.append(LEGS[i//3]['verins'][i])
-        res.append(LEGS[i//3]['verins'][i+1])
-        res.append(LEGS[i//3]['verins'][i+2])
+        res.append(LEGS[i//3]['verins'][0])
+        res.append(LEGS[i//3]['verins'][1])
+        res.append(LEGS[i//3]['verins'][2])
     return res
 
 def get_verins_3(leg_id):
+    """retourne les valeurs des 3 vérins pour une jambe"""
     return LEGS[leg_id]['verins']
 
 def on_ground(leg_id):
+    """renseigne le caractère 'au sol' d'une patte"""
+    global LEGS
     LEGS[leg_id]['og'] = 1
 
 def stand_up(leg_id):
+    """renseigne le caractère levé d'une patte"""
+    global LEGS
     LEGS[leg_id]['og'] = 0
 
 ############################### DIRECT #####################################
@@ -198,6 +207,13 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
 ################################ MOVE ######################################
 
 def draw_circle_12(n, r, V):
+    """
+    retourne une trajectoire circulaire pour les 4 pattes
+    @param n:
+    @param r:
+    @param V:
+    @return:
+    """
     traj_FL = draw_circle(r, n, V[0], V[1], V[2], 0)
     traj_FR = draw_circle(r, n, V[3], V[4], V[5], 1)
     traj_RL = draw_circle(r, n, V[6], V[7], V[8], 2)
@@ -212,6 +228,16 @@ def draw_circle_12(n, r, V):
     return traj
 
 def draw_circle(r, n, v1, v2, v3, leg_id):
+    """
+    retourne une trajectoire circulaire pour une patte
+    @param r:
+    @param n:
+    @param v1:
+    @param v2:
+    @param v3:
+    @param leg_id:
+    @return:
+    """
     lpl = LEGS[leg_id]['lengths']
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
@@ -223,9 +249,59 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
                            z0]) + L)
     return R
 
+def draw_line_3(v1, v2, v3, dx, dy, dz, n, leg_id):
+    """
+    retourne trajectoire rectiligne en liste de point pour u certain décalage et une certaine patte
+    @param v1:
+    @param v2:
+    @param v3:
+    @param dx:
+    @param dy:
+    @param dz:
+    @param n:
+    @param leg_id:
+    @return:
+    """
+    x0, y0, z0 = direct_leg(v1, v2, v3)
+    traj = []
+    for i in range(n):
+        traj.append((x0 + i * dx / n, y0 + i * dy / n, z0 + i * dz / n))
+    return traj
+
+def draw_line_12(V, dx, dy, dz, n):
+    """
+    retourne la discrétisation d'une trajectoire en ligne droite d'un certain décalage pour les 4 pattes à la fois
+    @param V: liste des 12 vérins
+    @param dx: décalage en x
+    @param dy: décalage en y
+    @param dz: décalage en z
+    @param n: nombre d'étapes dans la traj
+    @return: la trajextoire
+    """
+    traj_FL = draw_line_3(V[0], V[1], V[2], 15, 20, 10, 10, 0)
+    traj_FR = draw_line_3(V[3], V[4], V[5], 15, 20, 10, 10, 1)
+    traj_RL = draw_line_3(V[6], V[7], V[8], 15, 20, 10, 10, 2)
+    traj_RR = draw_line_3(V[9], V[10], V[11], 15, 20, 10, 10, 3)
+    traj = []
+    for i in range(n):
+        t = traj_FL[i]
+        t = np.append(t, MR[1] @ traj_FR[i])
+        t = np.append(t, MR[2] @ traj_RL[i])
+        t = np.append(t, MR[3] @ traj_RR[i])
+        traj.append(t)
+    return traj
 ############################################################################
 
 def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
+    """
+    fonction de test de notre cinématique inverse de la manière de l'implémentation de julien
+    dans le but de comparer sur le simulateur. A noter que ce n'est pas dutout une utilisation optimale car on utilise
+    pas ici le potentiel de travailler sur la division d'un mouvements en petits écarts.
+    @param legs: structure legs inutile ici car on utilise LEGS (qui est global dans ce fichier)
+    @param leg_id: id de la jambe (entre 0 et 3)
+    @param point: point cible pour le bout de la jambe en question
+    @return: les positions de vérins correspondantes
+    """
     lpl = LEGS[leg_id]['lengths']
     V = get_verins_3(leg_id)
     print(point)
@@ -250,16 +326,36 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
     return False, res
 
 def upg_init_legs(controlers):
-    print("\n")
-    print("\n")
+    """
+    met à jour la structure LEGS avec les positions des vérins
+    @param controlers: structure controllers du fichier static_walk
+    """
     print(controlers[FL].la, LEGS[FL]['verins'])
-    print("\n")
-    print("\n")
     for l in ALL_LEGS:
         LEGS[l]['verins'][0] = 450 + controlers[l].la[0]['position']
         LEGS[l]['verins'][1] = 450 + controlers[l].la[1]['position']
         LEGS[l]['verins'][2] = 450 + controlers[l].la[2]['position']
     print(LEGS[FL]['verins'])
+
+def do_the_traj():
+    """
+    créée une trajectoire, calcul les verins correspondant
+    puis envoie l'information sur leurs élongations (qui est interceptée par la simulation
+    """
+    print("ok1")
+    V = get_verins_12()
+    for i in ALL_LEGS:
+        wait_move(i, 2)
+    #traj = draw_line_12(V, 15, 20, 10, 10)
+    traj = draw_circle_12(20, 100, V)
+    V = move_12(traj, V, True)
+    print(traj[0] ,V[0])
+    for i in range(len(traj)):
+        tell_controlers(V[i])
+        wait_move(list(range(4)), 0.1)
+    V = get_verins_12()
+    set_verins_12(V)
+    return
 
 ############################################################################
 if __name__ == "__main__":

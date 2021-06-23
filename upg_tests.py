@@ -778,9 +778,6 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
-def test_simulateur():
-    return
-
 ################################# TESTS ####################################
 
 t_move = 0
@@ -848,10 +845,10 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_inverse = 0
+t_inverse = 1
 if t_inverse:
-    Ver = [550, 600, 515, 550, 600, 515, 550, 600, 515, 550, 600, 515]
-    traj = draw_circle_12(200, 200, Ver)
+    Ver = [485, 575, 565, 485, 575, 565, 485, 575, 565, 485, 575, 565]
+    traj = draw_circle_12(20, 200, Ver)
     draw_12(traj, Ver)
 
 t_artificial_inverse = 0

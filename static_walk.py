@@ -13,9 +13,7 @@ from kinetic import *
 from geo import *
 from com import *
 from visu import *
-
-from upg_kinetic import upg_init_legs
-from upg_kinetic import upg_inverse_kinetic_robot_ref
+from upg_kinetic import draw_line_12, draw_circle_12, upg_inverse_kinetic_robot_ref, upg_init_legs, do_the_traj
 
 
 
@@ -457,7 +455,46 @@ class FastWalk:
             self.timer()
         return True
             
-    
+def init_circle():
+    V = 0.485, 0.575, 0.565
+    for i in range(4):
+        tell_controler(i, to_linear_actuator_order((V)))
+        for j in range(3):
+            controlers[i].la[j]['position'] = V[j]*1000 - 450
+
+class Traj:
+    def __init__(self):
+        self.stage=0
+        self.last=time.time()
+    def timer(self,timeout=None):
+        if timeout==None:
+            self.last=time.time()
+            return False
+        return (time.time()-self.last)>timeout
+    def __next__(self):
+        s = self.stage
+        if self.stage==0:
+            init_circle()
+            upg_init_legs(controlers)
+            print("1passage")
+            self.stage=1
+        elif self.stage==1:
+            print("2passage")
+            if wait_move(list(range(4)),1) or self.timer(10):
+                self.stage=2
+        elif self.stage==2:
+            print("3passage")
+            do_the_traj()
+            self.stage=3
+        elif self.stage==3:
+            print("3passage")
+            do_the_traj()
+            self.stage = 2
+        if self.stage!=s:
+            print("walk reset timer")
+            self.timer()
+        return True
+
 
 class Walk:
     def __init__(self):
@@ -479,8 +516,6 @@ class Walk:
             if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage=2
         elif self.stage==2:
-            print(orders)
-            #print(dcdzveaovqznnpa"naponnpn")
             move_legs(2)
             print("walk: moving back right leg (back to front)")
             self.stage=3
@@ -712,6 +747,9 @@ def cmd_quit(m):
     movement_handler.quit()
     movement_handler.join()
     sys.exit(0)
+def cmd_traj(m):
+    """start making circle (i hope)"""
+    movement_handler.setMove(Traj())
 def cmd_walk(m):
     """start walk movement"""
     movement_handler.setMove(Walk())
