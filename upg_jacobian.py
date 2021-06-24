@@ -1,11 +1,10 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
 
+from upg_kinetic import *
 import numpy as np
 from numpy.linalg import inv
 from qpsolvers import solve_qp
-import kinetic as kin
 from upg_tools import *
-from upg_kinetic import *
 
 def distance_3_points(A, B, C):
     """
@@ -20,13 +19,13 @@ def gen_jacob_2(pts, v1, v2):
     Prend en argument la position des points de la patte et l'élongation des verrins en m
     La jacobienne doit être appliqué sur des élongations en m et retourne des position en m
 
-    >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
+    >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, LEGS[FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
     array([0., 0.])
 
-    # >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
+    # >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, LEGS[FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
     # array([1, 0])
     #
-    # >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, kin.LEGS[kin.FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
+    # >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, LEGS[FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
 
     """
     x_E, y_E = pts['E']
@@ -39,8 +38,8 @@ def gen_jacob_2(pts, v1, v2):
     B = np.array([0, 2 * v1])
     M_D = inv(A) @ B
 
-    M_E = (kin.LEGS[kin.FL]['lengths']['ae'] / (
-                kin.LEGS[kin.FL]['lengths']['ae'] - kin.LEGS[kin.FL]['lengths']['de'])) * M_D
+    M_E = (LEGS[FL]['lengths']['ae'] / (
+                LEGS[FL]['lengths']['ae'] - LEGS[FL]['lengths']['de'])) * M_D
 
     A = distance_3_points(pts['F'], pts['E'], pts['B'])
     B = np.array([
@@ -48,7 +47,7 @@ def gen_jacob_2(pts, v1, v2):
         [0, 0]])
     M_F = (inv(A) @ B) @ M_E
 
-    M_G = ((kin.LEGS[kin.FL]['lengths']['ef'] + kin.LEGS[kin.FL]['lengths']['fg']) / kin.LEGS[kin.FL]['lengths'][
+    M_G = ((LEGS[FL]['lengths']['ef'] + LEGS[FL]['lengths']['fg']) / LEGS[FL]['lengths'][
         'ef']) * M_F
 
     M_H = (BH / BF) * M_F
@@ -67,7 +66,7 @@ def gen_jacob_2(pts, v1, v2):
         [V1[0], V2[0]],
         [V1[1], V2[1]]])
 
-    Jacob = inv((kin.LEGS[kin.FL]['lengths']['gj'] / kin.LEGS[kin.FL]['lengths']['gi']) * M_I)
+    Jacob = inv((LEGS[FL]['lengths']['gj'] / LEGS[FL]['lengths']['gi']) * M_I)
 
     return Jacob
 
@@ -107,7 +106,7 @@ def gen_jacob_3(v1, v2, v3, alpha, lpl):
     Prend en argument l'élongation des verrins en m et l'angle alpha en radian
     La jacobienne doit être appliquée sur des élongations en m et retourne des position en m
     """
-    pts = kin.get_leg_points_V1_V2(v1, v2, lpl)
+    pts = get_leg_points_V1_V2(v1, v2, lpl)
     A = mat_A(pts, v1, v2, v3, alpha)
     B = mat_B(pts, alpha)
 
@@ -118,7 +117,7 @@ def gen_jacob_12(V):
     for i in range(4):
         # Calcul de la jacobienne de la patte
         v1, v2, v3 = V[i*3], V[i*3 + 1], V[i*3 + 2]
-        lpl = kin.LEGS[i]['lengths']
+        lpl = LEGS[i]['lengths']
         alpha = np.arccos(v3_to_cos_angle(v3, lpl))
         J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ MR[i].T
 
@@ -203,7 +202,7 @@ def gen_jacob_12x18(V, R, dRdl, dRdm, dRdn, X):
 def legs_constraints():
     C = np.zeros((12, 18))
     for i in range(4):
-        if LEGS[i]['og']:
+        if get_og(i):
             for j in range(3):
                 C[i * 3 + j][i * 3 + j] = 1
     return C

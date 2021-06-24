@@ -6,10 +6,9 @@ from mpl_toolkits.mplot3d import axes3d  # Fonction pour la 3D
 import matplotlib.animation as animation
 import time
 
-import kinetic as kin
 from upg_kinetic import *
-from upg_deprecated import *
 from upg_tools import *
+from upg_deprecated import *
 from upg_jacobian import *
 
 ############################# FONCTIONS DE TEST ################################
@@ -771,6 +770,8 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
+draw_12(shake_dat_ass(200, get_verins_12()), get_verins_12())
+
 t_move = 0
 # test de normalized_move_xyz
 if t_move:
@@ -861,7 +862,7 @@ if t_artificial_inverse:
                  [550, 600, 515]])
     draw_move_4_legs(traj_4_legs, V)
 
-t_different_moves = 1
+t_different_moves = 0
 if t_different_moves:
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=True)
     # draw_move_leg(draw_circle(150, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=False)

@@ -3,99 +3,21 @@
 import numpy as np
 from numpy.linalg import inv
 from qpsolvers import solve_qp
-import kinetic as kin
+from Matrix import nearPD
 from upg_tools import *
 from upg_jacobian import *
 # from com import wait_move, tell_controlers
 
-FL=0 # front left leg
-FR=1 # front right leg
-RL=2 # rear left leg
-RR=3 # rear right leg
-
-ALL_LEGS=(FL,FR,RL,RR)
-
-BODY_FRAME=1.0
-
-LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
-          'lengths':{'ao':135.0,'bo':120.0,'bcx':290.0,'bcy':60.0,
-                     'ae':500.0,'de':100.0,'ef':450.0,'fg':300.0,
-                     'fh':200.0,'gi':520.0,'bf':600.0,'gj':1055.0,
-                     'yaw_a':700.0,'yaw_b':50.0,'yaw_c':280.0},
-          'verins':[485, 575, 515],
-          'og':1},
-      FR:{'origin':(BODY_FRAME/2.0,BODY_FRAME/2.0,0),
-          'lengths':{'ao':130.0,'bo':120.0,'bcx':300.0,'bcy':60.0,
-                     'ae':500.0,'de':100.0,'ef':445.0,'fg':285.0,
-                     'fh':200.0,'gi':500.0,'bf':603.0,'gj':1035.0,
-                     'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},
-          'verins': [485, 575, 515],
-          'og':1},
-      RL:{'origin':(-BODY_FRAME/2.0,-BODY_FRAME/2.0,0),
-          'lengths':{'ao':130.0,'bo':120.0,'bcx':295.0,'bcy':60.0,
-                     'ae':495.0,'de':100.0,'ef':450.0,'fg':300.0,
-                     'fh':200.0,'gi':515.0,'bf':600.0,'gj':1055.0,
-                     'yaw_a':700.0,'yaw_b':60.0,'yaw_c':280.0},
-          'verins': [485, 575, 515],
-          'og':1},
-      RR:{'origin':(BODY_FRAME/2.0,-BODY_FRAME/2.0,0),
-          'lengths':{'ao':130.0,'bo':120.0,'bcx':290.0,'bcy':60.0,
-                     'ae':495.0,'de':100.0,'ef':445.0,'fg':300.0,
-                     'fh':200.0,'gi':500.0,'bf':600.0,'gj':1045.0,
-                     'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},
-          'verins': [485, 575, 515],
-          'og':1}
-      }
-
-######################### Tools for 'Legs' struct ##########################
-
-def set_verins_3(v1, v2, v3, leg_id):
-    """
-    actualise les valeurs de vérins courantes stockées dans la structure LEGS avec celles entrées en paramètre.
-    """
-    global LEGS
-    LEGS[leg_id]['verins'][0] = v1
-    LEGS[leg_id]['verins'][1] = v2
-    LEGS[leg_id]['verins'][2] = v3
-    return
-
-def set_verins_12(V):
-    """actualise les 12 vérins"""
-    for i in range(0, len(V), 3):
-        set_verins_3(V[i], V[i + 1], V[i + 2], i / 3)
-
-def get_verins_12():
-    """retourne les valeurs des 12 vérins"""
-    res = []
-    for i in range(0, 12, 3):
-        res.append(LEGS[i//3]['verins'][0])
-        res.append(LEGS[i//3]['verins'][1])
-        res.append(LEGS[i//3]['verins'][2])
-    return res
-
-def get_verins_3(leg_id):
-    """retourne les valeurs des 3 vérins pour une jambe"""
-    return LEGS[leg_id]['verins']
-
-def on_ground(leg_id):
-    """renseigne le caractère 'au sol' d'une patte"""
-    global LEGS
-    LEGS[leg_id]['og'] = 1
-
-def stand_up(leg_id):
-    """renseigne le caractère levé d'une patte"""
-    global LEGS
-    LEGS[leg_id]['og'] = 0
 
 ############################### DIRECT #####################################
 
 def direct_O(X_abs, V):
     if LEGS[0]['og'] and LEGS[2]['og']:
-        O0 = X_abs[0 : 3] - direct_leg(V[0], V[1], V[2], 0)
-        O2 = MR[0] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8], 2)
+        O0 = X_abs[0 : 3] - direct_leg(V[0], V[1], V[2])
+        O2 = MR[0] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8])
         return 0.5 * (O0 + O2)
-    O1 = MR[1] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5], 1)
-    O3 = MR[3] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11], 3)
+    O1 = MR[1] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5])
+    O3 = MR[3] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11])
     return 0.5 * (O1 + O3)
 
 def direct_12(V):
@@ -114,7 +36,7 @@ def direct_robot(v1, v2, v3, leg_id):
     Se base sur le modèle direct de Julien
     """
     lpl = LEGS[leg_id]['lengths']
-    X, Z = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
+    X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
     calpha = v3_to_cos_angle(v3, lpl)
     Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
     return MR[leg_id] @ (Pos + L)
@@ -124,8 +46,8 @@ def direct_leg(v1, v2, v3):
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel de la patte FL
     Se base sur le modèle direct de Julien
     """
-    lpl = LEGS[kin.FL]['lengths']
-    X, Z = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
+    lpl = LEGS[FL]['lengths']
+    X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
     calpha = v3_to_cos_angle(v3, lpl)
     x = X * np.sqrt(1 - calpha ** 2) * 1000
     y = X * calpha * 1000
@@ -143,7 +65,7 @@ def move(traj_center, X, Omega, V, angle_chassis=10):
         dO = traj_center[i] - O0
         X0_rel = direct_12(V0)
         M = gen_jacob(V0, X0_rel, Omega[0], Omega[1], Omega[2])
-        P = M.T @ M
+        P = nearPD(M.T @ M)
         q = - M.T @ dO
 
         # Contraintes sur les pattes
@@ -152,8 +74,8 @@ def move(traj_center, X, Omega, V, angle_chassis=10):
         for j in range(4):
             if LEGS[i]['og']:
                 for k in range(3):
-                    A[j * 4 + k][j * 4 + k] = 1
-                    A[27 + j * 4 + k][27 + j * 4 + k] = 1
+                    A[j * 3 + k][j * 3 + k] = 1
+                    A[27 + j * 3 + k][27 + j * 3 + k] = 1
         lb = np.full(39, -np.inf)
         ub = np.full(39, np.inf)
         # Contraintes sur les vérins
@@ -221,7 +143,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
     # Parcours de traj
     for i in range(1, len(traj)):
         lpl = LEGS[leg_id]['lengths']
-        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+        pts = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
         x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3, lpl))
 
@@ -284,7 +206,7 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
     @return:
     """
     lpl = LEGS[leg_id]['lengths']
-    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    pts = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3, lpl))
     R = []
@@ -403,7 +325,7 @@ def do_the_traj():
     return
 
 def shake_dat_ass(n, V):
-    z0 = - kin.get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, LEGS[0]['lengths'])['J'][1]
+    z0 = - get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, LEGS[0]['lengths'])['J'][1]
     X = direct_12(V)
     for i in range(4):
         X[3 * i + 2] += z0
