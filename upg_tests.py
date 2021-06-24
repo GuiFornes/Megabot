@@ -15,6 +15,16 @@ from upg_jacobian import *
 
 ############################# FONCTIONS DE TEST ################################
 
+def shake_dat_ass(n, V):
+    z0 = - kin.get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, LEGS[0]['lengths'])['J'][1]
+    X = direct_12(V)
+    for i in range(4):
+        X[3 * i + 2] += z0
+    Omega = np.array([0, 0, 0])
+    L = np.linspace(-1, 1, n)
+    traj_center = [[0, 0, z0 - 200 * np.sin(l)] for l in L]
+    return move(traj_center, X, Omega, V)
+
 def test_jacob_2(v1, v2, dstep_x, dstep_y):
     """
     Retourne l'erreur relative en x et en y de l'application de la Jacobienne du modèle indirect plan

@@ -89,8 +89,14 @@ def stand_up(leg_id):
 
 ############################### DIRECT #####################################
 
-def direct_18(V):
-    return 0
+def direct_O(X_abs, V):
+    if LEGS[0]['og'] and LEGS[2]['og']:
+        O0 = X_abs[0 : 3] - direct_leg(V[0], V[1], V[2], 0)
+        O2 = MR[0] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8], 2)
+        return 0.5 * (O0 + O2)
+    O1 = MR[1] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5], 1)
+    O3 = MR[3] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11], 3)
+    return 0.5 * (O1 + O3)
 
 def direct_12(V):
     """
@@ -128,10 +134,44 @@ def direct_leg(v1, v2, v3):
 
 ############################## INDIRECT ####################################
 
-# def move(traj_center, V):
-#     V0 = V
-#     L = [V0]
-#     X0 = direct_12(V0)
+def move(traj_center, X, Omega, V, angle_chassis=10):
+    V0 = V
+    X0_abs = X
+    L = [V0]
+    for i in range(1, len(traj_center)):
+        O0 = direct_O(X0_abs, V)
+        dO = traj_center[i] - O0
+        X0_rel = direct_12(V0)
+        M = gen_jacob(V0, X0_rel, Omega[0], Omega[1], Omega[2])
+        P = M.T @ M
+        q = - M.T @ dO
+
+        # Contraintes sur les pattes
+        b = np.zeros(39)
+        A = np.zeros((39, 39))
+        for j in range(4):
+            if LEGS[i]['og']:
+                for k in range(3):
+                    A[j * 4 + k][j * 4 + k] = 1
+                    A[27 + j * 4 + k][27 + j * 4 + k] = 1
+        lb = np.full(39, -np.inf)
+        ub = np.full(39, np.inf)
+        # Contraintes sur les vérins
+        for j in range(12):
+            lb[15 + j] = 450.0 - V0[j]
+            ub[15 + j] = 650.0 - V0[j]
+        # Contraintes sur les angles
+        for j in range(3):
+            lb[12 + j] = -angle_chassis
+            ub[12 + j] = angle_chassis
+
+        sol = solve_qp(P, q, lb=lb, ub=ub, A=A, b=b)
+        X0_abs = X0_abs + sol[0:12]
+        V0 = V0 + sol[15:27]
+        set_verins_12(V)
+        for v in V0: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        L.append(V0)
+    return L
 
 def move_12(traj, V, solved=True):
     """
