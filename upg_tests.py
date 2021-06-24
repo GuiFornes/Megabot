@@ -3,7 +3,6 @@ from numpy.linalg import inv
 from numpy import dot
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d  # Fonction pour la 3D
-import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 import time
 
@@ -639,40 +638,34 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False):
     anim = True
     if anim:
         fig = plt.figure()
-        ax = p3.Axes3D(fig)
-        # Initialisation
-        pointO = ax.scatter(xs=0, ys=0, zs=0, s=40)
-        pointJ = ax.scatter(xs=Xp[0], ys=Yp[0], zs=Zp[0], s=40, marker='o')
+        for i in range(len(traj)):
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(xs=0, ys=0, zs=0, s=40) # point 0
+            ax.scatter(xs=Xp[i], ys=Yp[i], zs=Zp[i], s=40, marker='o', c='red') # point J
+            ax.plot(xs=[0, Pos2[i]['A'][0]], ys=[0, Pos2[i]['A'][1]], zs=[0, Pos2[i]['A'][2]], c='black') # seg OA
+            ax.plot(xs=[Pos2[i]['A'][0], Pos2[i]['E'][0]], ys=[Pos2[0]['A'][1], Pos2[i]['E'][1]],
+                    zs=[Pos2[i]['A'][2], Pos2[i]['E'][2]], c='black') # segment AE
+            ax.plot(xs=[Pos2[i]['E'][0], Pos2[i]['G'][0]], ys=[Pos2[0]['E'][1], Pos2[i]['G'][1]],
+                    zs=[Pos2[i]['E'][2], Pos2[i]['G'][2]], c='black') # segment EG
+            ax.plot(xs=[Pos2[i]['G'][0], Pos2[i]['J'][0]], ys=[Pos2[0]['G'][1], Pos2[i]['J'][1]],
+                    zs=[Pos2[i]['G'][2], Pos2[i]['J'][2]], c='black') # segment GJ
+            ax.plot(xs=[Pos2[i]['A'][0], Pos2[i]['B'][0]], ys=[Pos2[0]['A'][1], Pos2[i]['B'][1]],
+                    zs=[Pos2[i]['A'][2], Pos2[i]['B'][2]], c='black') # segment AB
+            ax.plot(xs=[Pos2[i]['B'][0], Pos2[i]['F'][0]], ys=[Pos2[0]['B'][1], Pos2[i]['F'][1]],
+                    zs=[Pos2[i]['B'][2], Pos2[i]['F'][2]], c='black') # segment BF
+            ax.plot(xs=[Pos2[i]['H'][0], Pos2[i]['I'][0]], ys=[Pos2[0]['H'][1], Pos2[i]['I'][1]],
+                    zs=[Pos2[i]['H'][2], Pos2[i]['I'][2]], c='red') # vérin v2
+            ax.plot(xs=[Pos2[i]['B'][0], Pos2[i]['C'][0]], ys=[Pos2[0]['B'][1], Pos2[i]['C'][1]],
+                    zs=[Pos2[i]['B'][2], Pos2[i]['C'][2]], c='black') # segment BC
+            ax.plot(xs=[Pos2[i]['C'][0], Pos2[i]['D'][0]], ys=[Pos2[0]['C'][1], Pos2[i]['D'][1]],
+                    zs=[Pos2[i]['C'][2], Pos2[i]['D'][2]], c='red') # vérin v1
 
-        ligneOA, = ax.plot(xs=[0, Pos2[0]['A'][0]], ys=[0, Pos2[0]['A'][1]], zs=[0, Pos2[0]['A'][2]])
-        ligneAE, = ax.plot(xs=[Pos2[0]['A'][0], Pos2[0]['E'][0]], ys=[Pos2[0]['A'][1], Pos2[0]['E'][1]], zs=[Pos2[0]['A'][2], Pos2[0]['E'][2]])
-        ligneEG, = ax.plot(xs=[Pos2[0]['E'][0], Pos2[0]['G'][0]], ys=[Pos2[0]['E'][1], Pos2[0]['G'][1]], zs=[Pos2[0]['E'][2], Pos2[0]['G'][2]])
-        ligneGJ, = ax.plot(xs=[Pos2[0]['G'][0], Pos2[0]['J'][0]], ys=[Pos2[0]['G'][1], Pos2[0]['J'][1]], zs=[Pos2[0]['G'][2], Pos2[0]['J'][2]])
+            for j in range(i):
+                pointJ = ax.scatter(xs=Xp[j], ys=Yp[j], zs=Zp[j], s=20, marker='o', c='grey')
+            #plt.show()
+            plt.pause(0.05)
+            plt.gcf().clear()
 
-        def animateJ(i):
-            pointJ.set_xdata(Xp[i])
-            pointJ.set_ydata(Yp[i])
-            pointJ.set_zdata(Zp[i])
-            return pointJ
-        def animateOA(i):
-            ligneOA.set_data([0, Pos2[i]['A'][0]], [0, Pos2[i]['A'][1]], [0, Pos2[i]['A'][2]])
-            return ligneOA
-        def animateAE(i):
-            ligneAE.set_data([Pos2[i]['A'][0], Pos2[i]['E'][0]], [Pos2[i]['A'][1], Pos2[i]['E'][1]], [Pos2[i]['A'][2], Pos2[i]['E'][2]])
-            return ligneAE
-        def animateEG(i):
-            ligneEG.set_data([Pos2[i]['E'][0], Pos2[i]['G'][0]], [Pos2[i]['E'][1], Pos2[i]['G'][1]], [Pos2[i]['E'][2], Pos2[i]['G'][2]])
-            return ligneEG
-        def animateGJ(i):
-            ligneGJ.set_data([Pos2[i]['G'][0], Pos2[i]['J'][0]], [Pos2[i]['G'][1], Pos2[i]['J'][1]], [Pos2[i]['G'][2], Pos2[i]['J'][2]])
-        fra = len(traj)
-        aniJ = animation.FuncAnimation(fig, animateJ, interval=100, frames=fra, repeat=True)
-        aniOA = animation.FuncAnimation(fig, animateOA, interval=100, frames=fra, repeat=True)
-        aniAE = animation.FuncAnimation(fig, animateAE, interval=100, frames=fra, repeat=True)
-        aniEG = animation.FuncAnimation(fig, animateEG, interval=100, frames=fra, repeat=True)
-        aniGJ = animation.FuncAnimation(fig, animateGJ, interval=100, frames=fra, repeat=True)
-
-        plt.show()
 
 def test_circle_3(v1, v2, v3, r, n, leg_id):
     """
@@ -845,7 +838,7 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_inverse = 1
+t_inverse = 0
 if t_inverse:
     Ver = [485, 575, 565, 485, 575, 565, 485, 575, 565, 485, 575, 565]
     traj = draw_circle_12(20, 200, Ver)
@@ -870,12 +863,12 @@ if t_artificial_inverse:
                  [550, 600, 515]])
     draw_move_4_legs(traj_4_legs, V)
 
-t_different_moves = 0
+t_different_moves = 1
 if t_different_moves:
-    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=True)
-    draw_move_leg(draw_circle(150, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=False)
+    # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=True)
+    # draw_move_leg(draw_circle(150, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=False)
     draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True)
-    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=False)
+    # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=False)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
     # test_penalty_move_XZ(450, 500, 500, 10, kin.FL)

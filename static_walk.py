@@ -455,7 +455,8 @@ class FastWalk:
             self.timer()
         return True
             
-def init_circle():
+def upg_init_pos():
+    """met les verins dans une position connue en mettant à jour les infos de la structure controlers"""
     V = 0.485, 0.575, 0.565
     for i in range(4):
         tell_controler(i, to_linear_actuator_order((V)))
@@ -473,24 +474,24 @@ class Traj:
         return (time.time()-self.last)>timeout
     def __next__(self):
         s = self.stage
-        if self.stage==0:
-            init_circle()
+        if self.stage == 0:
+            upg_init_pos()
             upg_init_legs(controlers)
             print("1passage")
-            self.stage=1
-        elif self.stage==1:
+            self.stage = 1
+        elif self.stage == 1:
             print("2passage")
             if wait_move(list(range(4)),1) or self.timer(10):
-                self.stage=2
-        elif self.stage==2:
+                self.stage = 2
+        elif self.stage == 2:
             print("3passage")
             do_the_traj()
             self.stage=3
-        elif self.stage==3:
+        elif self.stage == 3:
             print("3passage")
             do_the_traj()
             self.stage = 2
-        if self.stage!=s:
+        if self.stage != s:
             print("walk reset timer")
             self.timer()
         return True
