@@ -6,7 +6,7 @@ from qpsolvers import solve_qp
 import kinetic as kin
 from upg_tools import *
 from upg_jacobian import *
-from com import tell_controler, to_linear_actuator_order, wait_move, tell_controlers
+# from com import wait_move, tell_controlers
 
 FL=0 # front left leg
 FR=1 # front right leg
@@ -349,15 +349,15 @@ def do_the_traj():
     """
     print("ok1")
     V = get_verins_12()
-    for i in ALL_LEGS:
-        wait_move(i, 2)
+    # for i in ALL_LEGS:
+        # wait_move(i, 2)
     #traj = draw_line_12(V, 15, 20, 10, 10)
     traj = draw_circle_12(20, 100, V)
     V = move_12(traj, V, True)
     print(traj[0] ,V[0])
-    for i in range(len(traj)):
-        tell_controlers(V[i])
-        wait_move(list(range(4)), 0.1)
+    # for i in range(len(traj)):
+        # tell_controlers(V[i])
+        # wait_move(list(range(4)), 0.1)
     V = get_verins_12()
     set_verins_12(V)
     return

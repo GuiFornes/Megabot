@@ -574,7 +574,7 @@ def draw_move_4_legs(traj, V, upgrade=False):
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
 
-def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False):
+def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False, anim=False):
     """
         Trace la trajectoire de la patte du robot suivant traj avec move_leg
     """
@@ -635,7 +635,6 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False):
         # Pos2[i] = dict(map(lambda kv: (kv[0], kv[1]*1000), Pos2[i].items()))
 
     print(Pos2[0]['A'][0])
-    anim = True
     if anim:
         fig = plt.figure()
         for i in range(len(traj)):
@@ -662,7 +661,6 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False):
 
             for j in range(i):
                 pointJ = ax.scatter(xs=Xp[j], ys=Yp[j], zs=Zp[j], s=20, marker='o', c='grey')
-            #plt.show()
             plt.pause(0.05)
             plt.gcf().clear()
 
@@ -867,7 +865,7 @@ t_different_moves = 1
 if t_different_moves:
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=True)
     # draw_move_leg(draw_circle(150, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=False)
-    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True)
+    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True, anim=True)
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=False)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
