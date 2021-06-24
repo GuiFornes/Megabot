@@ -13,7 +13,7 @@ from kinetic import *
 from geo import *
 from com import *
 from visu import *
-from upg_kinetic import draw_line_12, draw_circle_12, upg_inverse_kinetic_robot_ref, upg_init_legs, do_the_traj
+import upg_kinetic as upg_k
 
 
 
@@ -476,7 +476,7 @@ class Traj:
         s = self.stage
         if self.stage == 0:
             upg_init_pos()
-            upg_init_legs(controlers)
+            upg_k.upg_init_legs(controlers)
             print("1passage")
             self.stage = 1
         elif self.stage == 1:
@@ -485,11 +485,11 @@ class Traj:
                 self.stage = 2
         elif self.stage == 2:
             print("3passage")
-            do_the_traj()
+            upg_k.do_the_traj()
             self.stage=3
         elif self.stage == 3:
             print("3passage")
-            do_the_traj()
+            upg_k.do_the_traj()
             self.stage = 2
         if self.stage != s:
             print("walk reset timer")
@@ -509,7 +509,7 @@ class Bancale:
         s = self.stage
         if self.stage == 0:
             upg_init_pos()
-            upg_init_legs(controlers)
+            upg_k.upg_init_legs(controlers)
             print("1passage")
             self.stage = 1
         elif self.stage == 1:
@@ -518,11 +518,11 @@ class Bancale:
                 self.stage = 2
         elif self.stage == 2:
             print("3passage")
-            mouvement_bancale()
+            tell_controlers(upg_k.shake_dat_ass(200, upg_k.get_verins_12()))
             self.stage=3
         elif self.stage == 3:
             print("3passage")
-            mouvement_bancale()
+            tell_controlers(upg_k.shake_dat_ass(200, upg_k.get_verins_12()))
             self.stage = 2
         if self.stage != s:
             print("walk reset timer")
@@ -543,7 +543,7 @@ class Walk:
         if self.stage==0:
             init_walk()
             print("walk: init")
-            upg_init_legs(controlers)
+            upg_k.upg_init_legs(controlers)
             self.stage=1
         elif self.stage==1:
             if wait_move(list(range(4)),1) or self.timer(10):
