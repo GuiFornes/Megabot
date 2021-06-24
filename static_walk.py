@@ -522,7 +522,7 @@ class Bancale:
             self.stage=3
         elif self.stage == 3:
             print("3passage")
-            do_the_traj()
+            mouvement_bancale()
             self.stage = 2
         if self.stage != s:
             print("walk reset timer")
@@ -783,6 +783,9 @@ def cmd_quit(m):
 def cmd_traj(m):
     """start making circle (i hope)"""
     movement_handler.setMove(Traj())
+def cmd_bacale(m):
+    """start bancale movement"""
+    movement_handler.setMove(Bancale())
 def cmd_walk(m):
     """start walk movement"""
     movement_handler.setMove(Walk())
