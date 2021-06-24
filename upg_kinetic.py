@@ -47,7 +47,7 @@ LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
           'og':1}
       }
 
-######################### Tools for 'Legs' struct ###########################
+######################### Tools for 'Legs' struct ##########################
 
 def set_verins_3(v1, v2, v3, leg_id):
     """
