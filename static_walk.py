@@ -474,8 +474,9 @@ class Traj:
     def __next__(self):
         s = self.stage
         if self.stage == 0:
-            upg_init_pos()
-            upg_k.upg_init_legs(controlers)
+            # upg_init_pos()
+            while not self.timer(1):
+                upg_k.upg_init_legs(controlers)
             self.stage = 1
         elif self.stage == 1:
             if wait_move(list(range(4)),1) or self.timer(10):
@@ -485,6 +486,7 @@ class Traj:
             self.stage=3
         elif self.stage == 3:
             upg_k.do_the_traj()
+            print("control : ", controlers[0].la)
             self.stage = 2
         if self.stage != s:
             print("walk reset timer")
