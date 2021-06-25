@@ -3,7 +3,6 @@
 import numpy as np
 from numpy.linalg import inv
 from qpsolvers import solve_qp
-from Matrix import nearPD
 from upg_tools import *
 from upg_jacobian import *
 # from com import wait_move, tell_controlers
@@ -55,7 +54,6 @@ def direct_leg(v1, v2, v3):
     return x, y, z
 
 ############################## INDIRECT ####################################
-
 def move(traj_center, X, Omega, V, angle_chassis=10):
     V0 = V
     X0_abs = X
@@ -64,8 +62,48 @@ def move(traj_center, X, Omega, V, angle_chassis=10):
         O0 = direct_O(X0_abs, V)
         dO = traj_center[i] - O0
         X0_rel = direct_12(V0)
+        M = gen_jacob_alt(V0, X0_rel, Omega[0], Omega[1], Omega[2])
+        P = M.T @ M
+        q = - M.T @ dO
+
+        # Contraintes sur les pattes
+        b = np.zeros(30)
+        A = np.zeros((30, 30))
+        for j in range(4):
+            if LEGS[i]['og']:
+                for k in range(3):
+                    A[j * 3 + k][j * 3 + k] = 1
+        for j in range(3):
+            A[27 + j][27 + j] = 1
+        lb = np.full(30, -np.inf)
+        ub = np.full(30, np.inf)
+        # Contraintes sur les vérins
+        for j in range(12):
+            lb[15 + j] = 450.0 - V0[j]
+            ub[15 + j] = 650.0 - V0[j]
+        # Contraintes sur les angles
+        for j in range(3):
+            lb[12 + j] = -angle_chassis
+            ub[12 + j] = angle_chassis
+
+        sol = solve_qp(P, q, lb=lb, ub=ub, A=A, b=b)
+        X0_abs = X0_abs + sol[0:12]
+        V0 = V0 + sol[15:27]
+        set_verins_12(V)
+        for v in V0: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        L.append(V0)
+    return L
+
+def move_39(traj_center, X, Omega, V, angle_chassis=10):
+    V0 = V
+    X0_abs = X
+    L = [V0]
+    for i in range(1, len(traj_center)):
+        O0 = direct_O(X0_abs, V)
+        dO = traj_center[i] - O0
+        X0_rel = direct_12(V0)
         M = gen_jacob(V0, X0_rel, Omega[0], Omega[1], Omega[2])
-        P = nearPD(M.T @ M)
+        P = M.T @ M
         q = - M.T @ dO
 
         # Contraintes sur les pattes

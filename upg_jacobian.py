@@ -199,6 +199,11 @@ def gen_jacob_12x18(V, R, dRdl, dRdm, dRdn, X):
 
     return J_12 @ Big_inv_R @ M
 
+def pseudo_inv(M):
+    return inv(M.T @ M) @ M.T
+
+######################### 1 ########################
+
 def legs_constraints():
     C = np.zeros((12, 18))
     for i in range(4):
@@ -219,14 +224,44 @@ def gen_jacob_24x18(V, X, l, m, n):
     Legs_constraints = legs_constraints()
     return np.concatenate((J_12x18, Legs_constraints))
 
-def pseudo_inv(M):
-    return inv(M.T @ M) @ M.T
-
 def gen_jacob(V, X, l, m, n):
     J_24x18 = gen_jacob_24x18(V, X, l, m, n)
     J_24x15 = J_24x18[0:24, 0:15]
     J_O = J_24x18[0:24, 15:18]
     return pseudo_inv(J_O) @ np.concatenate((-J_24x15, np.eye(24)), axis=1)
+
+######################### 2 ########################
+
+def legs_constraints_2():
+    """
+    3 pattes au sol
+    """
+    C = np.zeros((3, 18))
+    l = 0
+    for i in range(4):
+        if l == 3: break
+        if get_og(i):
+            C[l][i * 3 + 2] = 1
+            l += 1
+    return C
+
+def gen_jacob_15x18(V, X, l, m, n):
+    """
+    A voir
+    """
+    R = gen_R(l, m, n)
+    dRdl = gen_dRdl(l, m, n)
+    dRdm = gen_dRdm(l, m, n)
+    dRdn = gen_dRdn(l, m, n)
+    J_12x18 = gen_jacob_12x18(V, R, dRdl, dRdm, dRdn, X)
+    Legs_constraints = legs_constraints_2()
+    return np.concatenate((J_12x18, Legs_constraints))
+
+def gen_jacob_alt(V, X, l, m, n):
+    J_15x18 = gen_jacob_15x18(V, X, l, m, n)
+    J_15x15 = J_15x18[0:15, 0:15]
+    J_O = J_15x18[0:15, 15:18]
+    return pseudo_inv(J_O) @ np.concatenate((-J_15x15, np.eye(15)), axis=1)
 
 # V = [550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550]
 # print(gen_jacob(V, direct_12(V), 0, 0, 0))
