@@ -5,7 +5,7 @@ from numpy.linalg import inv
 from qpsolvers import solve_qp
 from upg_tools import *
 from upg_jacobian import *
-from com import wait_move, tell_controlers
+# from com import wait_move, tell_controlers
 
 
 ############################### DIRECT #####################################
@@ -133,7 +133,7 @@ def move_39(traj_center, X, Omega, V, angle_chassis=10):
         L.append(V0)
     return L
 
-def move_12(traj, V, solved=True):
+def move_rel(traj, V, solved=True):
     """
     Retourne le tableau des élongations successives des 12 vérins permettant aux extrémités des 4 pattes de suivre les trajectoires qui leur ont été attribuées par traj
     traj : liste des positions successives des extrémités des 4 pattes sous la forme [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...]
@@ -340,32 +340,24 @@ def upg_init_legs(controlers):
     @param controlers: structure controllers du fichier static_walk
     """
     # print(controlers[FL].la, LEGS[FL]['verins'])
+    global LEGS
     for l in ALL_LEGS:
         LEGS[l]['verins'][0] = 450 + controlers[l].la[0]['position']
+        print("UPG !", controlers[l].la[0]['position'], controlers[l].la[1]['position'], controlers[l].la[2]['position'])
         LEGS[l]['verins'][1] = 450 + controlers[l].la[1]['position']
         LEGS[l]['verins'][2] = 450 + controlers[l].la[2]['position']
     print(LEGS[FL]['verins'], "ici")
 
-def do_the_traj():
+def get_the_traj():
     """
     créée une trajectoire, calcul les verins correspondant
     puis envoie l'information sur leurs élongations (qui est interceptée par la simulation
     """
     V = get_verins_12()
-    for i in ALL_LEGS:
-        wait_move(i, 2)
-    #traj = draw_line_12(V, 15, 20, 10, 10)
     traj = draw_circle_12(20, 100, V)
-    V = move_12(traj, V, True)
-    # print(traj[0] ,V[0])
-    for i in range(len(traj)):
-        tell_controlers(V[i])
-        wait_move(list(range(4)), 0.1)
-    V = get_verins_12()
-    set_verins_12(V)
-    return
+    return move_rel(traj, V, True)
 
-def shake_dat_ass(n, V):
+def shake_dat_ass_abs(n, V):
     z0 = - get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, LEGS[0]['lengths'])['J'][1]
     X = direct_12(V)
     for i in range(4):
@@ -375,6 +367,15 @@ def shake_dat_ass(n, V):
     traj_center = [[0, 0, z0 - 200 * np.sin(l)] for l in L]
     return move(traj_center, X, Omega, V)
 
+def shake_dat_ass_rel(n, amp):
+    V = get_verins_12()
+    X = direct_12(V)
+    L = np.linspace(0, np.pi, n)
+    traj = [[X[0], X[1], X[2] + amp * np.sin(l),
+                    X[3], X[4], X[5] + amp * np.sin(l),
+                    X[6], X[7], X[8] + amp * np.sin(l),
+                    X[9], X[10], X[11] + amp * np.sin(l)] for l in L]
+    return move_rel(traj, V)
 
 ############################################################################
 if __name__ == "__main__":

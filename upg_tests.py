@@ -401,7 +401,7 @@ def test_circle_2(v1, v2, r, n, leg_id):
 
 def draw_12(traj, V):
     """
-    Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_12
+    Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_rel
     """
     # Trajectoires
     Xt0 = [p[0] for p in traj]
@@ -418,7 +418,7 @@ def draw_12(traj, V):
     Zt3 = [p[11] for p in traj]
 
     # Elongations des vérins
-    Ver = move_12(traj, V)
+    Ver = move_rel(traj, V)
     V1 = [v[0] for v in Ver]
     V2 = [v[1] for v in Ver]
     V3 = [v[2] for v in Ver]
@@ -663,7 +663,6 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False, anim=Fa
             plt.pause(0.05)
             plt.gcf().clear()
 
-
 def test_circle_3(v1, v2, v3, r, n, leg_id):
     """
     Trace la trajectoire de la patte du robot réalisant des petits cercles
@@ -770,7 +769,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
-draw_12(shake_dat_ass(200, get_verins_12()), get_verins_12())
+# draw_12(shake_dat_ass_rel(20, 200), get_verins_12())
 
 t_move = 0
 # test de normalized_move_xyz
