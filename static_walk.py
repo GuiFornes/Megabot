@@ -460,8 +460,7 @@ def upg_init_pos():
     V = 0.485, 0.575, 0.565
     for i in range(4):
         tell_controler(i, to_linear_actuator_order((V)))
-        for j in range(3):
-            controlers[i].la[j]['position'] = V[j]*1000 - 450
+        controlers[i].parse_msg("S 0;35.0;35.0;0 0;125.0;125.0;0 0;115.0;115.0;0")
 
 class Traj:
     def __init__(self):
@@ -477,18 +476,14 @@ class Traj:
         if self.stage == 0:
             upg_init_pos()
             upg_k.upg_init_legs(controlers)
-            print("1passage")
             self.stage = 1
         elif self.stage == 1:
-            print("2passage")
             if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage = 2
         elif self.stage == 2:
-            print("3passage")
             upg_k.do_the_traj()
             self.stage=3
         elif self.stage == 3:
-            print("3passage")
             upg_k.do_the_traj()
             self.stage = 2
         if self.stage != s:
@@ -510,18 +505,14 @@ class Bancale:
         if self.stage == 0:
             upg_init_pos()
             upg_k.upg_init_legs(controlers)
-            print("1passage")
             self.stage = 1
         elif self.stage == 1:
-            print("2passage")
             if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage = 2
         elif self.stage == 2:
-            print("3passage")
             tell_controlers(upg_k.shake_dat_ass(200, upg_k.get_verins_12()))
             self.stage=3
         elif self.stage == 3:
-            print("3passage")
             tell_controlers(upg_k.shake_dat_ass(200, upg_k.get_verins_12()))
             self.stage = 2
         if self.stage != s:
@@ -781,7 +772,7 @@ def cmd_quit(m):
     movement_handler.join()
     sys.exit(0)
 def cmd_traj(m):
-    """start making circle (i hope)"""
+    """start making the traj (circle or straight)(i hope)"""
     movement_handler.setMove(Traj())
 def cmd_bacale(m):
     """start bancale movement"""
@@ -794,6 +785,7 @@ def cmd_fast(m):
     movement_handler.setMove(FastWalk())
 def cmd_pause(m):
     """toggle pause in motion"""
+    global pause_term
     pause_term=not pause_term
     print("pause during moving :",pause_term)
 def cmd_u(m):

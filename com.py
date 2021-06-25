@@ -194,7 +194,7 @@ class ControlerHandler(Thread):
 #            print self.indata
 #            print ">>"
         if len(msg)<=0:
-            return        
+            return
         if msg[0]=='S':
             d=msg.split()
             if len(d)!=4:

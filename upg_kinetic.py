@@ -5,7 +5,7 @@ from numpy.linalg import inv
 from qpsolvers import solve_qp
 from upg_tools import *
 from upg_jacobian import *
-# from com import wait_move, tell_controlers
+from com import wait_move, tell_controlers
 
 
 ############################### DIRECT #####################################
@@ -299,9 +299,10 @@ def draw_line_12(V, dx, dy, dz, n):
 
 def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
     """
-    fonction de test de notre cinématique inverse de la manière de l'implémentation de julien
-    dans le but de comparer sur le simulateur. A noter que ce n'est pas dutout une utilisation optimale car on utilise
-    pas ici le potentiel de travailler sur la division d'un mouvements en petits écarts.
+    fonction de test de notre cinématique inverse de la manière de l'implémentation de julien,
+    dans le but de comparer sur le simulateur. A noter que ce n'est pas dutout une utilisation optimale
+    car on utilise pas ici le potentiel de travailler sur la division d'un mouvements en petits écarts,
+    étant donné le fait que l'on renvoie que la position finale.
     @param legs: structure legs inutile ici car on utilise LEGS (qui est global dans ce fichier)
     @param leg_id: id de la jambe (entre 0 et 3)
     @param point: point cible pour le bout de la jambe en question
@@ -326,38 +327,40 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
                               y0 + i * dy/10,
                               z0 + i * dz/10]))
     Verins = move_leg(traj, V[0], V[1], V[2], leg_id, upgrade=True, solved=True)
-    print(Verins)
     res = [Verins[9][0]/1000, Verins[9][1]/1000, Verins[9][2]/1000]
-    return False, res
+    error = False
+    for i in range(3):
+        if res[i] == 650 or res[i] == 450:
+            error = True
+    return error, res
 
 def upg_init_legs(controlers):
     """
     met à jour la structure LEGS avec les positions des vérins
     @param controlers: structure controllers du fichier static_walk
     """
-    print(controlers[FL].la, LEGS[FL]['verins'])
+    # print(controlers[FL].la, LEGS[FL]['verins'])
     for l in ALL_LEGS:
         LEGS[l]['verins'][0] = 450 + controlers[l].la[0]['position']
         LEGS[l]['verins'][1] = 450 + controlers[l].la[1]['position']
         LEGS[l]['verins'][2] = 450 + controlers[l].la[2]['position']
-    print(LEGS[FL]['verins'])
+    print(LEGS[FL]['verins'], "ici")
 
 def do_the_traj():
     """
     créée une trajectoire, calcul les verins correspondant
     puis envoie l'information sur leurs élongations (qui est interceptée par la simulation
     """
-    print("ok1")
     V = get_verins_12()
-    # for i in ALL_LEGS:
-        # wait_move(i, 2)
+    for i in ALL_LEGS:
+        wait_move(i, 2)
     #traj = draw_line_12(V, 15, 20, 10, 10)
     traj = draw_circle_12(20, 100, V)
     V = move_12(traj, V, True)
-    print(traj[0] ,V[0])
-    # for i in range(len(traj)):
-        # tell_controlers(V[i])
-        # wait_move(list(range(4)), 0.1)
+    # print(traj[0] ,V[0])
+    for i in range(len(traj)):
+        tell_controlers(V[i])
+        wait_move(list(range(4)), 0.1)
     V = get_verins_12()
     set_verins_12(V)
     return
@@ -371,6 +374,7 @@ def shake_dat_ass(n, V):
     L = np.linspace(-1, 1, n)
     traj_center = [[0, 0, z0 - 200 * np.sin(l)] for l in L]
     return move(traj_center, X, Omega, V)
+
 
 ############################################################################
 if __name__ == "__main__":
