@@ -459,8 +459,10 @@ def upg_init_pos():
     """met les verins dans une position connue en mettant à jour les infos de la structure controlers"""
     V = 0.485, 0.575, 0.565
     for i in range(4):
-        tell_controler(i, to_linear_actuator_order((V)))
-        controlers[i].parse_msg("S 0;35.0;35.0;0 0;125.0;125.0;0 0;115.0;115.0;0")
+        tell_controler(i, to_linear_actuator_order(V))
+        for j in range(3):
+            controlers[i].la[j]['position'] = V[j] - 0.450
+        # controlers[i].parse_msg("S 0;35.0;35.0;0 0;125.0;125.0;0 0;115.0;115.0;0")
 
 class Traj:
     def __init__(self):
@@ -475,23 +477,30 @@ class Traj:
         s = self.stage
         if self.stage == 0:
             upg_init_pos()
-            upg_k.upg_init_legs(controlers)
+            while not self.timer(2):
+                upg_k.upg_init_legs(controlers)
             self.stage = 1
         elif self.stage == 1:
             if wait_move(list(range(4)),1) or self.timer(10):
                 self.stage = 2
         elif self.stage == 2:
-            upg_k.do_the_traj()
+            Ver = upg_k.get_the_traj()
+            for i in range(len(Ver)):
+                tell_controlers(Ver[i])
+                wait_move(list(range(4)), 0.1)
             self.stage=3
         elif self.stage == 3:
-            upg_k.do_the_traj()
+            Ver = upg_k.get_the_traj()
+            for i in range(len(Ver)):
+                tell_controlers(Ver[i])
+                wait_move(list(range(4)), 0.1)
             self.stage = 2
         if self.stage != s:
             print("walk reset timer")
             self.timer()
         return True
 
-class Bancale:
+class PushUp:
     def __init__(self):
         self.stage=0
         self.last=time.time()
@@ -504,16 +513,23 @@ class Bancale:
         s = self.stage
         if self.stage == 0:
             upg_init_pos()
-            upg_k.upg_init_legs(controlers)
+            while not self.timer(2):
+                upg_k.upg_init_legs(controlers)
             self.stage = 1
         elif self.stage == 1:
-            if wait_move(list(range(4)),1) or self.timer(10):
+            if wait_move(list(range(4)),0.1) or self.timer(10):
                 self.stage = 2
         elif self.stage == 2:
-            tell_controlers(upg_k.shake_dat_ass(200, upg_k.get_verins_12()))
+            Ver = upg_k.shake_dat_ass_rel(20, 200)
+            for i in range(len(Ver)):
+                tell_controlers(Ver[i])
+                wait_move(list(range(4)), 0.1)
             self.stage=3
         elif self.stage == 3:
-            tell_controlers(upg_k.shake_dat_ass(200, upg_k.get_verins_12()))
+            Ver = upg_k.shake_dat_ass_rel(20, 200)
+            for i in range(len(Ver)):
+                tell_controlers(Ver[i])
+                wait_move(list(range(4)), 0.1)
             self.stage = 2
         if self.stage != s:
             print("walk reset timer")
@@ -774,9 +790,9 @@ def cmd_quit(m):
 def cmd_traj(m):
     """start making the traj (circle or straight)(i hope)"""
     movement_handler.setMove(Traj())
-def cmd_bacale(m):
-    """start bancale movement"""
-    movement_handler.setMove(Bancale())
+def cmd_pushup(m):
+    """start push-up movement"""
+    movement_handler.setMove(PushUp())
 def cmd_walk(m):
     """start walk movement"""
     movement_handler.setMove(Walk())
