@@ -263,5 +263,65 @@ def gen_jacob_alt(V, X, l, m, n):
     J_O = J_15x18[0:15, 15:18]
     return pseudo_inv(J_O) @ np.concatenate((-J_15x15, np.eye(15)), axis=1)
 
+#####################################################################################
+
+def gen_VAR(V, Omega, X_rel):
+    dRdl = gen_dRdl(Omega[0], Omega[1], Omega[2])
+    dRdm = gen_dRdm(Omega[0], Omega[1], Omega[2])
+    dRdn = gen_dRdn(Omega[0], Omega[1], Omega[2])
+    J_l = np.block([[dRdl, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdl, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdl, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdl]]) @ X_rel
+    J_m = np.block([[dRdm, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdm, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdm, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdm]]) @ X_rel
+    J_n = np.block([[dRdn, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdn, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdn, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdn]]) @ X_rel
+
+    J_12 = gen_jacob_12(V)
+    R = gen_R(Omega[0], Omega[1], Omega[2])
+    Big_R = np.block([[R, np.zeros((3, 9))],
+                          [np.zeros((3, 3)), R, np.zeros((3, 6))],
+                          [np.zeros((3, 6)), R, np.zeros((3, 3))],
+                          [np.zeros((3, 9)), R]])
+    return np.concatenate((np.concatenate((Big_R @ inv(J_12), J_l.reshape((12, 1)), J_m.reshape((12, 1)), J_n.reshape((12, 1))), axis=1), np.zeros((3,15))))
+
+def legs_constraints_3():
+    """
+    3 pattes au sol
+    """
+    C = np.zeros((3, 15))
+    l = 0
+    for i in range(4):
+        if l == 3: break
+        if get_og(i):
+            C[l][i * 3 + 2] = 1
+            l += 1
+    return C
+
+def legs_constraints_4():
+    """
+    1 patte au sol
+    """
+    C = np.zeros((3, 15))
+    for i in range(4):
+        if get_og(i):
+            C[0][i * 3] = 1
+            C[1][i * 3 + 1] = 1
+            C[2][i * 3 + 2] = 1
+            break
+    return C
+
+def gen_OBJ():
+    return np.concatenate((np.concatenate((np.eye(12), - np.concatenate((np.eye(3), np.eye(3), np.eye(3), np.eye(3)))), axis=1), legs_constraints_4()))
+
+def gen_new_jacob(V, Omega, X_rel):
+    return inv(gen_OBJ()) @ gen_VAR(V, Omega, X_rel)
+
+
 # V = [550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550]
-# print(gen_jacob(V, direct_12(V), 0, 0, 0))
+# print(gen_new_jacob(V, np.array([0, 0, 0])))

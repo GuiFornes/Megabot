@@ -54,6 +54,7 @@ def direct_leg(v1, v2, v3):
     return x, y, z
 
 ############################## INDIRECT ####################################
+
 def move(traj_center, X, Omega, V, angle_chassis=10):
     V0 = V
     X0_abs = X
@@ -94,43 +95,41 @@ def move(traj_center, X, Omega, V, angle_chassis=10):
         L.append(V0)
     return L
 
-def move_39(traj_center, X, Omega, V, angle_chassis=10):
-    V0 = V
-    X0_abs = X
-    L = [V0]
+def move_on_floor(traj_center, max_angle=10):
+    """ On se considère en (O,O) du référentiel absolu au début du mouvement"""
+    V = get_verins_12()
+    Omega = get_omega()
+    X_abs = direct_12(V)
+    for i in range(4):
+        X_abs[3*i + 2] = 0
+    L = [V]
     for i in range(1, len(traj_center)):
-        O0 = direct_O(X0_abs, V)
-        dO = traj_center[i] - O0
-        X0_rel = direct_12(V0)
-        M = gen_jacob(V0, X0_rel, Omega[0], Omega[1], Omega[2])
+        O0 = direct_O(X_abs, V)
+        dO = np.concatenate((np.zeros(12), traj_center[i] - O0))
+        M = gen_new_jacob(V, Omega, direct_12(V))
         P = M.T @ M
+        print(P)
+        print("##############################################")
+        print(inv(P))
         q = - M.T @ dO
 
-        # Contraintes sur les pattes
-        b = np.zeros(39)
-        A = np.zeros((39, 39))
-        for j in range(4):
-            if LEGS[i]['og']:
-                for k in range(3):
-                    A[j * 3 + k][j * 3 + k] = 1
-                    A[27 + j * 3 + k][27 + j * 3 + k] = 1
-        lb = np.full(39, -np.inf)
-        ub = np.full(39, np.inf)
         # Contraintes sur les vérins
+        lb = np.zeros(15)
+        ub = np.zeros(15)
         for j in range(12):
-            lb[15 + j] = 450.0 - V0[j]
-            ub[15 + j] = 650.0 - V0[j]
-        # Contraintes sur les angles
-        for j in range(3):
-            lb[12 + j] = -angle_chassis
-            ub[12 + j] = angle_chassis
+            lb[j] = 450.0 - V[j]
+            ub[j] = 650.0 - V[j]
 
-        sol = solve_qp(P, q, lb=lb, ub=ub, A=A, b=b)
-        X0_abs = X0_abs + sol[0:12]
-        V0 = V0 + sol[15:27]
+        # Contraintes sur les angles
+        for j in range(12, 15):
+            lb[j] = - max_angle
+            ub[j] = max_angle
+
+        sol = solve_qp(P, q, lb=lb, ub=ub)
+        V = V + sol[0:12]
         set_verins_12(V)
-        for v in V0: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
-        L.append(V0)
+        for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        L.append(V)
     return L
 
 def move_rel(traj, V, solved=True):
@@ -357,15 +356,11 @@ def get_the_traj():
     traj = draw_circle_12(20, 100, V)
     return move_rel(traj, V, True)
 
-def shake_dat_ass_abs(n, V):
-    z0 = - get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, LEGS[0]['lengths'])['J'][1]
-    X = direct_12(V)
-    for i in range(4):
-        X[3 * i + 2] += z0
-    Omega = np.array([0, 0, 0])
+def shake_dat_ass_abs(n, amp):
+    z0 = - get_leg_points_V1_V2(get_verins_12()[0] / 1000, get_verins_12()[1] / 1000, LEGS[0]['lengths'])['J'][1]
     L = np.linspace(-1, 1, n)
-    traj_center = [[0, 0, z0 - 200 * np.sin(l)] for l in L]
-    return move(traj_center, X, Omega, V)
+    traj_center = [[0, 0, z0 - amp * np.sin(l)] for l in L]
+    return move_on_floor(traj_center)
 
 def shake_dat_ass_rel(n, amp):
     V = get_verins_12()
@@ -376,6 +371,35 @@ def shake_dat_ass_rel(n, amp):
                     X[6], X[7], X[8] + amp * np.sin(l),
                     X[9], X[10], X[11] + amp * np.sin(l)] for l in L]
     return move_rel(traj, V)
+
+############################## ROTATION ####################################
+
+def min_diff(square=True):
+    """
+    Retourne la patte la plus proche de sa position de repos en faisant la moyenne des écarts d'élongation
+    des vérins ou bien la moyenne des écarts d'élongation au carré des vérins
+    """
+    V = get_verins_12()
+    max_diff = np.inf
+    best_leg = 0
+    for i in range(4):
+        current_diff = 0
+        for j in range(3):
+            if square:
+                current_diff += (V[3 * i + j] - IDLE_POSITION['verins'][j]) ** 2
+            else:
+                current_diff += V[3 * i + j] - IDLE_POSITION['verins'][j]
+        if current_diff < max_diff :
+            best_leg = i
+            max_diff = current_diff
+    return best_leg
+
+def traj_rota():
+    leg_ig = min_diff()
+    x, y, z = direct_robot(LEGS[leg_ig]['verrins'][0], LEGS[leg_ig]['verrins'][1], LEGS[leg_ig]['verrins'][2], leg_ig)
+
+
+
 
 ############################################################################
 if __name__ == "__main__":

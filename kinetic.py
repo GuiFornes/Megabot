@@ -96,7 +96,7 @@ update_transformation_matrices(ROBOT['LEGS'])
 
 def get_leg_points(V1,V2,AO,BO,BCx,BCy,AE,DE,EF,FG,FH,GI,BF,GJ):
     #print 'get leg width V1: ',V1,' and V2: ',V2
-    points={'O':(0.0,0.0),'A':(-AO,0.0),'B':(BO,0),'C':(BCx+BO,BCy),'Q':(-0.8,0),'R':(-0.8-0.79,-0.49)}
+    points={'O':(0.0,0.0),'A':(-AO,0.0),'B':(BO,0),'C':(BCx+BO,BCy)} #,'Q':(-0.8,0),'R':(-0.8-0.79,-0.49)}
 
     points['D'],p2= compute(points['A'],points['C'], AE-DE , V1) 
     points['E'] = one_line(points['A'], points['D'] , AE)
