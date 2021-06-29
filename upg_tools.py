@@ -15,6 +15,9 @@ ALL_LEGS=(FL,FR,RL,RR)
 
 BODY_FRAME=1.0
 
+OMEGA = {'l':0.0, 'm':0.0, 'n':0.0}
+IDLE_POSITION = {'verins':[485, 575, 515]}
+
 LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
           'lengths':{'ao':135.0,'bo':120.0,'bcx':290.0,'bcy':60.0,
                      'ae':500.0,'de':100.0,'ef':450.0,'fg':300.0,
@@ -74,6 +77,10 @@ def get_verins_12():
 def get_verins_3(leg_id):
     """retourne les valeurs des 3 vérins pour une jambe"""
     return LEGS[leg_id]['verins']
+
+def get_omega():
+    """retourne les angles que forme le châssis par rapport au repère fixe"""
+    return np.array([OMEGA['l'], OMEGA['m'], OMEGA['n']])
 
 def on_ground(leg_id):
     """renseigne le caractère 'au sol' d'une patte"""

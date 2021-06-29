@@ -487,6 +487,75 @@ def draw_12(traj, V):
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
 
+def draw(V):
+    """
+    Trace la trajectoire des extrémités des pattes du robot
+    """
+    # Elongations des vérins
+    V1 = [v[0] for v in V]
+    V2 = [v[1] for v in V]
+    V3 = [v[2] for v in V]
+    V4 = [v[3] for v in V]
+    V5 = [v[4] for v in V]
+    V6 = [v[5] for v in V]
+    V7 = [v[6] for v in V]
+    V8 = [v[7] for v in V]
+    V9 = [v[8] for v in V]
+    V10 = [v[9] for v in V]
+    V11 = [v[10] for v in V]
+    V12 = [v[11] for v in V]
+    T = np.linspace(0, 1, len(V))
+
+    #Positions des bouts de patte
+    Pos0 = list(map(direct_robot, [v for v in V1], [v for v in V2], [v for v in V3], [kin.FL for v in Ver]))
+    Pos1 = list(map(direct_robot, [v for v in V4], [v for v in V5], [v for v in V6], [kin.FR for v in Ver]))
+    Pos2 = list(map(direct_robot, [v for v in V7], [v for v in V8], [v for v in V9], [kin.RL for v in Ver]))
+    Pos3 = list(map(direct_robot, [v for v in V10], [v for v in V11], [v for v in V12], [kin.RR for v in Ver]))
+    Xp0 = [p[0] for p in Pos0]
+    Yp0 = [p[1] for p in Pos0]
+    Zp0 = [p[2] for p in Pos0]
+    Xp1 = [p[0] for p in Pos1]
+    Yp1 = [p[1] for p in Pos1]
+    Zp1 = [p[2] for p in Pos1]
+    Xp2 = [p[0] for p in Pos2]
+    Yp2 = [p[1] for p in Pos2]
+    Zp2 = [p[2] for p in Pos2]
+    Xp3 = [p[0] for p in Pos3]
+    Yp3 = [p[1] for p in Pos3]
+    Zp3 = [p[2] for p in Pos3]
+
+    # Tracé des trajectoires
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
+    ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=3, c='blue')  # Tracé des points réels
+    ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
+    ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(2000, -2000)
+    plt.show()
+
+    # Tracé des élongations des vérins au cours du temps
+    plt.plot(T, V1, label='V1')
+    plt.plot(T, V2, label='V2')
+    plt.plot(T, V3, label='V3')
+    plt.plot(T, V4, label='V4')
+    plt.plot(T, V5, label='V5')
+    plt.plot(T, V6, label='V6')
+    plt.plot(T, V7, label='V7')
+    plt.plot(T, V8, label='V8')
+    plt.plot(T, V9, label='V9')
+    plt.plot(T, V10, label='V10')
+    plt.plot(T, V11, label='V11')
+    plt.plot(T, V12, label='V12')
+    plt.title("Elongations des vérins dans le mouvement")
+    plt.show()
+
 def draw_move_4_legs(traj, V, upgrade=False):
     """
     Trace la trajectoire des extrémités des pattes du robot suivant traj avec move_4_legs
@@ -769,7 +838,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
-# draw_12(shake_dat_ass_rel(20, 200), get_verins_12())
+draw_12(shake_dat_ass_abs(20, 200))
 
 t_move = 0
 # test de normalized_move_xyz
