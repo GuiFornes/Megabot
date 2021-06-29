@@ -14,8 +14,12 @@ WAITMOVE_DST=[50.0]
 
 ####### COMPUTE ACTUATOR ORDERS ########
 def to_linear_actuator_order(l):
+    """
+    transform a list of elongation in an encoded msg (to send to tell_controler())
+    :param l: list of 3 elongations
+    :return: encoded msg
+    """
     k=[(c-0.45)*1000.0 for c in l] # m to mm
-    print(l, "olive", k)
     return "A%.2f#B%.2f#C%.2f#\n"%(k[2],k[0],k[1])
 
 
@@ -160,6 +164,13 @@ def find_controler():
 
 
 def tell_controler(number,msg,w=0):
+    """
+    write encoded 'msg' in the 'number' controler
+    :param number: leg id
+    :param msg: encoded msg with 'to_linear_activator_order'
+    :param w: waiting time after telling the controler
+    :return:
+    """
     print('tell controler ',number,' : ',msg)
     if legs[number]==None:
         return
@@ -174,6 +185,11 @@ def tell_controler(number,msg,w=0):
         tell_controler(number,msg,w)
 
 def tell_controlers(V):
+    """
+    send the encoded msg to all controlers from a list a 12 elongations
+    :param V: list of 12 elongations
+    :return:
+    """
     for i in range(4):
         tell_controler(i, to_linear_actuator_order([V[3 * i] / 1000, V[3 * i + 1] / 1000, V[3 * i + 2] / 1000]))
 

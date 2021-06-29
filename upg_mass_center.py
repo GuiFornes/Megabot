@@ -21,7 +21,7 @@ for a in weigths:
     for b in weigths[a]:
         weigths[b][a]=weigths[a][b]
 
-def leg_center_of_mass(v1, v2, weigths, leg_id):
+def leg_center_of_mass(v1, v2, weigths):
     points = kin.get_leg_points_V1_V2(v1, v2)
     lweigths = []
     total_weigth = 0

@@ -132,6 +132,15 @@ MR = np.array([[[1, 0, 0],
 # Décalage entre le centre du robot et le point O de la jambe FL
 L = np.array([500, 500, 0])
 
+def robot_ref_to_leg(point, leg_id):
+    point = MR[leg_id].T @ point
+    point -= L
+    return point
+
+def leg_ref_to_robot(point, leg_id):
+    point += L
+    return MR[leg_id] @ point
+
 def d3_to_d2(x, y, z):
     """
     Retourne (X, Z, alpha) les coordonnées cylindriques du bout de la patte

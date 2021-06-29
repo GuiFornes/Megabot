@@ -52,7 +52,8 @@ for l in ALL_LEGS:
 LEGS_CANVAS={}
 LEGS_SLIDER={FL:{},FR:{},RL:{},RR:{}}    
 
-LEG_PARTS_LENGTHS={'ao':150.0,'bc':300.0,'ae':500.0,'de':100.0,'ef':450.0,'fg':250.0,'fh':250.0,'gi':500.0,'bf':600.0,'gj':1000.0}
+LEG_PARTS_LENGTHS={'ao':150.0,'bc':300.0,'ae':500.0,'de':100.0,'ef':450.0,'fg':250.0,
+                   'fh':250.0,'gi':500.0,'bf':600.0,'gj':1000.0}
 
 
 def print_robot(robot):

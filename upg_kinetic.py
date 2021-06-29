@@ -219,6 +219,7 @@ def draw_circle_12(n, r, V):
     @param V:
     @return:
     """
+    print("elongation : ", V)
     traj_FL = draw_circle(r, n, V[0], V[1], V[2], 0)
     traj_FR = draw_circle(r, n, V[3], V[4], V[5], 1)
     traj_RL = draw_circle(r, n, V[6], V[7], V[8], 2)
@@ -310,17 +311,21 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
     """
     lpl = LEGS[leg_id]['lengths']
     V = get_verins_3(leg_id)
-    print(point)
+    print("pt = ", point)
     x0, y0, z0 = direct_leg(V[0], V[1], V[2])
     print("x0 =", x0, y0, z0)
     # dX = point['x'] - LEGS[leg_id]['origin']['x']
     # dY = point['y'] - LEGS[leg_id]['origin']['y']
     # calpha = v3_to_cos_angle(V[2], lpl)
     # dx, dy, dz = d2_to_d3(dX, dY, calpha)
-    dx = point[0]*1000 - x0
-    dy = point[1]*1000 - y0
-    dz = point[2]*1000 - z0
-    print(dx, dy, dz)
+    for i in range(3):
+        point[i] = (point[i] - LEGS[leg_id]["origin"][i]) * 1000
+    leg_ref_point = np.matmul(legs[leg_id]['matrix'], point).tolist()
+    print("leg_ref_pt = ", leg_ref_point)
+    dx = leg_ref_point[0] - x0
+    dy = leg_ref_point[1] - y0
+    dz = leg_ref_point[2] - z0
+    print("dX = ", dx, dy, dz)
     traj = []
     for i in range(10):
         traj.append(np.array([x0 + i * dx/10,
@@ -343,7 +348,7 @@ def upg_init_legs(controlers):
     global LEGS
     for l in ALL_LEGS:
         LEGS[l]['verins'][0] = 450 + controlers[l].la[0]['position']
-        print("UPG !", controlers[l].la[0]['position'], controlers[l].la[1]['position'], controlers[l].la[2]['position'])
+        # print("UPG !", controlers[l].la[0]['position'], controlers[l].la[1]['position'], controlers[l].la[2]['position'])
         LEGS[l]['verins'][1] = 450 + controlers[l].la[1]['position']
         LEGS[l]['verins'][2] = 450 + controlers[l].la[2]['position']
     print(LEGS[FL]['verins'], "ici")
@@ -351,7 +356,7 @@ def upg_init_legs(controlers):
 def get_the_traj():
     """
     créée une trajectoire, calcul les verins correspondant
-    puis envoie l'information sur leurs élongations (qui est interceptée par la simulation
+    puis envoie l'information sur leurs élongations
     """
     V = get_verins_12()
     traj = draw_circle_12(20, 100, V)
