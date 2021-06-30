@@ -12,7 +12,8 @@ from upg_jacobian import *
 
 def direct_O(X_abs, V):
     """
-    cinématique direct dans le référentiel absolue (base flottante)
+    Cinématique direct dans le référentiel absolue (base flottante)
+
     :param X_abs: x absolu
     :param V: liste des 12 élongations
     :return: ????
@@ -29,6 +30,7 @@ def direct_12(V):
     """
     Retourne les positions des extrémités des 4 pattes correspondant aux élongations V des vérins
     Les distances sont exprimées en mm et les coordonnées sont exprimées dans le référentiel du robot
+
     :param V: liste des 12 élongations des vérins
     :return: les positions des 4 extrémités de patte
     """
@@ -41,6 +43,7 @@ def direct_robot(v1, v2, v3, leg_id):
     """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel du robot
     Se base sur le modèle direct de Julien
+
     :param v1: élongation de v1
     :param v2: élongation de v2
     :param v3: élongation de v3
@@ -57,6 +60,7 @@ def direct_leg(v1, v2, v3):
     """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel de la patte FL
     Se base sur le modèle direct de Julien
+
     :param v1: élongation de v1
     :param v2: élongation de v2
     :param v3: élongation de v3
@@ -73,6 +77,15 @@ def direct_leg(v1, v2, v3):
 ############################## INDIRECT ####################################
 
 def move(traj_center, X, Omega, V, angle_chassis=10):
+    """
+
+    :param traj_center:
+    :param X:
+    :param Omega:
+    :param V:
+    :param angle_chassis:
+    :return:
+    """
     V0 = V
     X0_abs = X
     L = [V0]
@@ -151,11 +164,15 @@ def move_on_floor(traj_center, max_angle=10):
 
 def move_rel(traj, V, solved=True):
     """
-    Retourne le tableau des élongations successives des 12 vérins permettant aux extrémités des 4 pattes de suivre les trajectoires qui leur ont été attribuées par traj
-    traj : liste des positions successives des extrémités des 4 pattes sous la forme [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...]
-    V : liste des élongations initiales des 12 vérins (dans l'ordre FL, FR, RL, RR) sous la forme [v1, v2, v3, v4, ..., v12]
-    V doit correspondre à la première position de traj
+    Calcul la liste des élongations de vérins correspondants à chaques points de la trajectoire en paramètre,
+    la traj est sous la forme  [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...],
+    les vérins sont sous la forme [v1, v2, v3, v4, ..., v12] et correspondent à la prùière position de la trajectoire.
     Toutes les longueurs sont en mm, les coordonnées des trajectoires sont exprimées dans le référentiel du robot
+
+    :param traj: trajectoire discrétisée en points intermédiaires
+    :param V: liste des élongations initiales des 12 vérins
+    :param solved: True ou False selon si on utilise le solveur ou non
+    :return: liste des vérins pour réaliser cette trajectoire
     """
     V0 = V
     R = [V0]
@@ -186,9 +203,18 @@ def move_rel(traj, V, solved=True):
 def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True):
     """
     Retourne la liste des élongations des vérins permettant au bout de la patte de suivre traj
-    Prend en argument la succession de positions formant traj, les élongations initiales des vérins et l'id de la patte
     Les élongations initiales des vérins doivent placer la patte au premier point de traj
     Toutes les longueurs sont en mm (entrée comme sortie)
+
+    :param traj: trajectoire sous la forme d'une liste de points successifs
+    :param v1: élongation du vérin 1
+    :param v2: élongation du vérin 2
+    :param v3: élongation du vérin 3
+    :param leg_id: ID de la patte
+    :param display: *True* pour avoir l'affichage
+    :param upgrade: *True* pour utiliser l'optimisation naïve
+    :param solved: *False* pour ne pas utiliser le solveur
+    :return: liste des vérins pour chaque point de la traj
     """
     R = [(v1, v2, v3)]
     err = 0
@@ -229,11 +255,12 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
 
 def draw_circle_12(n, r, V):
     """
-    retourne une trajectoire circulaire pour les 4 pattes
-    @param n: précision de la discrétisation (nbr de pts)
-    @param r: rayon des cercles
-    @param V: liste des 12 élongations de vérins
-    @return: liste des pts intermédiaires des 4 trajectoires
+    Retourne une trajectoire circulaire pour les 4 pattes
+
+    :param n: précision de la discrétisation (nbr de pts)
+    :param r: rayon des cercles
+    :param V: liste des 12 élongations de vérins
+    :return: liste des pts intermédiaires des 4 trajectoires
     """
     traj_FL = draw_circle(r, n, V[0], V[1], V[2], 0)
     traj_FR = draw_circle(r, n, V[3], V[4], V[5], 1)
@@ -250,14 +277,15 @@ def draw_circle_12(n, r, V):
 
 def draw_circle(r, n, v1, v2, v3, leg_id):
     """
-    retourne une trajectoire circulaire pour une patte
-    @param r: rayon
-    @param n: précision de la discrétisation (nbr de points)
-    @param v1: élongation de v1
-    @param v2: élongation de v2
-    @param v3: élongation de v3
-    @param leg_id: id de la jambe
-    @return: trajectoire en liste de cooredonnées intermédiaires
+    Retourne une trajectoire circulaire pour une patte
+
+    :param r: rayon
+    :param n: précision de la discrétisation (nbr de points)
+    :param v1: élongation de v1
+    :param v2: élongation de v2
+    :param v3: élongation de v3
+    :param leg_id: id de la jambe
+    :return: trajectoire en liste de cooredonnées intermédiaires
     """
     lpl = LEGS[leg_id]['lengths']
     pts = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
@@ -273,16 +301,17 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
 
 def draw_line_3(v1, v2, v3, dx, dy, dz, n, leg_id):
     """
-    retourne trajectoire rectiligne en liste de point pour un certain décalage et une certaine patte
-    @param v1: elongation de v1
-    @param v2: elongation de v2
-    @param v3: elongation de v3
-    @param dx: décalage en x
-    @param dy: décalage en y
-    @param dz: décalage en z
-    @param n: précision de la discrétisation (nombre de points intermédiaires)
-    @param leg_id: id de la jambe
-    @return: trajectoire en liste coordonnées intermédiaire
+    Retourne trajectoire rectiligne en liste de point pour un certain décalage et une certaine patte
+
+    :param v1: elongation de v1
+    :param v2: elongation de v2
+    :param v3: elongation de v3
+    :param dx: décalage en x
+    :param dy: décalage en y
+    :param dz: décalage en z
+    :param n: précision de la discrétisation (nombre de points intermédiaires)
+    :param leg_id: id de la jambe
+    :return: trajectoire en liste coordonnées intermédiaire
     """
     x0, y0, z0 = direct_leg(v1, v2, v3)
     traj = []
@@ -292,13 +321,14 @@ def draw_line_3(v1, v2, v3, dx, dy, dz, n, leg_id):
 
 def draw_line_12(V, dx, dy, dz, n):
     """
-    retourne la discrétisation d'une trajectoire en ligne droite d'un certain décalage pour les 4 pattes à la fois
-    @param V: liste des 12 vérins
-    @param dx: décalage en x
-    @param dy: décalage en y
-    @param dz: décalage en z
-    @param n: nombre d'étapes dans la traj
-    @return: la trajextoire
+    Retourne la discrétisation d'une trajectoire en ligne droite d'un certain décalage pour les 4 pattes à la fois
+
+    :param V: liste des 12 vérins
+    :param dx: décalage en x
+    :param dy: décalage en y
+    :param dz: décalage en z
+    :param n: nombre d'étapes dans la traj
+    :return: la trajextoire
     """
     traj_FL = draw_line_3(V[0], V[1], V[2], 15, 20, 10, 10, 0)
     traj_FR = draw_line_3(V[3], V[4], V[5], 15, 20, 10, 10, 1)
@@ -321,12 +351,12 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
     car on utilise pas ici le potentiel de travailler sur la division d'un mouvements en petits écarts,
     étant donné le fait que l'on renvoie que la position finale.
 
-    Ne MArCHE PAS
+    Ne MArCHE PAS ( valeurs étranges envoyé par compute_move (cf static_walk)
 
-    @param legs: structure legs inutile ici car on utilise LEGS (qui est global dans ce fichier)
-    @param leg_id: id de la jambe (entre 0 et 3)
-    @param point: point cible pour le bout de la jambe en question
-    @return: les positions de vérins correspondantes
+    :param legs: structure legs inutile ici car on utilise LEGS (qui est global dans ce fichier)
+    :param leg_id: id de la jambe (entre 0 et 3)
+    :param point: point cible pour le bout de la jambe en question
+    :return: les positions de vérins correspondantes
     """
 
     lpl = LEGS[leg_id]['lengths']
@@ -360,8 +390,9 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
 
 def upg_init_legs(controlers):
     """
-    met à jour la structure LEGS avec les positions des vérins
-    @param controlers: structure controllers du fichier static_walk
+    Met à jour la structure LEGS avec les positions des vérins
+
+    :param controlers: structure controllers du fichier static_walk
     """
     # print(controlers[FL].la, LEGS[FL]['verins'])
     global LEGS
@@ -373,8 +404,8 @@ def upg_init_legs(controlers):
     print(LEGS[FL]['verins'], "ici")
 
 def get_the_traj():
-    """
-    créée une trajectoire, calcul les verins correspondant
+    """ *deprecated actuellement*
+    Créée une trajectoire, calcul les verins correspondant
     puis envoie l'information sur leurs élongations
     """
     V = get_verins_12()
@@ -383,8 +414,9 @@ def get_the_traj():
 
 def shake_dat_ass_abs(n, amp):
     """
-    retourne les élongations de vérins nécéssaires à la réalisation d'un mouvement de haut en bas,
+    Retourne les élongations de vérins nécéssaires à la réalisation d'un mouvement de haut en bas,
     en travaillant dans le référentiel absolu.
+
     :param n: précision de la discrétisation (nombre de points)
     :param amp: amplitude du mouvement
     :return: liste de tableau de 12 vérins pour chaques positions intermédiaires du mouvement
@@ -396,8 +428,9 @@ def shake_dat_ass_abs(n, amp):
 
 def shake_dat_ass_rel(n, amp):
     """
-    retourne les élongations de vérins nécéssaires à la réalisation d'un mouvement de haut en bas,
+    Retourne les élongations de vérins nécéssaires à la réalisation d'un mouvement de haut en bas,
     en travaillant dans le référentiel relatif.
+
     :param n: précision de la discrétisation (nombre de points)
     :param amp: amplitude du mouvement
     :return: liste de tableau de 12 vérins pour chaques positions intermédiaires du mouvement

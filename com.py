@@ -165,7 +165,8 @@ def find_controler():
 
 def tell_controler(number,msg,w=0):
     """
-    write encoded 'msg' in the 'number' controler
+    Write encoded 'msg' in the 'number' controler
+
     :param number: leg id
     :param msg: encoded msg with 'to_linear_activator_order'
     :param w: waiting time after telling the controler
@@ -186,7 +187,8 @@ def tell_controler(number,msg,w=0):
 
 def tell_controlers(V):
     """
-    send the encoded msg to all controlers from a list a 12 elongations
+    Send the encoded msg to all controlers from a list a 12 elongations
+
     :param V: list of 12 elongations
     :return:
     """

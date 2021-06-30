@@ -23,6 +23,7 @@ for a in leg_weights:
 def leg_center_of_mass(v1, v2, leg_id):
     """
     Retourne le centre de masse de la patte leg_id dans son référentiel et sa masse équivalente
+
     :param v1: élongation du vérin 1 de la patte
     :param v2: élongation du vérin 2 de la patte
     :param leg_id: ID de la patte
