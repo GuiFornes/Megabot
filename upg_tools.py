@@ -24,6 +24,9 @@ LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
                      'fh':200.0,'gi':520.0,'bf':600.0,'gj':1055.0,
                      'yaw_a':700.0,'yaw_b':50.0,'yaw_c':280.0},
           'verins':[485, 575, 515],
+          'matrix':np.array([[1, 0, 0],
+                              [0, 1, 0],
+                              [0, 0, 1]]),
           'og':1},
       FR:{'origin':(BODY_FRAME/2.0,BODY_FRAME/2.0,0),
           'lengths':{'ao':130.0,'bo':120.0,'bcx':300.0,'bcy':60.0,
@@ -31,6 +34,9 @@ LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
                      'fh':200.0,'gi':500.0,'bf':603.0,'gj':1035.0,
                      'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},
           'verins': [485, 575, 515],
+          'matrix':np.array([[0, -1, 0],
+                             [1, 0, 0],
+                             [0, 0, 1]]),
           'og':1},
       RL:{'origin':(-BODY_FRAME/2.0,-BODY_FRAME/2.0,0),
           'lengths':{'ao':130.0,'bo':120.0,'bcx':295.0,'bcy':60.0,
@@ -38,6 +44,9 @@ LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
                      'fh':200.0,'gi':515.0,'bf':600.0,'gj':1055.0,
                      'yaw_a':700.0,'yaw_b':60.0,'yaw_c':280.0},
           'verins': [485, 575, 515],
+          'matrix':np.array([[0, 1, 0],
+                             [-1, 0, 0],
+                             [0, 0, 1]]),
           'og':1},
       RR:{'origin':(BODY_FRAME/2.0,-BODY_FRAME/2.0,0),
           'lengths':{'ao':130.0,'bo':120.0,'bcx':290.0,'bcy':60.0,
@@ -45,8 +54,14 @@ LEGS={FL:{'origin':(-BODY_FRAME/2.0,BODY_FRAME/2.0,0),
                      'fh':200.0,'gi':500.0,'bf':600.0,'gj':1045.0,
                      'yaw_a':700.0,'yaw_b':55.0,'yaw_c':280.0},
           'verins': [485, 575, 515],
+          'matrix':np.array([[-1, 0, 0],
+                             [0, -1, 0],
+                             [0, 0, 1]]),
           'og':1}
       }
+
+# Décalage entre le centre du robot et le point O de la jambe FL
+L = np.array([500, 500, 0])
 
 ######################### Tools for 'Legs' struct ##########################
 
@@ -96,67 +111,21 @@ def get_og(leg_id):
     """renvoie 1 si la patte est au sol, 0 sinon"""
     return LEGS[leg_id]['og']
 
-x_A = - LEGS[FL]['lengths']['ao']
-y_A = 0
-x_B = LEGS[FL]['lengths']['bo']
-y_B = 0
-
-AB = LEGS[FL]['lengths']['ao'] + LEGS[FL]['lengths']['bo']
-AC = np.sqrt((AB + LEGS[FL]['lengths']['bcx']) ** 2 + LEGS[FL]['lengths']['bcy'] ** 2)
-BC = np.sqrt(LEGS[FL]['lengths']['bcx'] ** 2 + LEGS[FL]['lengths']['bcy'] ** 2)
-AE = LEGS[FL]['lengths']['ae']
-AD = AE - LEGS[FL]['lengths']['de']
-BF = LEGS[FL]['lengths']['bf']
-FH = LEGS[FL]['lengths']['fh']
-BH = BF - FH
-FG = LEGS[FL]['lengths']['fg']
-EF = LEGS[FL]['lengths']['ef']
-EG = EF + FG
-GI = LEGS[FL]['lengths']['gi']
-GJ = LEGS[FL]['lengths']['gj']
-
-KO = LEGS[FL]['lengths']['yaw_c']
-LM = LEGS[FL]['lengths']['yaw_b']
-MO = LEGS[FL]['lengths']['yaw_a']
-LO = np.sqrt(LM ** 2 + MO ** 2)
-##################### CHGT DE REPERE #########################
-# Matrices de rotation permettant le passage d'une patte à l'autre
-MR = np.array([[[1, 0, 0],
-                [0, 1, 0],
-                [0, 0, 1]],
-
-               [[0, -1, 0],
-                [1, 0, 0],
-                [0, 0, 1]],
-
-               [[0, 1, 0],
-                [-1, 0, 0],
-                [0, 0, 1]],
-
-               [[-1, 0, 0],
-                [0, -1, 0],
-                [0, 0, 1]]])
-
-# Décalage entre le centre du robot et le point O de la jambe FL
-L = np.array([500, 500, 0])
-
 def robot_ref_to_leg(point, leg_id):
     """
     faire passer un points du référentiel du robot à celui de la patte
     :param point: coordonées du point
-    :param leg_id: id de la jambe
+    :param leg_id: ID de la patte
     :return: coords dans le ref de la patte
     """
-    point = MR[leg_id] @ point
+    point = LEGS[leg_id]['matrix'] @ point
     point -= L
     return point
 
 def leg_ref_to_robot(point, leg_id):
     """passer d'un point dans le référentiel de la jambe à celui du robot"""
     point += L
-    return MR[leg_id].T @ point
-
-print(robot_ref_to_leg([-1000, -900, -400], RR))
+    return LEGS[leg_id]['matrix'].T @ point
 
 def d3_to_d2(x, y, z):
     """
@@ -234,3 +203,9 @@ def al_kashi_longueur(a, b, alpha):
 
 def al_kashi_angle(a, b, c):
     return np.arccos((a ** 2 + b ** 2 - c ** 2) / (2 * a * b))
+
+############################################################################
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
