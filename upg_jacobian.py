@@ -13,7 +13,7 @@ def distance_3_points(A, B, C):
     """
     return 2 * np.array([[A[0] - B[0], A[1] - B[1]], [A[0] - C[0], A[1] - C[1]]])
 
-def gen_jacob_2(pts, v1, v2):
+def gen_jacob_2(pts, lpl, v1, v2):
     """
     Retourne la jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
     Prend en argument la position des points de la patte et l'élongation des verrins en m
@@ -38,8 +38,7 @@ def gen_jacob_2(pts, v1, v2):
     B = np.array([0, 2 * v1])
     M_D = inv(A) @ B
 
-    M_E = (LEGS[FL]['lengths']['ae'] / (
-                LEGS[FL]['lengths']['ae'] - LEGS[FL]['lengths']['de'])) * M_D
+    M_E = (lpl['ae'] / (lpl['ae'] - lpl['de'])) * M_D
 
     A = distance_3_points(pts['F'], pts['E'], pts['B'])
     B = np.array([
@@ -47,10 +46,9 @@ def gen_jacob_2(pts, v1, v2):
         [0, 0]])
     M_F = (inv(A) @ B) @ M_E
 
-    M_G = ((LEGS[FL]['lengths']['ef'] + LEGS[FL]['lengths']['fg']) / LEGS[FL]['lengths'][
-        'ef']) * M_F
+    M_G = ((lpl['ef'] + lpl['fg']) / lpl['ef']) * M_F
 
-    M_H = (BH / BF) * M_F
+    M_H = ((lpl['bf'] - lpl['fh']) / lpl['bf']) * M_F
 
     A = distance_3_points(pts['I'], pts['G'], pts['H'])
     B = np.array([
@@ -66,17 +64,22 @@ def gen_jacob_2(pts, v1, v2):
         [V1[0], V2[0]],
         [V1[1], V2[1]]])
 
-    Jacob = inv((LEGS[FL]['lengths']['gj'] / LEGS[FL]['lengths']['gi']) * M_I)
+    Jacob = inv((lpl['gj'] / lpl['gi']) * M_I)
 
     return Jacob
 
-def mat_A(pts, v1, v2, v3, alpha):
+def mat_A(pts, lpl, v1, v2, v3, alpha):
     """
     Fonction auxiliaire de gen_jacob_3
     Génère la matrice A conformément à nos équations (cf. indirect.pdf)
     Toutes les longueurs en m
     """
-    Jacob = gen_jacob_2(pts, v1, v2)
+    Jacob = gen_jacob_2(pts, lpl, v1, v2)
+
+    KO = lpl['yaw_c']
+    LM = lpl['yaw_b']
+    MO = lpl['yaw_a']
+    LO = np.sqrt(LM ** 2 + MO ** 2)
 
     A = np.array([
         [Jacob[0][0], Jacob[0][1], 0],
@@ -107,7 +110,7 @@ def gen_jacob_3(v1, v2, v3, alpha, lpl):
     La jacobienne doit être appliquée sur des élongations en m et retourne des position en m
     """
     pts = get_leg_points_V1_V2(v1, v2, lpl)
-    A = mat_A(pts, v1, v2, v3, alpha)
+    A = mat_A(pts, lpl, v1, v2, v3, alpha)
     B = mat_B(pts, alpha)
 
     return A @ inv(B)
@@ -119,7 +122,7 @@ def gen_jacob_12(V):
         v1, v2, v3 = V[i*3], V[i*3 + 1], V[i*3 + 2]
         lpl = LEGS[i]['lengths']
         alpha = np.arccos(v3_to_cos_angle(v3, lpl))
-        J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ MR[i].T
+        J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ LEGS[i]['matrix'].T
 
         # Ajout à J_12
         L = np.zeros((3, 12))

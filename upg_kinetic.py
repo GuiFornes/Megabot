@@ -13,10 +13,10 @@ from upg_jacobian import *
 def direct_O(X_abs, V):
     if LEGS[0]['og'] and LEGS[2]['og']:
         O0 = X_abs[0 : 3] - direct_leg(V[0], V[1], V[2])
-        O2 = MR[0] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8])
+        O2 = LEGS[2]['matrix'] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8])
         return 0.5 * (O0 + O2)
-    O1 = MR[1] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5])
-    O3 = MR[3] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11])
+    O1 = LEGS[1]['matrix'] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5])
+    O3 = LEGS[3]['matrix'] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11])
     return 0.5 * (O1 + O3)
 
 def direct_12(V):
@@ -38,7 +38,7 @@ def direct_robot(v1, v2, v3, leg_id):
     X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
     calpha = v3_to_cos_angle(v3, lpl)
     Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
-    return MR[leg_id] @ (Pos + L)
+    return LEGS[leg_id]['matrix'] @ (Pos + L)
 
 def direct_leg(v1, v2, v3):
     """
@@ -175,7 +175,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
     """
     R = [(v1, v2, v3)]
     err = 0
-    if upgrade : prev_T = MR[leg_id].T @ traj[0] - L
+    if upgrade : prev_T = LEGS[leg_id]['matrix'].T @ traj[0] - L
 
     # Parcours de traj
     for i in range(1, len(traj)):
@@ -188,7 +188,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
             print("VERINS_________actual :", v1, v2, v3)
 
-        T = MR[leg_id].T @ traj[i] - L
+        T = LEGS[leg_id]['matrix'].T @ traj[i] - L
         dX = np.array([T[0] - x0, T[1] - y0, T[2] - z0])
         if upgrade:
             dX += err
@@ -226,9 +226,9 @@ def draw_circle_12(n, r, V):
     traj = []
     for i in range(n):
         t = traj_FL[i]
-        t = np.append(t, MR[1] @ traj_FR[i])
-        t = np.append(t, MR[2] @ traj_RL[i])
-        t = np.append(t, MR[3] @ traj_RR[i])
+        t = np.append(t, LEGS[1]['matrix'] @ traj_FR[i])
+        t = np.append(t, LEGS[2]['matrix'] @ traj_RL[i])
+        t = np.append(t, LEGS[3]['matrix'] @ traj_RR[i])
         traj.append(t)
     return traj
 
@@ -290,9 +290,9 @@ def draw_line_12(V, dx, dy, dz, n):
     traj = []
     for i in range(n):
         t = traj_FL[i]
-        t = np.append(t, MR[1] @ traj_FR[i])
-        t = np.append(t, MR[2] @ traj_RL[i])
-        t = np.append(t, MR[3] @ traj_RR[i])
+        t = np.append(t, LEGS[1]['matrix'] @ traj_FR[i])
+        t = np.append(t, LEGS[2]['matrix'] @ traj_RL[i])
+        t = np.append(t, LEGS[3]['matrix'] @ traj_RR[i])
         traj.append(t)
     return traj
 ############################################################################
@@ -403,11 +403,3 @@ def traj_rota():
     leg_ig = min_diff()
     x, y, z = direct_robot(LEGS[leg_ig]['verrins'][0], LEGS[leg_ig]['verrins'][1], LEGS[leg_ig]['verrins'][2], leg_ig)
 
-
-
-
-############################################################################
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod()

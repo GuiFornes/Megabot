@@ -916,13 +916,13 @@ if t_artificial_inverse:
     traj_FL = draw_circle(200, 200, 550, 600, 515, 0)
     traj_FR = draw_circle(200, 200, 550, 600, 515, 1)
     for i in range(len(traj_FR)):
-        traj_FR[i] = MR[1] @ traj_FR[i]
+        traj_FR[i] = LEGS[1]['matrix'] @ traj_FR[i]
     traj_RL = draw_circle(200, 200, 550, 600, 515, 2)
     for i in range(len(traj_RL)):
-        traj_RL[i] = MR[2] @ traj_RL[i]
+        traj_RL[i] = LEGS[2]['matrix'] @ traj_RL[i]
     traj_RR = draw_circle(200, 200, 550, 600, 515, 3)
     for i in range(len(traj_RR)):
-        traj_RR[i] = MR[3] @ traj_RR[i]
+        traj_RR[i] = LEGS[3]['matrix'] @ traj_RR[i]
     traj_4_legs = np.array([traj_FL, traj_FR, traj_RL, traj_RR])
     V = np.array([[550, 600, 515],
                  [550, 600, 515],
