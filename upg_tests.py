@@ -838,7 +838,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
 
 ################################# TESTS ####################################
 
-draw_12(shake_dat_ass_abs(20, 200))
+# draw_12(shake_dat_ass_abs(20, 200))
 
 t_move = 0
 # test de normalized_move_xyz
@@ -905,7 +905,7 @@ if test_comp_indirect:
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
     test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
 
-t_inverse = 0
+t_inverse = 1
 if t_inverse:
     Ver = [485, 575, 565, 485, 575, 565, 485, 575, 565, 485, 575, 565]
     traj = draw_circle_12(20, 200, Ver)

@@ -93,6 +93,7 @@ def stand_up(leg_id):
     LEGS[leg_id]['og'] = 0
 
 def get_og(leg_id):
+    """renvoie 1 si la patte est au sol, 0 sinon"""
     return LEGS[leg_id]['og']
 
 x_A = - LEGS[FL]['lengths']['ao']
@@ -118,7 +119,7 @@ KO = LEGS[FL]['lengths']['yaw_c']
 LM = LEGS[FL]['lengths']['yaw_b']
 MO = LEGS[FL]['lengths']['yaw_a']
 LO = np.sqrt(LM ** 2 + MO ** 2)
-
+##################### CHGT DE REPERE #########################
 # Matrices de rotation permettant le passage d'une patte à l'autre
 MR = np.array([[[1, 0, 0],
                 [0, 1, 0],
@@ -140,13 +141,22 @@ MR = np.array([[[1, 0, 0],
 L = np.array([500, 500, 0])
 
 def robot_ref_to_leg(point, leg_id):
-    point = MR[leg_id].T @ point
+    """
+    faire passer un points du référentiel du robot à celui de la patte
+    :param point: coordonées du point
+    :param leg_id: id de la jambe
+    :return: coords dans le ref de la patte
+    """
+    point = MR[leg_id] @ point
     point -= L
     return point
 
 def leg_ref_to_robot(point, leg_id):
+    """passer d'un point dans le référentiel de la jambe à celui du robot"""
     point += L
-    return MR[leg_id] @ point
+    return MR[leg_id].T @ point
+
+print(robot_ref_to_leg([-1000, -900, -400], RR))
 
 def d3_to_d2(x, y, z):
     """

@@ -1,5 +1,5 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
-
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.linalg import inv
 from qpsolvers import solve_qp
@@ -11,6 +11,12 @@ from upg_jacobian import *
 ############################### DIRECT #####################################
 
 def direct_O(X_abs, V):
+    """
+    cinématique direct dans le référentiel absolue (base flottante)
+    :param X_abs: x absolu
+    :param V: liste des 12 élongations
+    :return: ????
+    """
     if LEGS[0]['og'] and LEGS[2]['og']:
         O0 = X_abs[0 : 3] - direct_leg(V[0], V[1], V[2])
         O2 = MR[0] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8])
@@ -23,6 +29,8 @@ def direct_12(V):
     """
     Retourne les positions des extrémités des 4 pattes correspondant aux élongations V des vérins
     Les distances sont exprimées en mm et les coordonnées sont exprimées dans le référentiel du robot
+    :param V: liste des 12 élongations des vérins
+    :return: les positions des 4 extrémités de patte
     """
     R = []
     for i in range(4):
@@ -33,6 +41,11 @@ def direct_robot(v1, v2, v3, leg_id):
     """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel du robot
     Se base sur le modèle direct de Julien
+    :param v1: élongation de v1
+    :param v2: élongation de v2
+    :param v3: élongation de v3
+    :param leg_id: id de l patte
+    :return: coordonnées du bout de la patte
     """
     lpl = LEGS[leg_id]['lengths']
     X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
@@ -44,6 +57,10 @@ def direct_leg(v1, v2, v3):
     """
     Retourne les positions x, y, z du bout de la patte en fonctions de v1, v2, v3 dans le référentiel de la patte FL
     Se base sur le modèle direct de Julien
+    :param v1: élongation de v1
+    :param v2: élongation de v2
+    :param v3: élongation de v3
+    :return: coord x, y et z du bout de la patte
     """
     lpl = LEGS[FL]['lengths']
     X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
@@ -213,12 +230,11 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
 def draw_circle_12(n, r, V):
     """
     retourne une trajectoire circulaire pour les 4 pattes
-    @param n:
-    @param r:
-    @param V:
-    @return:
+    @param n: précision de la discrétisation (nbr de pts)
+    @param r: rayon des cercles
+    @param V: liste des 12 élongations de vérins
+    @return: liste des pts intermédiaires des 4 trajectoires
     """
-    print("elongation : ", V)
     traj_FL = draw_circle(r, n, V[0], V[1], V[2], 0)
     traj_FR = draw_circle(r, n, V[3], V[4], V[5], 1)
     traj_RL = draw_circle(r, n, V[6], V[7], V[8], 2)
@@ -235,18 +251,19 @@ def draw_circle_12(n, r, V):
 def draw_circle(r, n, v1, v2, v3, leg_id):
     """
     retourne une trajectoire circulaire pour une patte
-    @param r:
-    @param n:
-    @param v1:
-    @param v2:
-    @param v3:
-    @param leg_id:
-    @return:
+    @param r: rayon
+    @param n: précision de la discrétisation (nbr de points)
+    @param v1: élongation de v1
+    @param v2: élongation de v2
+    @param v3: élongation de v3
+    @param leg_id: id de la jambe
+    @return: trajectoire en liste de cooredonnées intermédiaires
     """
     lpl = LEGS[leg_id]['lengths']
     pts = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3, lpl))
+
     R = []
     for k in range(n + 1):
         R.append(np.array([x0+ r * np.cos(2 * k * np.pi / n) - r,
@@ -256,16 +273,16 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
 
 def draw_line_3(v1, v2, v3, dx, dy, dz, n, leg_id):
     """
-    retourne trajectoire rectiligne en liste de point pour u certain décalage et une certaine patte
-    @param v1:
-    @param v2:
-    @param v3:
-    @param dx:
-    @param dy:
-    @param dz:
-    @param n:
-    @param leg_id:
-    @return:
+    retourne trajectoire rectiligne en liste de point pour un certain décalage et une certaine patte
+    @param v1: elongation de v1
+    @param v2: elongation de v2
+    @param v3: elongation de v3
+    @param dx: décalage en x
+    @param dy: décalage en y
+    @param dz: décalage en z
+    @param n: précision de la discrétisation (nombre de points intermédiaires)
+    @param leg_id: id de la jambe
+    @return: trajectoire en liste coordonnées intermédiaire
     """
     x0, y0, z0 = direct_leg(v1, v2, v3)
     traj = []
@@ -303,24 +320,27 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
     dans le but de comparer sur le simulateur. A noter que ce n'est pas dutout une utilisation optimale
     car on utilise pas ici le potentiel de travailler sur la division d'un mouvements en petits écarts,
     étant donné le fait que l'on renvoie que la position finale.
+
+    Ne MArCHE PAS
+
     @param legs: structure legs inutile ici car on utilise LEGS (qui est global dans ce fichier)
     @param leg_id: id de la jambe (entre 0 et 3)
     @param point: point cible pour le bout de la jambe en question
     @return: les positions de vérins correspondantes
     """
+
     lpl = LEGS[leg_id]['lengths']
     V = get_verins_3(leg_id)
-    print("pt = ", point)
+    print("pt = ", point, "   leg_id = " ,leg_id)
     x0, y0, z0 = direct_leg(V[0], V[1], V[2])
     print("x0 =", x0, y0, z0)
     # dX = point['x'] - LEGS[leg_id]['origin']['x']
     # dY = point['y'] - LEGS[leg_id]['origin']['y']
     # calpha = v3_to_cos_angle(V[2], lpl)
     # dx, dy, dz = d2_to_d3(dX, dY, calpha)
-    for i in range(3):
-        point[i] = (point[i] - LEGS[leg_id]["origin"][i]) * 1000
-    leg_ref_point = np.matmul(legs[leg_id]['matrix'], point).tolist()
-    print("leg_ref_pt = ", leg_ref_point)
+    point *= np.full(3, 1000)
+    leg_ref_point = robot_ref_to_leg(point, leg_id)
+    print("leg_ref =", leg_ref_point)
     dx = leg_ref_point[0] - x0
     dy = leg_ref_point[1] - y0
     dz = leg_ref_point[2] - z0
@@ -346,10 +366,10 @@ def upg_init_legs(controlers):
     # print(controlers[FL].la, LEGS[FL]['verins'])
     global LEGS
     for l in ALL_LEGS:
-        LEGS[l]['verins'][0] = 450 + controlers[l].la[0]['position']
+        LEGS[l]['verins'][0] = 450 + controlers[l].la[1]['position']
         # print("UPG !", controlers[l].la[0]['position'], controlers[l].la[1]['position'], controlers[l].la[2]['position'])
-        LEGS[l]['verins'][1] = 450 + controlers[l].la[1]['position']
-        LEGS[l]['verins'][2] = 450 + controlers[l].la[2]['position']
+        LEGS[l]['verins'][1] = 450 + controlers[l].la[2]['position']
+        LEGS[l]['verins'][2] = 450 + controlers[l].la[0]['position']
     print(LEGS[FL]['verins'], "ici")
 
 def get_the_traj():
@@ -362,12 +382,26 @@ def get_the_traj():
     return move_rel(traj, V, True)
 
 def shake_dat_ass_abs(n, amp):
+    """
+    retourne les élongations de vérins nécéssaires à la réalisation d'un mouvement de haut en bas,
+    en travaillant dans le référentiel absolu.
+    :param n: précision de la discrétisation (nombre de points)
+    :param amp: amplitude du mouvement
+    :return: liste de tableau de 12 vérins pour chaques positions intermédiaires du mouvement
+    """
     z0 = - get_leg_points_V1_V2(get_verins_12()[0] / 1000, get_verins_12()[1] / 1000, LEGS[0]['lengths'])['J'][1]
     L = np.linspace(-1, 1, n)
     traj_center = [[0, 0, z0 - amp * np.sin(l)] for l in L]
     return move_on_floor(traj_center)
 
 def shake_dat_ass_rel(n, amp):
+    """
+    retourne les élongations de vérins nécéssaires à la réalisation d'un mouvement de haut en bas,
+    en travaillant dans le référentiel relatif.
+    :param n: précision de la discrétisation (nombre de points)
+    :param amp: amplitude du mouvement
+    :return: liste de tableau de 12 vérins pour chaques positions intermédiaires du mouvement
+    """
     V = get_verins_12()
     X = direct_12(V)
     L = np.linspace(0, np.pi, n)

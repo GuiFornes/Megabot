@@ -63,7 +63,7 @@ def compute_moves(dist,z,angle,store=None):
     start_points=[None,None,None,None]
     for L in [FL,FR,RL,RR]:
         start_points[L]=list(prod(normed([LEGS[L]['origin'][X],LEGS[L]['origin'][Y]]),dist))+[z] # in robot ref
-        if upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,start_points[L])[0]==True:
+        if inverse_kinetic_robot_ref(LEGS,L,start_points[L])[0]==True:
             print("start point is not in possible space!: ",L," ",start_points[L],' origin:',LEGS[L]['origin'])
             return
 
@@ -76,7 +76,7 @@ def compute_moves(dist,z,angle,store=None):
         y=(ymin+ymax)/2.0
         e=False
         for L in [FL,FR,RL,RR]:
-            e= e or upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,y))))[0]
+            e= e or inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,y))))[0]
         if e==False:
             ymin=y
         else:
@@ -90,7 +90,7 @@ def compute_moves(dist,z,angle,store=None):
         y=(ymin+ymax)/2.0
         e=False
         for L in [FL,FR,RL,RR]:
-            e=e or upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,y))))[0]
+            e=e or inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,y))))[0]
         if e==False:
             ymin=y
         else:
@@ -120,28 +120,28 @@ def compute_moves(dist,z,angle,store=None):
         store[L]=[]
         print(L,"back  start: ",start_points[L] , "dir:", prod(direction,ybackward)," => ",plus(start_points[L],prod(direction,ybackward)))
         print(L,"front start: ",start_points[L] , "dir:", prod(direction,yforward)," => ",plus(start_points[L],prod(direction,yforward)))
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,ybackward))))[1])
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,(ybackward+yforward)/2.0))))[1])
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,yforward))))[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,ybackward))))[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,(ybackward+yforward)/2.0))))[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,list(plus(start_points[L],prod(direction,yforward))))[1])
         p=list(plus(start_points[L],prod(direction,ybackward)))
         p[2]=z+MOVE_UP_ZDELTA
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,p)[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
         p=list(plus(start_points[L],prod(direction,(ybackward+yforward)/2.0)))
         p[2]=z+MOVE_UP_ZDELTA
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,p)[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
         p=list(plus(start_points[L],prod(direction,yforward)))
         p[2]=z+MOVE_UP_ZDELTA
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,p)[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
 
         p=list(plus(start_points[L],prod(direction,ybackward)))
         p[2]=z+0.05
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,p)[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
         p=list(plus(start_points[L],prod(direction,(ybackward+yforward)/2.0)))
         p[2]=z+0.05
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,p)[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
         p=list(plus(start_points[L],prod(direction,yforward)))
         p[2]=z+0.05
-        store[L].append(upg_k.upg_inverse_kinetic_robot_ref(LEGS,L,p)[1])
+        store[L].append(inverse_kinetic_robot_ref(LEGS,L,p)[1])
         print("order for leg:",L)
         for i in range(len(store[L])):
             print('[',i,']',store[L][i],' ',L," ",to_linear_actuator_order(store[L][i]))
@@ -346,7 +346,7 @@ def move_body(dx,dy):
                                     (controlers[l].la[0]['position']+450.0)/1000.0)
         print("leg is at ",current)
         new_point=[current[0]+dx,current[1]+dy,current[2]]
-        err,order=upg_k.upg_inverse_kinetic_robot_ref(LEGS,l,new_point)
+        err,order=inverse_kinetic_robot_ref(LEGS,l,new_point)
         print("new position: ",new_point," leads to ",err," : ",order," => ",to_linear_actuator_order(order))
         if err:
             print("can not make that move: ",current," => ",new_point)
@@ -378,7 +378,7 @@ def move_danse(dx,step,delay,count=1):
         new_order=[]
         for l in range(4):
             new_point=[orig_position[l][0]+dx*math.cos(angle),orig_position[l][1]+dx*math.sin(angle),orig_position[l][2]]
-            err,order=upg_k.upg_inverse_kinetic_robot_ref(LEGS,l,new_point)
+            err,order=inverse_kinetic_robot_ref(LEGS,l,new_point)
             print("new position: ",new_point," leads to ",err," : ",order," => ",to_linear_actuator_order(order))
             if err:
                 print("can not make that move: ",current," => ",new_point)
@@ -498,10 +498,11 @@ class FastWalk:
         return True
 
 def upg_init_pos():
-    """met les verins dans une position connue en mettant à jour les infos de la structure controlers"""
+    """put all legs in a known initial position"""
+    V = [0.485, 0.575, 0.515]
     for i in range(4):
-        tell_controler(i, to_linear_actuator_order(orders[i][1]))
-    print("iciii", controlers[0].la)
+        tell_controler(i, to_linear_actuator_order(V))
+    wait_move(list(range(4)), 5)
 
 class Traj:
     def __init__(self):
@@ -516,14 +517,12 @@ class Traj:
         s = self.stage
         if self.stage == 0:
             upg_init_pos()
-            # print("iciii", controlers[0].la)
             self.stage = 1
         elif self.stage == 1:
-            if wait_move(list(range(4)),1) or self.timer(10):
+            if wait_move(list(range(4)), 5) or self.timer(10):
                 self.stage = 2
-            print("elongations : ", (v['position'] for v in controlers[0].la))
-            upg_k.upg_init_legs(controlers)
         elif self.stage == 2:
+            upg_k.upg_init_legs(controlers)
             Ver = upg_k.get_the_traj()
             for i in range(len(Ver)):
                 tell_controlers(Ver[i])

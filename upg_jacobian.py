@@ -1,6 +1,5 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
 
-from upg_kinetic import *
 import numpy as np
 from numpy.linalg import inv
 from qpsolvers import solve_qp
