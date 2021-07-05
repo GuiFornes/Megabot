@@ -179,7 +179,7 @@ def v3_to_cos_angle(v3, lpl):
     return (KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO) * MO / LO - np.sqrt(
         1 - ((KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO)) ** 2) * np.sqrt(1 - (MO / LO) ** 2)
 
-def distance(x, y, z=0):
+def distance(x, y, z=0, x2=0, y2=0, z2=0):
     """
     Calcule la distance euclidienne dans l'espace en 3 dimensions (ou 2D selon le nombre de coordonnées passées en paramètre)
 
@@ -196,7 +196,7 @@ def distance(x, y, z=0):
     >>> np.abs(distance(1, 1, 0) - np.sqrt(2)) < 0.0000001
     True
     """
-    return np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    return np.sqrt((x - x2) ** 2 + (y - y2) ** 2 + (z - z2) ** 2)
 
 def al_kashi_longueur(a, b, alpha):
     return np.sqrt(a ** 2 + b ** 2 - 2 * a * b * np.cos(alpha))
@@ -207,5 +207,4 @@ def al_kashi_angle(a, b, c):
 ############################################################################
 if __name__ == "__main__":
     import doctest
-
     doctest.testmod()
