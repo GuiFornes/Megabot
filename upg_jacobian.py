@@ -18,13 +18,13 @@ def gen_jacob_2(pts, lpl, v1, v2):
     Prend en argument la position des points de la patte et l'élongation des verrins en m
     La jacobienne doit être appliqué sur des élongations en m et retourne des position en m
 
-    >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, LEGS[FL]['lengths']), 0.495, 0.585) @ np.array([0, 0])
+    >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([0, 0])
     array([0., 0.])
 
-    # >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, LEGS[FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
+    # >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([1, 0])
     # array([1, 0])
     #
-    # >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, LEGS[FL]['lengths']), 0.495, 0.585) @ np.array([1, 0])
+    # >>> gen_jacob_2(get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([1, 0])
 
     """
     x_E, y_E = pts['E']
@@ -119,9 +119,9 @@ def gen_jacob_12(V):
     for i in range(4):
         # Calcul de la jacobienne de la patte
         v1, v2, v3 = V[i*3], V[i*3 + 1], V[i*3 + 2]
-        lpl = LEGS[i]['lengths']
+        lpl = ROBOT['legs'][i]['lengths']
         alpha = np.arccos(v3_to_cos_angle(v3, lpl))
-        J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ LEGS[i]['matrix'].T
+        J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ ROBOT['legs'][i]['matrix'].T
 
         # Ajout à J_12
         L = np.zeros((3, 12))
@@ -290,7 +290,8 @@ def gen_VAR(V, Omega, X_rel):
                           [np.zeros((3, 3)), R, np.zeros((3, 6))],
                           [np.zeros((3, 6)), R, np.zeros((3, 3))],
                           [np.zeros((3, 9)), R]])
-    return np.concatenate((np.concatenate((Big_R @ inv(J_12), J_l.reshape((12, 1)), J_m.reshape((12, 1)), J_n.reshape((12, 1))), axis=1), np.zeros((3,15))))
+    old_VAR = np.concatenate((np.concatenate((Big_R @ inv(J_12), J_l.reshape((12, 1)), J_m.reshape((12, 1)), J_n.reshape((12, 1))), axis=1), np.zeros((3,15))))
+    return np.concatenate((old_VAR, np.concatenate((np.zeros((12, 3)), np.eye(3)))), axis=1)
 
 def legs_constraints_3():
     """
@@ -318,12 +319,61 @@ def legs_constraints_4():
             break
     return C
 
+def legs_constraints_5():
+    """
+    3 pattes fixes
+    """
+    C = np.zeros((9, 15))
+    c = 0
+    for i in range(4):
+        if get_og(i):
+            c += 1
+            C[3 * i][i * 3] = 1
+            C[3 * i + 1][i * 3 + 1] = 1
+            C[3 * i + 2][i * 3 + 2] = 1
+        if c == 3: break
+    return C
+
 def gen_OBJ():
     return np.concatenate((np.concatenate((np.eye(12), - np.concatenate((np.eye(3), np.eye(3), np.eye(3), np.eye(3)))), axis=1), legs_constraints_4()))
 
+def gen_weights_regu(V_weights=0.1):
+    W = np.zeros((18, 18))
+    for i in range(12):
+        W[i][i] = V_weights
+    return W
+
 def gen_new_jacob(V, Omega, X_rel):
-    return inv(gen_OBJ()) @ gen_VAR(V, Omega, X_rel)
+    return pseudo_inv(gen_OBJ()) @ gen_VAR(V, Omega, X_rel)
 
 
-# V = [550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550]
-# print(gen_new_jacob(V, np.array([0, 0, 0])))
+#####################################################
+
+def jacob_dX_to_dV_dO_dOmega(V, Omega, X_rel):
+    dRdl = gen_dRdl(Omega[0], Omega[1], Omega[2])
+    dRdm = gen_dRdm(Omega[0], Omega[1], Omega[2])
+    dRdn = gen_dRdn(Omega[0], Omega[1], Omega[2])
+    J_l = np.block([[dRdl, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdl, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdl, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdl]]) @ X_rel
+    J_m = np.block([[dRdm, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdm, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdm, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdm]]) @ X_rel
+    J_n = np.block([[dRdn, np.zeros((3, 9))],
+                    [np.zeros((3, 3)), dRdn, np.zeros((3, 6))],
+                    [np.zeros((3, 6)), dRdn, np.zeros((3, 3))],
+                    [np.zeros((3, 9)), dRdn]]) @ X_rel
+
+    J_12 = gen_jacob_12(V)
+    R = gen_R(Omega[0], Omega[1], Omega[2])
+    Big_R = np.block([[R, np.zeros((3, 9))],
+                      [np.zeros((3, 3)), R, np.zeros((3, 6))],
+                      [np.zeros((3, 6)), R, np.zeros((3, 3))],
+                      [np.zeros((3, 9)), R]])
+    return np.concatenate((Big_R @ inv(J_12),
+                           np.concatenate((np.eye(3), np.eye(3), np.eye(3), np.eye(3))),
+                           np.reshape(J_l, (12, 1)),
+                           np.reshape(J_m, (12, 1)),
+                           np.reshape(J_n, (12, 1))), axis=1)

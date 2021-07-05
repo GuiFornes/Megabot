@@ -23,11 +23,12 @@ for a in leg_weights:
 def leg_center_of_mass(v1, v2, leg_id):
     """
     Retourne le centre de masse de la patte leg_id dans son référentiel et sa masse équivalente
+
     :param v1: élongation du vérin 1 de la patte
     :param v2: élongation du vérin 2 de la patte
     :param leg_id: ID de la patte
     """
-    points = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, kin.LEGS[leg_id]['lengths'])
+    points = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, ROBOT['legs'][leg_id]['lengths'])
     lweights = []
     total_weight = 0
     application_points = []
@@ -51,6 +52,7 @@ def body_center_of_mass(passenger=True, passenger_weight=80.0):
     """
     Retourne le centre de masse du châssis dans le référentiel du robot et sa masse équivalente
     Peut prendre un passager en argument, et le cas échéant fixer sa masse
+
     :param passenger: présence d'un passager
     :param passenger_weight: si passager il y a, sa masse
     :return: centre de masse et masse équivalente du châssis du robot
@@ -63,6 +65,7 @@ def body_center_of_mass(passenger=True, passenger_weight=80.0):
 def center_of_mass(V, passenger=True, passenger_weight=80.0):
     """
     Retourne les coordonnées du centre de masse du robot dans le référentiel du robot
+
     :param V: élongations des vérins (vecteur de taille 12)
     :param passenger: présence d'un passager
     :param passenger_weight: si passager il y a, sa masse
@@ -74,7 +77,7 @@ def center_of_mass(V, passenger=True, passenger_weight=80.0):
 
     for i in range(4):
         m, w = leg_center_of_mass(V[3 * i], V[3 * i + 1], i)
-        G += leg_ref_to_robot(d2_to_d3(m[0], m[1], v3_to_cos_angle(V[3 * i + 2], LEGS[i]['lengths'])), i) * w
+        G += leg_ref_to_robot(d2_to_d3(m[0], m[1], v3_to_cos_angle(V[3 * i + 2], ROBOT['legs'][i]['lengths'])), i) * w
         total_weight += w
 
     return G / total_weight
@@ -82,6 +85,7 @@ def center_of_mass(V, passenger=True, passenger_weight=80.0):
 def plan_from_points(A, B, C):
     """
     Détermine une équation du plan contenant les 3 points non colinéaires A, B et C
+
     :param A: 1er point
     :param B: 2nd point
     :param C: 3ème point
@@ -117,14 +121,15 @@ def plan_from_points(A, B, C):
 def project(point):
     """
     Calcule le projeté du point sur le sol dans le référentiel du robot
+
     :param point: coordonnées du point à projeter sur le sol dans le référentiel du robot
     :return: projeté du point sur le sol dans le référnetiel du robot
     """
     V = get_verins_12()
     legs_on_ground = []
     for i in range(4):
-        if LEGS[i]['og']:
-            lpl = kin.LEGS[i]['lengths']
+        if ROBOT['legs'][i]['og']:
+            lpl = ROBOT['legs'][i]['lengths']
             Pos2D = get_leg_points_V1_V2(V[3 * i] / 1000, V[3 * i + 1] / 1000, lpl)['J']
             legs_on_ground.append(leg_ref_to_robot(d2_to_d3(Pos2D[0] * 1000, Pos2D[1] * 1000, v3_to_cos_angle(V[3 * i + 2], lpl)), i))
         if len(legs_on_ground) == 3:
@@ -138,13 +143,14 @@ def project(point):
 def proj_center_of_mass_robot(passenger=True, passenger_weight=80.0):
     """
     Calcule le projeté au sol du centre de masse du robot dans son référentiel
+
     :param passenger: présence d'un passager
     :param passenger_weight: si passager il y a, sa masse
     :return: projeté au sol du centre de masse dans le référentiel du robot
     """
     return project(center_of_mass(get_verins_12(), passenger=passenger, passenger_weight=passenger_weight))
 
-# print(proj_center_of_mass_robot())
+print(proj_center_of_mass_robot())
 
 ############################################################################
 if __name__ == "__main__":
