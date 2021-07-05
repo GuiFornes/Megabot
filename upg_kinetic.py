@@ -8,22 +8,31 @@ from upg_jacobian import *
 # from com import wait_move, tell_controlers
 
 
+################################ INIT ######################################
+
+def init_pos_abs():
+    global ROBOT
+    pos_rel = direct_12(get_verins_12())
+    for i in range(4):
+        ROBOT['legs'][i]['pos_abs'][3 * i] = pos_rel[3 * i]
+        ROBOT['legs'][i]['pos_abs'][3 * i + 1] = pos_rel[3 * i + 1]
+
 ############################### DIRECT #####################################
 
 def direct_O(X_abs, V):
     """
-    Cinématique direct dans le référentiel absolue (base flottante)
+    Cinématique directe dans le référentiel absolu
 
     :param X_abs: x absolu
     :param V: liste des 12 élongations
-    :return: ????
+    :return: position du centre dans le référentiel absolue
     """
-    if LEGS[0]['og'] and LEGS[2]['og']:
+    if ROBOT['legs'][0]['og'] and ROBOT['legs'][2]['og']:
         O0 = X_abs[0 : 3] - direct_leg(V[0], V[1], V[2])
-        O2 = LEGS[2]['matrix'] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8])
+        O2 = ROBOT['legs'][2]['matrix'] @ X_abs[6 : 9] - direct_leg(V[6], V[7], V[8])
         return 0.5 * (O0 + O2)
-    O1 = LEGS[1]['matrix'] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5])
-    O3 = LEGS[3]['matrix'] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11])
+    O1 = ROBOT['legs'][1]['matrix'] @ X_abs[3 : 6] - direct_leg(V[3], V[4], V[5])
+    O3 = ROBOT['legs'][3]['matrix'] @ X_abs[9 : 12] - direct_leg(V[9], V[10], V[11])
     return 0.5 * (O1 + O3)
 
 def direct_12(V):
@@ -50,11 +59,11 @@ def direct_robot(v1, v2, v3, leg_id):
     :param leg_id: id de l patte
     :return: coordonnées du bout de la patte
     """
-    lpl = LEGS[leg_id]['lengths']
+    lpl = ROBOT['legs'][leg_id]['lengths']
     X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
     calpha = v3_to_cos_angle(v3, lpl)
     Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
-    return LEGS[leg_id]['matrix'] @ (Pos + L)
+    return ROBOT['legs'][leg_id]['matrix'] @ (Pos + ROBOT['body']['offset'])
 
 def direct_leg(v1, v2, v3):
     """
@@ -66,7 +75,7 @@ def direct_leg(v1, v2, v3):
     :param v3: élongation de v3
     :return: coord x, y et z du bout de la patte
     """
-    lpl = LEGS[FL]['lengths']
+    lpl = ROBOT['legs'][FL]['lengths']
     X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
     calpha = v3_to_cos_angle(v3, lpl)
     x = X * np.sqrt(1 - calpha ** 2) * 1000
@@ -101,7 +110,7 @@ def move(traj_center, X, Omega, V, angle_chassis=10):
         b = np.zeros(30)
         A = np.zeros((30, 30))
         for j in range(4):
-            if LEGS[i]['og']:
+            if ROBOT['legs'][i]['og']:
                 for k in range(3):
                     A[j * 3 + k][j * 3 + k] = 1
         for j in range(3):
@@ -125,48 +134,97 @@ def move(traj_center, X, Omega, V, angle_chassis=10):
         L.append(V0)
     return L
 
-def move_on_floor(traj_center, max_angle=10):
-    """ On se considère en (O,O) du référentiel absolu au début du mouvement"""
+def traj(n, amp):
+    X = direct_12(get_verins_12())
+    L = np.linspace(0, np.pi, n)
+    return [[X[0], X[1], amp * np.sin(l),
+             X[3], X[4], amp * np.sin(l),
+             X[6], X[7], amp * np.sin(l),
+             X[9], X[10], amp * np.sin(l)] for l in L]
+
+def direct_abs(leg_ini, V):
+    """
+    Calcule la nouvelle position absolue des pattes et du centre du robot à partir de la position absolue initiale
+    des pattes pour la phase de déplacement en cours (une phase = un déplacement avec le même groupe de pattes au sol)
+
+    :param leg_ini: coordonnées des pattes absolues au début de la phase (vecteur 12)
+    :param V: élongations actuelle des vérins (vecteur 12)
+    :return: coordonnées absolues des pattes et du centre du robot (vecteur 15)
+    """
+    return 0
+
+def move_one_leg(traj, leg_id, reg_val=0.01, max_Omega=10):
+    """
+    Détermine la liste des élongations successives des vérins permettant à l'extrémité de la patte leg_id, au centre
+    du robot et à l'angle du châssis de suivre la trajectoire traj données
+    dP(OnAir), dO, dl -> dP(OnGround), dV, dm, dn
+    :param traj: trajectoire de l'extrémité de la patte, du centre du robot et évolution de l'angle du châssis
+    :param leg_id: patte dans les airs (qui bouge selon traj)
+    :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
+    :param max_Omega: angles maximaux permis au châssis (en m et n)
+    :return: élongations des vérins
+    """
+    return 0
+
+def move_all_legs(traj_legs, reg_val=0.01, max_Omega=10):
+    """
+    Détermine la liste des élongations successives des vérins permettant aux extrémités des pattes de suivre le
+    trajectoire traj_legs exprimée dans le référentiel absolu
+    dX -> dV, dO, dOmega
+
+    :param traj_legs: trajectoire des extrémités des pattes en coordonnées absolues
+    :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
+    :param max_Omega: angles maximaux permis au châssis
+    :return: élongations des vérins
+    """
     V = get_verins_12()
     Omega = get_omega()
-    X_abs = direct_12(V)
+    diff_z = direct_12(V)
     for i in range(4):
-        X_abs[3*i + 2] = 0
+        diff_z[3*i] = 0
+        diff_z[3*i+1] = 0
     L = [V]
-    for i in range(1, len(traj_center)):
-        O0 = direct_O(X_abs, V)
-        dO = np.concatenate((np.zeros(12), traj_center[i] - O0))
-        M = gen_new_jacob(V, Omega, direct_12(V))
-        P = M.T @ M
-        print(P)
-        print("##############################################")
-        print(inv(P))
-        q = - M.T @ dO
 
-        # Contraintes sur les vérins
-        lb = np.zeros(15)
-        ub = np.zeros(15)
+    # Régularisation des dV
+    R = reg_val * np.eye(18)
+
+    for i in range(1, len(traj_legs)):
+        # Calcul de dX
+        X_abs = direct_12(V) - diff_z
+        dX_abs = traj_legs[i] - X_abs
+
+        # Contraintes
+        lb = np.zeros(18)
+        ub = np.zeros(18)
         for j in range(12):
             lb[j] = 450.0 - V[j]
             ub[j] = 650.0 - V[j]
+        for j in range(3):
+            lb[12 + j] = - np.inf
+            ub[12 + j] = np.inf
+            lb[15 + j] = - max_Omega * np.pi / 180 - Omega[j]
+            ub[15 + j] = max_Omega * np.pi / 180 - Omega[j]
 
-        # Contraintes sur les angles
-        for j in range(12, 15):
-            lb[j] = - max_angle
-            ub[j] = max_angle
-
-        sol = solve_qp(P, q, lb=lb, ub=ub)
+        # Application du solveur
+        M = jacob_dX_to_dV_dO_dOmega(V, Omega, direct_12(V))
+        P = M.T @ M + 0.01 * np.eye(18)
+        q = - M.T @ dX_abs
+        sol = solve_qp(P, q, lb=lb, ub=ub) # , A=A, b=b)
         V = V + sol[0:12]
+        Omega = Omega + sol[15:18]
+
+        # Mise à jour des valeurs réelles
         set_verins_12(V)
+        set_omega(Omega)
         for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
         L.append(V)
     return L
 
 def move_rel(traj, V, solved=True):
     """
-    Calcul la liste des élongations de vérins correspondants à chaques points de la trajectoire en paramètre,
-    la traj est sous la forme  [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...],
-    les vérins sont sous la forme [v1, v2, v3, v4, ..., v12] et correspondent à la prùière position de la trajectoire.
+    Calcule la liste des élongations des vérins correspondant à chaque point de la trajectoire en paramètre,
+    La trajectoire est sous la forme  [[FL_x, FL_y, FL_z, FR_x, FR_y, FR_z, RL_x, RL_y, RL_z, RR_x, RR_y, RR_z], ...]
+    Les vérins sont sous la forme [v1, v2, v3, v4, ..., v12] et correspondent à la première position de la trajectoire
     Toutes les longueurs sont en mm, les coordonnées des trajectoires sont exprimées dans le référentiel du robot
 
     :param traj: trajectoire discrétisée en points intermédiaires
@@ -218,7 +276,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
     """
     R = [(v1, v2, v3)]
     err = 0
-    if upgrade : prev_T = LEGS[leg_id]['matrix'].T @ traj[0] - L
+    if upgrade : prev_T = ROBOT['legs'][leg_id]['matrix'].T @ traj[0] - ROBOT['body']['offset']
 
     # Parcours de traj
     for i in range(1, len(traj)):
@@ -229,7 +287,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
             print("VERINS_________actual :", v1, v2, v3)
 
-        T = LEGS[leg_id]['matrix'].T @ traj[i] - L
+        T = ROBOT['legs'][leg_id]['matrix'].T @ traj[i] - ROBOT['body']['offset']
         dX = np.array([T[0] - x0, T[1] - y0, T[2] - z0])
         if upgrade:
             dX += err
@@ -267,9 +325,9 @@ def draw_circle_12(n, r, V):
     traj = []
     for i in range(n):
         t = traj_FL[i]
-        t = np.append(t, LEGS[1]['matrix'] @ traj_FR[i])
-        t = np.append(t, LEGS[2]['matrix'] @ traj_RL[i])
-        t = np.append(t, LEGS[3]['matrix'] @ traj_RR[i])
+        t = np.append(t, ROBOT['legs'][1]['matrix'] @ traj_FR[i])
+        t = np.append(t, ROBOT['legs'][2]['matrix'] @ traj_RL[i])
+        t = np.append(t, ROBOT['legs'][3]['matrix'] @ traj_RR[i])
         traj.append(t)
     return traj
 
@@ -285,7 +343,7 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
     :param leg_id: id de la jambe
     :return: trajectoire en liste de cooredonnées intermédiaires
     """
-    lpl = LEGS[leg_id]['lengths']
+    lpl = ROBOT['legs'][leg_id]['lengths']
     pts = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3, lpl))
@@ -294,7 +352,7 @@ def draw_circle(r, n, v1, v2, v3, leg_id):
     for k in range(n + 1):
         R.append(np.array([x0+ r * np.cos(2 * k * np.pi / n) - r,
                            y0 + r * np.sin(2 * k * np.pi / n),
-                           z0]) + L)
+                           z0]) + ROBOT['body']['offset'])
     return R
 
 def draw_line_3(v1, v2, v3, dx, dy, dz, n, leg_id):
@@ -335,9 +393,9 @@ def draw_line_12(V, dx, dy, dz, n):
     traj = []
     for i in range(n):
         t = traj_FL[i]
-        t = np.append(t, LEGS[1]['matrix'] @ traj_FR[i])
-        t = np.append(t, LEGS[2]['matrix'] @ traj_RL[i])
-        t = np.append(t, LEGS[3]['matrix'] @ traj_RR[i])
+        t = np.append(t, ROBOT['legs'][1]['matrix'] @ traj_FR[i])
+        t = np.append(t, ROBOT['legs'][2]['matrix'] @ traj_RL[i])
+        t = np.append(t, ROBOT['legs'][3]['matrix'] @ traj_RR[i])
         traj.append(t)
     return traj
 ############################################################################
@@ -357,13 +415,13 @@ def upg_inverse_kinetic_robot_ref(legs,leg_id,point):
     :return: les positions de vérins correspondantes
     """
 
-    lpl = LEGS[leg_id]['lengths']
+    lpl = ROBOT['legs'][leg_id]['lengths']
     V = get_verins_3(leg_id)
     # print("pt = ", point, "   leg_id = " ,leg_id)
     x0, y0, z0 = direct_leg(V[0], V[1], V[2])
     # print("x0 =", x0, y0, z0)
-    # dX = point['x'] - LEGS[leg_id]['origin']['x']
-    # dY = point['y'] - LEGS[leg_id]['origin']['y']
+    # dX = point['x'] - ROBOT['legs'][leg_id]['origin']['x']
+    # dY = point['y'] - ROBOT['legs'][leg_id]['origin']['y']
     # calpha = v3_to_cos_angle(V[2], lpl)
     # dx, dy, dz = d2_to_d3(dX, dY, calpha)
     point *= np.full(3, 1000)
@@ -393,13 +451,13 @@ def upg_init_legs(controlers):
     :param controlers: structure controllers du fichier static_walk
     """
     # print(controlers[FL].la, LEGS[FL]['verins'])
-    global LEGS
-    for l in ALL_LEGS:
-        LEGS[l]['verins'][0] = 450 + controlers[l].la[1]['position']
+    global ROBOT
+    for l in range(4):
+        ROBOT['legs'][l]['verins'][0] = 450 + controlers[l].la[1]['position']
         # print("UPG !", controlers[l].la[0]['position'], controlers[l].la[1]['position'], controlers[l].la[2]['position'])
-        LEGS[l]['verins'][1] = 450 + controlers[l].la[2]['position']
-        LEGS[l]['verins'][2] = 450 + controlers[l].la[0]['position']
-    print(LEGS[FL]['verins'], "ici")
+        ROBOT['legs'][l]['verins'][1] = 450 + controlers[l].la[2]['position']
+        ROBOT['legs'][l]['verins'][2] = 450 + controlers[l].la[0]['position']
+    print(ROBOT['legs'][FL]['verins'], "ici")
 
 def get_the_traj():
     """ *deprecated actuellement*
@@ -419,10 +477,10 @@ def shake_dat_ass_abs(n, amp):
     :param amp: amplitude du mouvement
     :return: liste de tableau de 12 vérins pour chaques positions intermédiaires du mouvement
     """
-    z0 = - get_leg_points_V1_V2(get_verins_12()[0] / 1000, get_verins_12()[1] / 1000, LEGS[0]['lengths'])['J'][1]
+    z0 = - get_leg_points_V1_V2(get_verins_12()[0] / 1000, get_verins_12()[1] / 1000, ROBOT['legs'][0]['lengths'])['J'][1]
     L = np.linspace(-1, 1, n)
     traj_center = [[0, 0, z0 - amp * np.sin(l)] for l in L]
-    return move_on_floor(traj_center)
+    return move_all_legs(traj_center)
 
 def shake_dat_ass_rel(n, amp):
     """
@@ -448,7 +506,6 @@ def min_diff(square=True):
     """
     Retourne la patte la plus proche de sa position de repos en faisant la moyenne des écarts d'élongation
     des vérins ou bien la moyenne des écarts d'élongation au carré des vérins
-    >>> min_diff()
     """
     V = get_verins_12()
     max_diff = np.inf
@@ -457,9 +514,9 @@ def min_diff(square=True):
         current_diff = 0
         for j in range(3):
             if square:
-                current_diff += (V[3 * i + j] - IDLE_POSITION['verins'][j]) ** 2
+                current_diff += (V[3 * i + j] - ROBOT['idle_pos']['verins'][j]) ** 2
             else:
-                current_diff += V[3 * i + j] - IDLE_POSITION['verins'][j]
+                current_diff += V[3 * i + j] - ROBOT['idle_pos']['verins'][j]
         if current_diff < max_diff :
             best_leg = i
             max_diff = current_diff
@@ -467,7 +524,7 @@ def min_diff(square=True):
 
 def traj_rota():
     leg_ig = min_diff()
-    x, y, z = direct_robot(LEGS[leg_ig]['verrins'][0], LEGS[leg_ig]['verrins'][1], LEGS[leg_ig]['verrins'][2], leg_ig)
+    x, y, z = direct_robot(ROBOT['legs'][leg_ig]['verrins'][0], ROBOT['legs'][leg_ig]['verrins'][1], ROBOT['legs'][leg_ig]['verrins'][2], leg_ig)
 
 ############################################################################
 if __name__ == "__main__":
