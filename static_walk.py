@@ -33,8 +33,9 @@ orders=[None,None,None,None]
 
 def compute_moves(dist,z,angle,store=None):
     """
-    compute the 9 possible positions for verins, adding them in 'store' (that is basically 'orders')
-    :param dist: distance between the origin of the robot and the of each legs in the horizontal plan for the starting point
+    Compute the 9 possible positions for verins, adding them in 'store' (that is basically 'orders')
+
+    :param dist: distance between the origin of the robot and the end of legs in the horizontal plan
     :param z: height of the robot platform
     :param angle: angle of the walk direction asked
     :param store: the array where will be stocked all these positions
@@ -176,8 +177,9 @@ def init_walk():
 
 def move_leg(l):
     """
-    move forward the leg from 'backward on the ground' to 'frontward on the ground'
+    Move forward the leg from 'backward on the ground' to 'frontward on the ground'
     passing by 'backward on the air' and 'frontward on the air'
+
     :param l:
     :return:
     """
@@ -194,7 +196,8 @@ pause_term=False
 
 def move_legs(l):
     """
-    move l leg forward, changing the position of the gravity center moving slightly up and down the adjacent leg
+    Move l leg forward, changing the position of the gravity center moving slightly up and down the adjacent leg
+
     :param l: leg id of the moving leg
     :return:
     """
@@ -331,8 +334,9 @@ def print_leg_coords():
 
 def move_body(dx,dy):
     """
-    deprecated ?
-    move the robot's body of dx, dy
+    Deprecated ?
+    Move the robot's body of dx, dy
+
     :param dx: delta x movement asked
     :param dy: delta y movement asked
     :return:

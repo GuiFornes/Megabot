@@ -66,7 +66,8 @@ LEG_PARTS_LENGTHS={'ao':130.0,'bo':120.0,'bcx':290.0,'bcy':60.0,'ae':500.0,'de':
 
 def update_transformation_matrices_for(matrix,imatrix,angle,origin):
     """
-    update transformation matrices (rotations) of the struct LEGS
+    Update transformation matrices (rotations) of the struct LEGS
+
     :param matrix: rotation matrix that will be modified
     :param imatrix: inverse matrix which will be too
     :param angle: angle between leg and body-frame
@@ -103,7 +104,7 @@ update_transformation_matrices(ROBOT['LEGS'])
 
 
 def get_leg_points(V1,V2,AO,BO,BCx,BCy,AE,DE,EF,FG,FH,GI,BF,GJ):
-    """annexe function of get_leg_points_V1_V2 that should not be call alone"""
+    """Annexe function of get_leg_points_V1_V2 that should not be call alone"""
     #print 'get leg width V1: ',V1,' and V2: ',V2
     points={'O':(0.0,0.0),'A':(-AO,0.0),'B':(BO,0),'C':(BCx+BO,BCy)} #,'Q':(-0.8,0),'R':(-0.8-0.79,-0.49)}
 
@@ -118,7 +119,8 @@ def get_leg_points(V1,V2,AO,BO,BCx,BCy,AE,DE,EF,FG,FH,GI,BF,GJ):
 
 def get_leg_points_V1_V2(v1,v2,lpl):
     """
-    return the list of coords of each points of the leg in the leg referentiel (2 dimensions)
+    Return the list of coords of each points of the leg in the leg referentiel (2 dimensions)
+
     :param v1: elongation of v1
     :param v2: elongation of v2
     :param lpl: list o all constant lengths
@@ -142,7 +144,8 @@ def get_leg_points_V1_V2(v1,v2,lpl):
 # return v3 in mm
 def delta_angle_to_linear_actuator_v3(delta,lpl):
     """
-    compute the elongation needed to have delta angle between the leg and the body-frame
+    Compute the elongation needed to have delta angle between the leg and the body-frame
+
     :param delta: angle between leg and frame
     :param lpl: list of all constant lengths
     :return: elongation of v3 (in mm)
@@ -154,7 +157,8 @@ def delta_angle_to_linear_actuator_v3(delta,lpl):
 # v3 suppose to be in mm
 def v3_to_delta_angle(v3,lpl):
     """
-    compute the angle between the leg and the body-frame
+    Compute the angle between the leg and the body-frame
+
     :param v3: elongation of v3 (in mm)
     :param lpl: list of all constant lengths
     :return: angle in degrees
@@ -165,7 +169,8 @@ def v3_to_delta_angle(v3,lpl):
 #v3 suppose to be in m
 def update_angle(legs,leg,v3):
     """
-    update the angle of 'leg' in the struct LEGS
+    Update the angle of 'leg' in the struct LEGS
+
     :param legs: struct LEGS
     :param leg: leg id
     :param v3: elongation of v3 in m
@@ -193,6 +198,7 @@ def inverse_kinetic_fun(v,dx,dy,lpl):
 def inverse_kinetic(x,y,lpl):
     """
     compute the 2 dimensions approximation of inverse kinematic
+
     :param x: asked x position
     :param y: asked y position
     :param lpl: all the constant lengths of leg
@@ -211,6 +217,7 @@ def inverse_kinetic_robot_ref(legs,leg,point):
     """
     approximate inverse kinematic using minimize module to compute the necessary elongation of V
     to place the end of the 'leg' at 'point'.
+
     :param legs: struct LEGS
     :param leg: leg id
     :param point: destination point
@@ -240,7 +247,8 @@ def inverse_kinetic_robot_ref(legs,leg,point):
 
 def robot_ref_leg_point(legs,leg,v1,v2,v3):
     """
-    compute the position of the end of the 'leg' in the ref of the robot using direct kinematic
+    Compute the position of the end of the 'leg' in the ref of the robot using direct kinematic
+
     :param legs: struct legs
     :param leg: leg id
     :param v1: v1 elongation
@@ -257,7 +265,8 @@ def robot_ref_leg_point(legs,leg,v1,v2,v3):
 
 def robot_ref_leg_points(legs,leg,v1,v2,v3):
     """
-    compute the position of all points of the 'leg' in the ref of the robot using direct cinematic
+    Compute the position of all points of the 'leg' in the ref of the robot using direct cinematic
+
     :param legs: struct legs
     :param leg: leg id
     :param v1: v1 elongation
