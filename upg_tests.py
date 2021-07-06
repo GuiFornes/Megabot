@@ -702,11 +702,17 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False, anim=Fa
         Pos2[i] = dict(map(lambda kv: (kv[0], d2_to_d3(kv[1][0]*1000, kv[1][1]*1000, v3_to_cos_angle(V3[i], lpl))), Pos2[i].items()))
         # Pos2[i] = dict(map(lambda kv: (kv[0], kv[1]*1000), Pos2[i].items()))
 
-    print(Pos2[0]['A'][0])
+    # print(Pos2[0]['A'][0])
     if anim:
         fig = plt.figure()
         for i in range(len(traj)):
             ax = fig.add_subplot(111, projection='3d')
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+            ax.set_xbound(-500, 500)
+            ax.set_ybound(-500, 500)
+            ax.set_zbound(-500, 500)
             ax.scatter(xs=0, ys=0, zs=0, s=40) # point 0
             ax.scatter(xs=Xp[i], ys=Yp[i], zs=Zp[i], s=40, marker='o', c='red') # point J
             ax.plot(xs=[0, Pos2[i]['A'][0]], ys=[0, Pos2[i]['A'][1]], zs=[0, Pos2[i]['A'][2]], c='black') # seg OA
@@ -836,9 +842,59 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
+def accessible(leg_id, point):
+    """ Dans le repère 3D de la jambe """
+    lpl = ROBOT['legs'][leg_id]['lengths']
+    v1, v2, v3 = 485, 575, 515
+    x0, y0, z0 = direct_leg(v1, v2, v3)
+    x0, y0, z0 = leg_ref_to_robot((x0, y0, z0), leg_id)
+    x, y, z = point
+    dx, dy, dz = x-x0, y-y0, z-z0
+    traj = []
+    # print("X = ", x, x0, dx)
+    for i in range(21):
+        traj.append(np.array([x0 + i * dx / 20,
+                              y0 + i * dy / 20,
+                              z0 + i * dz / 20]))
+    # print(traj)
+    Verins = move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True)
+    # draw_move_leg(traj, v1, v2, v3, FL, True, True)
+    res = [Verins[9][0], Verins[9][1], Verins[9][2]]
+    # print("V = ", res)
+    acces = True
+    for i in range(3):
+        if res[i] >= 650 or res[i] <= 450:
+            acces = False
+    return acces
+
+def test_zone_accessible(leg_id):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+
+    for x in range(0, 2201, 200):
+        for y in range(0, 2201, 200):
+            for z in range(500, -1200, -200):
+                if not accessible(leg_id, (x, y, z)): # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
+                    ax.scatter(x, y, z, marker='.', s=30, c='grey')
+                else:
+                    ax.scatter(x, y, z, marker='.', s=160, c='green')
+
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    #ax.set_xbound(-1000, 2000)
+    #ax.set_ybound(-1000, 2000)
+    #ax.set_zbound(-1600, -200)
+    plt.title("points accessibles pour la patte")
+    plt.show()
 ################################# TESTS ####################################
 
 draw(move_all_legs(traj(100, 200)))
+# draw_12(shake_dat_ass_abs(20, 200))
+t_accessible = 1
+if t_accessible:
+    test_zone_accessible(FL)
 
 t_move = 0
 # test de normalized_move_xyz
@@ -934,7 +990,7 @@ t_different_moves = 0
 if t_different_moves:
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=True)
     # draw_move_leg(draw_circle(150, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=False)
-    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True, anim=True)
+    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True, anim=False)
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=False)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)

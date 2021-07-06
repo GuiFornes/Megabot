@@ -5,8 +5,6 @@ from numpy.linalg import inv
 from qpsolvers import solve_qp
 from upg_tools import *
 from upg_jacobian import *
-
-
 # from com import wait_move, tell_controlers
 
 
@@ -18,7 +16,6 @@ def init_pos_abs():
     for i in range(4):
         ROBOT['legs'][i]['pos_abs'][3 * i] = pos_rel[3 * i]
         ROBOT['legs'][i]['pos_abs'][3 * i + 1] = pos_rel[3 * i + 1]
-
 
 ############################### DIRECT #####################################
 
@@ -118,6 +115,16 @@ def traj_push_up(n, amp):
              ROBOT['legs'][2]['pos_abs'][0], ROBOT['legs'][2]['pos_abs'][1], amp * np.sin(l),
              ROBOT['legs'][3]['pos_abs'][0], ROBOT['legs'][3]['pos_abs'][1], amp * np.sin(l)] for l in L]
 
+def direct_abs(leg_ini, V):
+    """
+    Calcule la nouvelle position absolue des pattes et du centre du robot à partir de la position absolue initiale
+    des pattes pour la phase de déplacement en cours (une phase = un déplacement avec le même groupe de pattes au sol)
+
+    :param leg_ini: coordonnées des pattes absolues au début de la phase (vecteur 12)
+    :param V: élongations actuelle des vérins (vecteur 12)
+    :return: coordonnées absolues des pattes et du centre du robot (vecteur 15)
+    """
+    return 0
 
 def move_one_leg(traj, leg_id, reg_val=0.01, max_Omega=10):
     """
@@ -235,9 +242,9 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
     Toutes les longueurs sont en mm (entrée comme sortie)
 
     :param traj: trajectoire sous la forme d'une liste de points successifs
-    :param v1: élongation du vérin 1
-    :param v2: élongation du vérin 2
-    :param v3: élongation du vérin 3
+    :param v1: élongation du vérin 1 (mm)
+    :param v2: élongation du vérin 2 (mm)
+    :param v3: élongation du vérin 3 (mm)
     :param leg_id: ID de la patte
     :param display: *True* pour avoir l'affichage
     :param upgrade: *True* pour utiliser l'optimisation naïve
@@ -251,9 +258,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
     # Parcours de traj
     for i in range(1, len(traj)):
         lpl = ROBOT['legs'][leg_id]['lengths']
-        pts = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
-        X, Z = pts['J'][0] * 1000, pts['J'][1] * 1000
-        x0, y0, z0 = d2_to_d3(X, Z, v3_to_cos_angle(v3, lpl))
+        x0, y0, z0 = direct_leg(v1, v2, v3)
 
         if display:
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])
@@ -395,20 +400,20 @@ def upg_inverse_kinetic_robot_ref(legs, leg_id, point):
 
     lpl = ROBOT['legs'][leg_id]['lengths']
     V = get_verins_3(leg_id)
-    print("pt = ", point, "   leg_id = ", leg_id)
-    x0, y0, z0 = direct_leg(V[0], V[1], V[2], FL)
-    print("x0 =", x0, y0, z0)
+    # print("pt = ", point, "   leg_id = " ,leg_id)
+    x0, y0, z0 = direct_leg(V[0], V[1], V[2])
+    # print("x0 =", x0, y0, z0)
     # dX = point['x'] - ROBOT['legs'][leg_id]['origin']['x']
     # dY = point['y'] - ROBOT['legs'][leg_id]['origin']['y']
     # calpha = v3_to_cos_angle(V[2], lpl)
     # dx, dy, dz = d2_to_d3(dX, dY, calpha)
     point *= np.full(3, 1000)
     leg_ref_point = robot_ref_to_leg(point, leg_id)
-    print("leg_ref =", leg_ref_point)
+    # print("leg_ref =", leg_ref_point)
     dx = leg_ref_point[0] - x0
     dy = leg_ref_point[1] - y0
     dz = leg_ref_point[2] - z0
-    print("dX = ", dx, dy, dz)
+    # print("dX = ", dx, dy, dz)
     traj = []
     for i in range(10):
         traj.append(np.array([x0 + i * dx / 10,
@@ -418,7 +423,7 @@ def upg_inverse_kinetic_robot_ref(legs, leg_id, point):
     res = [Verins[9][0] / 1000, Verins[9][1] / 1000, Verins[9][2] / 1000]
     error = False
     for i in range(3):
-        if res[i] == 650 or res[i] == 450:
+        if res[i] >= 0.6501 or res[i] <= 0.4499:
             error = True
     return error, res
 
@@ -511,3 +516,9 @@ def traj_rota():
     leg_ig = min_diff()
     x, y, z = direct_robot(ROBOT['legs'][leg_ig]['verrins'][0], ROBOT['legs'][leg_ig]['verrins'][1],
                            ROBOT['legs'][leg_ig]['verrins'][2], leg_ig)
+
+
+############################################################################
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
