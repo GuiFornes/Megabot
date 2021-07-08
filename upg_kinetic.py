@@ -139,7 +139,7 @@ def direct_robot_3(v1, v2, v3, leg_id):
     X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
     calpha = v3_to_cos_angle(v3, lpl)
     Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
-    return ROBOT['legs'][leg_id]['matrix'] @ (Pos + ROBOT['body']['offset'])
+    return ROBOT['legs'][leg_id]['matrix'].T @ (Pos + ROBOT['body']['offset'])
 
 
 def direct_leg(v1, v2, v3, leg_id):
@@ -343,7 +343,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
     # Parcours de traj
     for i in range(1, len(traj)):
         lpl = ROBOT['legs'][leg_id]['lengths']
-        x0, y0, z0 = direct_leg(v1, v2, v3)
+        x0, y0, z0 = direct_leg(v1, v2, v3, leg_id)
 
         if display:
             print("POSITIONS ______actual :", x0, y0, z0, "__________target :", traj[i][0], traj[i][1], traj[i][2])

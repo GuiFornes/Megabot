@@ -866,11 +866,11 @@ def test_zone_accessible(leg_id):
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
 
-    for x in range(500, 1501, 200):
-        for y in range(500, 1501, 200):
-            for z in range(0, -1001, -200):
+    for x in range(300, 1701, 100):
+        for y in range(300, 1701, 100):
+            for z in range(-200, -801, -100):
                 if not is_accessible(leg_id, (x, y, z)): # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
-                    ax.scatter(x, y, z, marker='.', s=30, c='grey')
+                    x=x #ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
 
@@ -883,8 +883,10 @@ def test_zone_accessible(leg_id):
     plt.title("points accessibles pour la patte")
     plt.show()
 
+
 def test_compute_traj(R, D):
     traj = compute_traj_form_joystick(cmd_joystick(R, D))
+    print(traj[0])
     V = get_verins_12()
 
     # Trajectoires
@@ -913,16 +915,26 @@ def test_compute_traj(R, D):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500))
-    pos = direct_12(V)
+    pos = direct_robot_12(V)
     ax.plot((500, pos[0]), (500, pos[1]), (0, pos[2]), c='red')
-    ax.plot((-500, pos[3]), (500, pos[4]), (0, pos[5]), c='blue')
-    ax.plot((500, pos[6]), (-500, pos[7]), (0, pos[8]), c='purple')
+    ax.plot((500, pos[3]), (-500, pos[4]), (0, pos[5]), c='blue')
+    ax.plot((-500, pos[6]), (500, pos[7]), (0, pos[8]), c='purple')
     ax.plot((-500, pos[9]), (-500, pos[10]), (0, pos[11]), c='green')
     ax.set_xbound(-2000, 2000)
     ax.set_ybound(-2000, 2000)
     ax.set_zbound(-1000, 1000)
+    for i in range(4):
+        ax.scatter(traj[0][i*3+0], traj[0][i*3+1], traj[0][i*3+2], c='black', s=60)
     plt.show()
 
+
+def test_furthest_pos(D, R):
+    traj = compute_traj_form_joystick(cmd_joystick(D, R))
+    max_step = []
+    print(traj)
+    for leg in range(4):
+        max_step.append(furthest_accessible(traj[leg], leg))
+    print(max_step)
 
 
 def test_get_last_leg():
@@ -940,10 +952,10 @@ def test_get_last_leg():
 
 ################################# TESTS ####################################
 
-init_pos_abs()
-set_og(0, 0)
-traj = traj_sin(200, 100, 0)
-draw(move_all_legs(traj))
+# init_pos_abs()
+# set_og(0, 0)
+# traj = traj_sin(200, 100, 0)
+# draw(move_all_legs(traj))
 # draw(move_all_legs(traj(100, 200)))
 # draw_12(shake_dat_ass_abs(20, 200))
 
@@ -1052,13 +1064,14 @@ if t_different_moves:
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
     # test_penalty_move_XZ(450, 500, 500, 10, kin.FL)
 
-t_accessible = 1
+t_accessible = 0
 if t_accessible:
     test_zone_accessible(FL)
 
-t_compute_traj = 0
+t_compute_traj = 1
 if t_compute_traj:
     test_compute_traj((1, 0), 1)
+    # test_furthest_pos((1, 0), 1)
 
 ############################################################################
 
