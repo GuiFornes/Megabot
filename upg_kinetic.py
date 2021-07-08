@@ -280,7 +280,7 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
 
     # Parcours de traj
     for i in range(1, len(traj)):
-        lpl = LEGS[leg_id]['lengths']
+        lpl = ROBOT['legs'][leg_id]['lengths']
         x0, y0, z0 = direct_leg(v1, v2, v3)
 
         if display:

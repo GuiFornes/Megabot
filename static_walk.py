@@ -503,7 +503,7 @@ class FastWalk:
 
 def upg_init_pos():
     """put all legs in a known initial position"""
-    V = [0.485, 0.575, 0.515]
+    V = [0.535, 0.615, 0.520]
     for i in range(4):
         tell_controler(i, to_linear_actuator_order(V))
     wait_move(list(range(4)), 5)

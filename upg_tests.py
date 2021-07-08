@@ -10,6 +10,7 @@ from upg_kinetic import *
 from upg_tools import *
 from upg_deprecated import *
 from upg_jacobian import *
+from upg_planning import *
 
 ############################# FONCTIONS DE TEST ################################
 
@@ -842,39 +843,14 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     # plt.plot.set_ylabel('T')
     plt.show()
 
-def accessible(leg_id, point):
-    """ Dans le repère 3D de la jambe """
-    lpl = ROBOT['legs'][leg_id]['lengths']
-    v1, v2, v3 = 485, 575, 515
-    x0, y0, z0 = direct_leg(v1, v2, v3)
-    x0, y0, z0 = leg_ref_to_robot((x0, y0, z0), leg_id)
-    x, y, z = point
-    dx, dy, dz = x-x0, y-y0, z-z0
-    traj = []
-    # print("X = ", x, x0, dx)
-    for i in range(21):
-        traj.append(np.array([x0 + i * dx / 20,
-                              y0 + i * dy / 20,
-                              z0 + i * dz / 20]))
-    # print(traj)
-    Verins = move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True)
-    # draw_move_leg(traj, v1, v2, v3, FL, True, True)
-    res = [Verins[9][0], Verins[9][1], Verins[9][2]]
-    # print("V = ", res)
-    acces = True
-    for i in range(3):
-        if res[i] >= 650 or res[i] <= 450:
-            acces = False
-    return acces
-
 def test_zone_accessible(leg_id):
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
 
-    for x in range(0, 2201, 200):
-        for y in range(0, 2201, 200):
-            for z in range(500, -1200, -200):
-                if not accessible(leg_id, (x, y, z)): # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
+    for x in range(500, 1501, 200):
+        for y in range(500, 1501, 200):
+            for z in range(0, -1001, -200):
+                if not is_accessible(leg_id, (x, y, z)): # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
                     ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
@@ -888,13 +864,51 @@ def test_zone_accessible(leg_id):
     #ax.set_zbound(-1600, -200)
     plt.title("points accessibles pour la patte")
     plt.show()
+
+def test_compute_traj(R, D):
+    traj = compute_traj_form_joystick(cmd_joystick(R, D))
+    V = get_verins_12()
+
+    # Trajectoires
+    Xt0 = [p[0] for p in traj]
+    Yt0 = [p[1] for p in traj]
+    Zt0 = [p[2] for p in traj]
+    Xt1 = [p[3] for p in traj]
+    Yt1 = [p[4] for p in traj]
+    Zt1 = [p[5] for p in traj]
+    Xt2 = [p[6] for p in traj]
+    Yt2 = [p[7] for p in traj]
+    Zt2 = [p[8] for p in traj]
+    Xt3 = [p[9] for p in traj]
+    Yt3 = [p[10] for p in traj]
+    Zt3 = [p[11] for p in traj]
+
+    # Tracé des trajectoires
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500))
+    pos = direct_12(V)
+    ax.plot((500, pos[0]), (500, pos[1]), (0, pos[2]), c='red')
+    ax.plot((-500, pos[3]), (500, pos[4]), (0, pos[5]), c='blue')
+    ax.plot((500, pos[6]), (-500, pos[7]), (0, pos[8]), c='purple')
+    ax.plot((-500, pos[9]), (-500, pos[10]), (0, pos[11]), c='green')
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(-1000, 1000)
+    plt.show()
+
 ################################# TESTS ####################################
 
-draw(move_all_legs(traj(100, 200)))
+# draw(move_all_legs(traj(100, 200)))
 # draw_12(shake_dat_ass_abs(20, 200))
-t_accessible = 1
-if t_accessible:
-    test_zone_accessible(FL)
 
 t_move = 0
 # test de normalized_move_xyz
@@ -956,14 +970,14 @@ if t_jacob_direct:
 
 test_comp_indirect = 0
 if test_comp_indirect:
-    test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.001, -0.0015)
-    test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.01, -0.015)
-    test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, 0.1, -0.15)
-    test_comparaison_minimize_vs_jacob_indirect(0.485, 0.565, -0.01, +0.015)
+    test_comparaison_minimize_vs_jacob_indirect(0.535, 0.615, 0.001, -0.0015)
+    test_comparaison_minimize_vs_jacob_indirect(0.535, 0.615, 0.01, -0.015)
+    test_comparaison_minimize_vs_jacob_indirect(0.535, 0.615, 0.1, -0.15)
+    test_comparaison_minimize_vs_jacob_indirect(0.535, 0.615, -0.01, +0.015)
 
 t_inverse = 0
 if t_inverse:
-    Ver = [485, 575, 565, 485, 575, 565, 485, 575, 565, 485, 575, 565]
+    Ver = [535, 615, 520, 535, 615, 520, 535, 615, 520, 535, 615, 520]
     traj = draw_circle_12(20, 200, Ver)
     draw_12(traj, Ver)
 
@@ -995,6 +1009,14 @@ if t_different_moves:
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
     # test_penalty_move_XZ(450, 500, 500, 10, kin.FL)
+
+t_accessible = 1
+if t_accessible:
+    test_zone_accessible(FL)
+
+t_compute_traj = 0
+if t_compute_traj:
+    test_compute_traj((1, 0), 1)
 
 ############################################################################
 
