@@ -57,7 +57,7 @@ def compute_traj_form_joystick(joystick):
     traj = []
     r, r_max = [], 0
     V = get_verins_12()
-    pos = direct_robot_12(V)
+    pos = direct_rel_12(V)
     print("pos =", pos)
     for leg in range(4):
         rayon = np.sqrt((pos[leg * 3 + 0] - centre[0])**2 + (pos[leg * 3 + 1] - centre[1])**2)
@@ -86,7 +86,7 @@ def is_accessible(leg_id, point):
     """ Dans le repère 3D de la jambe """
     lpl = ROBOT['legs'][leg_id]['lengths']
     v1, v2, v3 = 535, 615, 520
-    x0, y0, z0 = direct_robot_3(v1, v2, v3, leg_id)
+    x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
     xt, yt, zt = point
     dx, dy, dz = xt-x0, yt-y0, zt-z0
     traj = []
@@ -99,7 +99,7 @@ def is_accessible(leg_id, point):
     res = [Verins[n-1][0], Verins[n-1][1], Verins[n-1][2]]
     acces = True
     for i in range(3):
-        xf, yf, zf = direct_robot_3(res[0], res[1], res[2], leg_id)
+        xf, yf, zf = direct_rel_3(res[0], res[1], res[2], leg_id)
         print("x : ", x0, xt, traj[n-1][0], xf)
         print("y : ", y0, yt, traj[n-1][1], yf)
         print("z : ", z0, zt, traj[n-1][2], zf)
@@ -144,52 +144,52 @@ if __name__ == "__main__":
     doctest.testmod()
 
 ######################## DEPRECATED #############################
-# def length(a, b):
-#     return distance(b[0], b[1], x2=a[0], y2=a[1])
-#
-# def angle_between_linear(coef1, coef2):
-#     pointO = 0, 0
-#     pointA = 1, coef1
-#     pointB = 1, coef2
-#     return al_kashi_angle(length(pointO, pointA), length(pointO, pointB), length(pointA, pointB))
-#
-# def to_ref_traj_next_step(alpha, dx, dy):
-#     return np.array([
-#         [np.cos(alpha), - np.sin(alpha), dx],
-#         [np.sin(alpha), np.cos(alpha), dy],
-#         [0, 0, 1]
-#     ])
-#
-# def compute_trajs(traj):
-#     all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
-#     V = get_verins_12()
-#     Pos = direct_robot_12(V)
-#     fl = (Pos[0], Pos[1], Pos[2])
-#     fr = (Pos[3], Pos[4], Pos[5])
-#     last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
-#     if last_coef > 0.1:
-#         print("Legs position aren't initialized")
-#     legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
-#
-#     for i in range(1, len(traj)):
-#         direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
-#         current_coef = -1 / direction
-#         alpha = angle_between_linear(last_coef, current_coef)
-#         m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
-#         step_fl = m_rota @ np.array([-legs_spacing, 0, 1])
-#         step_fr = m_rota @ np.array([legs_spacing, 0, 1])
-#         trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
-#         trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
-#
-#     trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
-#     trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
-#     for i in range(len(trajFL) - len(trajRL)):
-#         trajRL.append(trajFL[i])
-#         trajRR.append(trajFR[i])
-#
-#     for i in range(len(trajFL)):
-#         traj.append(trajFL[i])
-#         traj.append(trajFR[i])
-#         traj.append(trajRL[i])
-#         traj.append(trajRR[i])
+def length(a, b):
+    return distance(b[0], b[1], x2=a[0], y2=a[1])
+
+def angle_between_linear(coef1, coef2):
+    pointO = 0, 0
+    pointA = 1, coef1
+    pointB = 1, coef2
+    return al_kashi_angle(length(pointO, pointA), length(pointO, pointB), length(pointA, pointB))
+
+def to_ref_traj_next_step(alpha, dx, dy):
+    return np.array([
+        [np.cos(alpha), - np.sin(alpha), dx],
+        [np.sin(alpha), np.cos(alpha), dy],
+        [0, 0, 1]
+    ])
+
+def compute_trajs(traj):
+    all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
+    V = get_verins_12()
+    Pos = direct_rel_12(V)
+    fl = (Pos[0], Pos[1], Pos[2])
+    fr = (Pos[3], Pos[4], Pos[5])
+    last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
+    if last_coef > 0.1:
+        print("Legs position aren't initialized")
+    legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
+
+    for i in range(1, len(traj)):
+        direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
+        current_coef = -1 / direction
+        alpha = angle_between_linear(last_coef, current_coef)
+        m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
+        step_fl = m_rota @ np.array([-legs_spacing, 0, 1])
+        step_fr = m_rota @ np.array([legs_spacing, 0, 1])
+        trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
+        trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
+
+    trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
+    trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
+    for i in range(len(trajFL) - len(trajRL)):
+        trajRL.append(trajFL[i])
+        trajRR.append(trajFR[i])
+
+    for i in range(len(trajFL)):
+        traj.append(trajFL[i])
+        traj.append(trajFR[i])
+        traj.append(trajRL[i])
+        traj.append(trajRR[i])
 
