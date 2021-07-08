@@ -57,7 +57,7 @@ def compute_traj_form_joystick(joystick):
     traj = []
     r, r_max = [], 0
     V = get_verins_12()
-    pos = direct_12(V)
+    pos = direct_rel_12(V)
     print("pos =", pos)
     for leg in range(4):
         rayon = np.sqrt((pos[leg * 3 + 0] - centre[0])**2 + (pos[leg * 3 + 1] - centre[1])**2)
@@ -86,7 +86,7 @@ def is_accessible(leg_id, point):
     """ Dans le repère 3D de la jambe """
     lpl = ROBOT['legs'][leg_id]['lengths']
     v1, v2, v3 = 535, 615, 520
-    x0, y0, z0 = direct_robot(v1, v2, v3, leg_id)
+    x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
     xt, yt, zt = point
     dx, dy, dz = xt-x0, yt-y0, zt-z0
     traj = []
@@ -99,7 +99,7 @@ def is_accessible(leg_id, point):
     res = [Verins[n-1][0], Verins[n-1][1], Verins[n-1][2]]
     acces = True
     for i in range(3):
-        xf, yf, zf = direct_robot(res[0], res[1], res[2], leg_id)
+        xf, yf, zf = direct_rel_3(res[0], res[1], res[2], leg_id)
         print("x : ", x0, xt, traj[n-1][0], xf)
         print("y : ", y0, yt, traj[n-1][1], yf)
         print("z : ", z0, zt, traj[n-1][2], zf)
@@ -147,7 +147,7 @@ def to_ref_traj_next_step(alpha, dx, dy):
 def compute_trajs(traj):
     all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
     V = get_verins_12()
-    Pos = direct_robot_12(V)
+    Pos = direct_rel_12(V)
     fl = (Pos[0], Pos[1], Pos[2])
     fr = (Pos[3], Pos[4], Pos[5])
     last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])

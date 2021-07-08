@@ -13,8 +13,8 @@ x_B = kin.LEGS[kin.FL]['lengths']['bo']
 y_B = 0
 
 AB = kin.LEGS[kin.FL]['lengths']['ao'] + kin.LEGS[kin.FL]['lengths']['bo']
-AC = np.sqrt((AB + kin.LEGS[kin.FL]['lengths']['bcx'])**2 + kin.LEGS[kin.FL]['lengths']['bcy']**2)
-BC = np.sqrt(kin.LEGS[kin.FL]['lengths']['bcx']**2 + kin.LEGS[kin.FL]['lengths']['bcy']**2)
+AC = np.sqrt((AB + kin.LEGS[kin.FL]['lengths']['bcx']) ** 2 + kin.LEGS[kin.FL]['lengths']['bcy'] ** 2)
+BC = np.sqrt(kin.LEGS[kin.FL]['lengths']['bcx'] ** 2 + kin.LEGS[kin.FL]['lengths']['bcy'] ** 2)
 AE = kin.LEGS[kin.FL]['lengths']['ae']
 AD = AE - kin.LEGS[kin.FL]['lengths']['de']
 BF = kin.LEGS[kin.FL]['lengths']['bf']
@@ -29,13 +29,14 @@ GJ = kin.LEGS[kin.FL]['lengths']['gj']
 KO = kin.LEGS[kin.FL]['lengths']['yaw_c']
 LM = kin.LEGS[kin.FL]['lengths']['yaw_b']
 MO = kin.LEGS[kin.FL]['lengths']['yaw_a']
-LO = np.sqrt(LM**2 + MO**2)
+LO = np.sqrt(LM ** 2 + MO ** 2)
 
-ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]]) #[[oritentation selon x][orientation selon y]]
+ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]])  # [[oritentation selon x][orientation selon y]]
 
 V = 460, 565, 500
 alpha = al_kashi_angle(AB, AC, BC)
-beta = np.arccos(MO/LO)
+beta = np.arccos(MO / LO)
+
 
 def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
     lpl = kin.LEGS[leg_id]['lengths']
@@ -73,6 +74,7 @@ def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
         pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
         X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
     return res
+
 
 def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
     lpl = kin.LEGS[leg_id]['lengths']
@@ -117,6 +119,53 @@ def draw_circle_3(v1, v2, v3, r, n, leg_id, solved=False):
         x0, y0, z0 = d2_to_d3(X0, Z0, v3_to_cos_angle(v3))
     return res
 
+
+def draw_line_3(v1, v2, v3, dx, dy, dz, n, leg_id):
+    """
+    Retourne trajectoire rectiligne en liste de point pour un certain décalage et une certaine patte
+
+    :param v1: elongation de v1
+    :param v2: elongation de v2
+    :param v3: elongation de v3
+    :param dx: décalage en x
+    :param dy: décalage en y
+    :param dz: décalage en z
+    :param n: précision de la discrétisation (nombre de points intermédiaires)
+    :param leg_id: id de la jambe
+    :return: trajectoire en liste coordonnées intermédiaire
+    """
+    x0, y0, z0 = direct_leg(v1, v2, v3, FL)
+    traj = []
+    for i in range(n):
+        traj.append((x0 + i * dx / n, y0 + i * dy / n, z0 + i * dz / n))
+    return traj
+
+
+def draw_line_12(V, dx, dy, dz, n):
+    """
+    Retourne la discrétisation d'une trajectoire en ligne droite d'un certain décalage pour les 4 pattes à la fois
+
+    :param V: liste des 12 vérins
+    :param dx: décalage en x
+    :param dy: décalage en y
+    :param dz: décalage en z
+    :param n: nombre d'étapes dans la traj
+    :return: la trajextoire
+    """
+    traj_FL = draw_line_3(V[0], V[1], V[2], 15, 20, 10, 10, 0)
+    traj_FR = draw_line_3(V[3], V[4], V[5], 15, 20, 10, 10, 1)
+    traj_RL = draw_line_3(V[6], V[7], V[8], 15, 20, 10, 10, 2)
+    traj_RR = draw_line_3(V[9], V[10], V[11], 15, 20, 10, 10, 3)
+    traj = []
+    for i in range(n):
+        t = traj_FL[i]
+        t = np.append(t, ROBOT['legs'][1]['matrix'] @ traj_FR[i])
+        t = np.append(t, ROBOT['legs'][2]['matrix'] @ traj_RL[i])
+        t = np.append(t, ROBOT['legs'][3]['matrix'] @ traj_RR[i])
+        traj.append(t)
+    return traj
+
+
 def move_4_legs(traj, V, upgrade=False):
     """
     Retourne le tableau des élongations successives des 12 vérins (3 par 3) permettant aux
@@ -127,6 +176,7 @@ def move_4_legs(traj, V, upgrade=False):
     """
     # Calcul des élongations de chacunes des pattes
     Ver = []
+    print(traj)
     for i in range(4):
         Ver.append(move_leg(traj[i], V[i][0], V[i][1], V[i][2], i, upgrade=upgrade, solved=True))
     # Mise sous le format attendu
@@ -138,6 +188,7 @@ def move_4_legs(traj, V, upgrade=False):
              Ver[3][k]]
         R.append(r)
     return R
+
 
 def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     """
@@ -162,6 +213,7 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
 
     return v1 + dV[0] * 1000, v2 + dV[1] * 1000, new_v3
 
+
 def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     """
     Retourne les élongations (v1, v2, v3) permettant de placer le bout de la patte en (x, y, z)
@@ -180,6 +232,7 @@ def solve_indirect_cart(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     dV = solve_qp(P, q, lb=lb, ub=ub)
 
     return v1 + dV[0] * 1000, v2 + dV[1] * 1000, v3 + dV[2] * 1000
+
 
 def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
     """
@@ -210,66 +263,71 @@ def normalized_move_xyz(x, y, z, v1, v2, v3, dstep, p, eps, leg_id):
         dist = distance(x - x0, y - y0, z - z0)
     return L
 
+
 def distance_euclidienne(xi, yi, xj, yj):
-  return np.sqrt((xj - xi)**2 + (yj - yi)**2)
+    return np.sqrt((xj - xi) ** 2 + (yj - yi) ** 2)
+
 
 def direct_v1(v1, v2):
-  theta1 = alpha + al_kashi_angle(AD, AC, v1)
-  x_E = x_A + AE * np.cos(theta1)
-  y_E = y_A + AE * np.sin(theta1)
-  EB = distance_euclidienne(x_E, y_E, x_B, y_B)
+    theta1 = alpha + al_kashi_angle(AD, AC, v1)
+    x_E = x_A + AE * np.cos(theta1)
+    y_E = y_A + AE * np.sin(theta1)
+    EB = distance_euclidienne(x_E, y_E, x_B, y_B)
 
-  theta2 = al_kashi_angle(EF, EB, BF)
-  theta3 = al_kashi_angle(AE, EB, AB)
+    theta2 = al_kashi_angle(EF, EB, BF)
+    theta3 = al_kashi_angle(AE, EB, AB)
 
-  beta = theta2 + theta3 - (np.pi - theta1)
-  x_F = x_E + EF * np.cos(beta)
-  y_F = y_E + EF * np.sin(beta)
-  x_G = x_E + EG * np.cos(beta)
-  y_G = y_E + EG * np.sin(beta)
+    beta = theta2 + theta3 - (np.pi - theta1)
+    x_F = x_E + EF * np.cos(beta)
+    y_F = y_E + EF * np.sin(beta)
+    x_G = x_E + EG * np.cos(beta)
+    y_G = y_E + EG * np.sin(beta)
 
-  x_H = (FH * x_B + BH * x_F) / (FH + BH)
-  y_H = (FH * y_B + BH * y_F) / (FH + BH)
+    x_H = (FH * x_B + BH * x_F) / (FH + BH)
+    y_H = (FH * y_B + BH * y_F) / (FH + BH)
 
-  GH = distance_euclidienne(x_G, x_H, y_G, y_H)
-  
-  theta4 = al_kashi_angle(FG, GH, FH)
-  theta5 = al_kashi_angle(GI, GH, v2)
-  theta6 = np.pi - (theta4 + theta5 + beta)
-  
-  return x_G + GJ * np.cos(theta6), y_G - GJ * np.sin(theta6)
+    GH = distance_euclidienne(x_G, x_H, y_G, y_H)
+
+    theta4 = al_kashi_angle(FG, GH, FH)
+    theta5 = al_kashi_angle(GI, GH, v2)
+    theta6 = np.pi - (theta4 + theta5 + beta)
+
+    return x_G + GJ * np.cos(theta6), y_G - GJ * np.sin(theta6)
+
 
 def deltas(theta1, theta2, dstep):
-  '''
-  Fonction auxiliaire de move_xyz
-  Retourne les valeurs de dx, dy et dz en fonction des angles theta1 et theta2 et de la distance d'un pas
-  '''
-  deltaX = dstep * np.cos(theta2)
-  dz = dstep * np.sin(theta2)
-  dx = deltaX * np.cos(theta1)
-  dy = deltaX * np.sin(theta1)
-  return dx, dy, dz
+    '''
+    Fonction auxiliaire de move_xyz
+    Retourne les valeurs de dx, dy et dz en fonction des angles theta1 et theta2 et de la distance d'un pas
+    '''
+    deltaX = dstep * np.cos(theta2)
+    dz = dstep * np.sin(theta2)
+    dx = deltaX * np.cos(theta1)
+    dy = deltaX * np.sin(theta1)
+    return dx, dy, dz
+
 
 def angle_to_v3(angle):
-  '''
-  Fonction auxiliaire de move_xyz
-  Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
-    
-  >>> angle_to_v3(np.pi/4) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
-  0.0
-  >>> v3_to_angle(angle_to_v3(np.pi/4)) - np.pi/4 < 0.0000001 
-  True
-  '''
-  return np.sqrt(LO**2 + KO**2 - 2*LO*KO*np.cos(angle - beta))
+    '''
+    Fonction auxiliaire de move_xyz
+    Retourne l'élongation de v3 en fonction de l'angle de la patte au chassis
+
+    >>> angle_to_v3(np.pi/4) - al_kashi_longueur(KO, LO, np.pi/4 - beta)
+    0.0
+    >>> v3_to_angle(angle_to_v3(np.pi/4)) - np.pi/4 < 0.0000001
+    True
+    '''
+    return np.sqrt(LO ** 2 + KO ** 2 - 2 * LO * KO * np.cos(angle - beta))
+
 
 def v3_to_angle(v3):
-  '''
-  Fonction auxiliaire de move_xyz
-  Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
-      
-  >>> v3_to_angle(500) - (al_kashi_angle(LO, KO, 500) + beta)
-  0.0
-  >>> angle_to_v3(v3_to_angle(500)) - 500 < 0.0000001 
-  True
-  '''
-  return np.arccos((KO**2 + LO**2 - v3**2)/(2*KO*LO)) + beta
+    '''
+    Fonction auxiliaire de move_xyz
+    Retourne l'angle de la patte au chassis en fonction de l'élongation de v3
+
+    >>> v3_to_angle(500) - (al_kashi_angle(LO, KO, 500) + beta)
+    0.0
+    >>> angle_to_v3(v3_to_angle(500)) - 500 < 0.0000001
+    True
+    '''
+    return np.arccos((KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO)) + beta
