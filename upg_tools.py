@@ -63,7 +63,12 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
          'idle_pos': {'verins': [485, 575, 515]}}
 
 
-######################### Tools for 'Legs' struct ##########################
+######################### ACCESS TO ROBOT ##########################
+
+def get_verins_3(leg_id):
+    """retourne les valeurs des 3 vérins pour une jambe"""
+    return ROBOT['legs'][leg_id]['verins']
+
 
 def set_verins_3(v1, v2, v3, leg_id):
     """
@@ -76,12 +81,6 @@ def set_verins_3(v1, v2, v3, leg_id):
     return
 
 
-def set_verins_12(V):
-    """actualise les 12 vérins"""
-    for i in range(0, len(V), 3):
-        set_verins_3(V[i], V[i + 1], V[i + 2], i / 3)
-
-
 def get_verins_12():
     """retourne les valeurs des 12 vérins"""
     res = []
@@ -92,9 +91,20 @@ def get_verins_12():
     return res
 
 
-def get_verins_3(leg_id):
-    """retourne les valeurs des 3 vérins pour une jambe"""
-    return ROBOT['legs'][leg_id]['verins']
+def set_verins_12(V):
+    """actualise les 12 vérins"""
+    for i in range(0, len(V), 3):
+        set_verins_3(V[i], V[i + 1], V[i + 2], i / 3)
+
+
+def get_O():
+    """retourne les coordonnées du centre du robot"""
+    return ROBOT['body']['center']
+
+
+def set_O(O):
+    global ROBOT
+    ROBOT['body']['center'] = O
 
 
 def get_omega():
@@ -109,22 +119,40 @@ def set_omega(Omega):
         ROBOT['body']['omega'][i] = Omega[i]
 
 
-def on_ground(leg_id):
-    """renseigne le caractère 'au sol' d'une patte"""
-    global ROBOT
-    ROBOT['legs'][leg_id]['og'] = 1
+def get_leg_pos(leg_id):
+    return ROBOT['legs'][leg_id]['pos_abs']
 
 
-def stand_up(leg_id):
-    """renseigne le caractère levé d'une patte"""
+def set_leg_pos(pos, leg_id):
     global ROBOT
-    ROBOT['legs'][leg_id]['og'] = 0
+    ROBOT['legs'][leg_id]['pos_abs'] = pos
+
+
+def get_X():
+    X = []
+    for i in range(4):
+        X = np.append(X, get_leg_pos(i))
+    return X
+
+
+def set_X(X):
+    global ROBOT
+    for i in range(4):
+        set_leg_pos(X[3 * i:3 * i + 3], i)
 
 
 def get_og(leg_id):
     """renvoie 1 si la patte est au sol, 0 sinon"""
     return ROBOT['legs'][leg_id]['og']
 
+
+def set_og(bool, leg_id):
+    """actualise la valeur de OnGround pour la patte leg_id dans ROBOT"""
+    global ROBOT
+    ROBOT['legs'][leg_id]['og'] = bool
+
+
+###########################################################
 
 def robot_ref_to_leg(point, leg_id):
     """

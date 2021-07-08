@@ -74,7 +74,7 @@ def to_ref_traj_next_step(alpha, dx, dy):
 def compute_trajs(traj):
     all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
     V = get_verins_12()
-    Pos = direct_12(V)
+    Pos = direct_robot_12(V)
     fl = (Pos[0], Pos[1], Pos[2])
     fr = (Pos[3], Pos[4], Pos[5])
     last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])

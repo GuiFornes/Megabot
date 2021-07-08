@@ -11,6 +11,7 @@ from upg_tools import *
 from upg_deprecated import *
 from upg_jacobian import *
 
+
 ############################# FONCTIONS DE TEST ################################
 
 def test_jacob_2(v1, v2, dstep_x, dstep_y):
@@ -19,30 +20,31 @@ def test_jacob_2(v1, v2, dstep_x, dstep_y):
     Prend en argument l'élongation des vérins et la distance de déplacement selon x et y en m
     """
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, ROBOT['legs'][FR]['lengths'])
-    x, y = pts['J'][0], pts['J'][1] 
+    x, y = pts['J'][0], pts['J'][1]
     Jacob = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
 
     Dpos = np.array([dstep_x / 1000, dstep_y / 1000])
     DV = Jacob @ Dpos
 
     pts = kin.get_leg_points_V1_V2(v1 / 1000 + DV[0], v2 / 1000 + DV[1], ROBOT['legs'][FR]['lengths'])
-    #print("position initiale : ", x * 1000, y * 1000)
+    # print("position initiale : ", x * 1000, y * 1000)
 
     new_x, new_y = pts['J']
-    #print("nouvelle position : ", new_x * 1000, new_y * 1000)
+    # print("nouvelle position : ", new_x * 1000, new_y * 1000)
     print("on s'est déplacé de ", (new_x - x) * 1000, " mm en x et de ", (new_y - y) * 1000, " mm en y")
 
-    err_pos = np.array([new_x - (x + dstep_x/1000), new_y - (y + dstep_y/1000)])
-    #print("erreur de position en x : ", err_pos[0] * 1000, " mm")
-    #print("erreur de position en y : ", err_pos[1] * 1000, " mm")
+    err_pos = np.array([new_x - (x + dstep_x / 1000), new_y - (y + dstep_y / 1000)])
+    # print("erreur de position en x : ", err_pos[0] * 1000, " mm")
+    # print("erreur de position en y : ", err_pos[1] * 1000, " mm")
     err_rel = np.array([None, None])
-    if dstep_x != 0: err_rel[0] = err_pos[0]*1000 / dstep_x
-    if dstep_y != 0: err_rel[1] = err_pos[1]*1000 / dstep_y
+    if dstep_x != 0: err_rel[0] = err_pos[0] * 1000 / dstep_x
+    if dstep_y != 0: err_rel[1] = err_pos[1] * 1000 / dstep_y
     if dstep_x != 0: print("erreur relative en x : ", err_rel[0])
     if dstep_y != 0: print("erreur relative en y : ", err_rel[1])
     print("\n")
 
     return err_rel
+
 
 def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     """
@@ -75,7 +77,7 @@ def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     plt.title("Trajectoire patte FL avec (dstep, p, eps) = (" + str(dstep) + ", " + str(p) + ", " + str(eps) + ")")
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
-    ax.set_zlabel('Z')    
+    ax.set_zlabel('Z')
     ax.set_xbound(400, 800)
     ax.set_ybound(400, 800)
     ax.set_zbound(-300, -700)
@@ -83,52 +85,53 @@ def test_normalized_move_xyz(x0, y0, z0, x, y, z, dstep, p, eps, leg_id):
     plt.show()
 
     # Tracé des positions des vérins
-    plt.plot(T, V1, label='V1' )
-    plt.plot(T, V2, label='V2' )
-    plt.plot(T, V3, label='V3' )
+    plt.plot(T, V1, label='V1')
+    plt.plot(T, V2, label='V2')
+    plt.plot(T, V3, label='V3')
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
 
+
 def test_A(dX, dZ, dalpha, v1, v2, v3):
-  lpl = ROBOT['legs'][FL]['lengths']
-  # alpha = np.cos(v3_to_cos_angle(v3))
-  # print (alpha)
-  # pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
-  # A = mat_A(pts, v1, v2, v3, alpha)
-  #
-  # dPos = np.array([dX/1000, dZ/1000, dalpha])
-  # dV = A @ dPos
-  #
-  # new_v1, new_v2 = v1 + dV[0]*1000, v2 + dV[1]*1000
-  # new_pts = kin.get_leg_points_V1_V2(new_v1 / 1000, new_v2 / 1000, lpl)
-  #
-  # new_alpha = np.arccos(v3_to_cos_angle(v3 + dV[2]*1000))
-  # print (dV)
-  # print(new_alpha)
-  # err_rel = (abs(new_pts['J'][0] - pts['J'][0])*1000 - dX)/dX, (abs(new_pts['J'][1] - pts['J'][1])*1000 - dZ)/dZ, \
-  #           (abs(new_alpha - alpha) - dalpha)/dalpha
+    lpl = ROBOT['legs'][FL]['lengths']
+    # alpha = np.cos(v3_to_cos_angle(v3))
+    # print (alpha)
+    # pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    # A = mat_A(pts, v1, v2, v3, alpha)
+    #
+    # dPos = np.array([dX/1000, dZ/1000, dalpha])
+    # dV = A @ dPos
+    #
+    # new_v1, new_v2 = v1 + dV[0]*1000, v2 + dV[1]*1000
+    # new_pts = kin.get_leg_points_V1_V2(new_v1 / 1000, new_v2 / 1000, lpl)
+    #
+    # new_alpha = np.arccos(v3_to_cos_angle(v3 + dV[2]*1000))
+    # print (dV)
+    # print(new_alpha)
+    # err_rel = (abs(new_pts['J'][0] - pts['J'][0])*1000 - dX)/dX, (abs(new_pts['J'][1] - pts['J'][1])*1000 - dZ)/dZ, \
+    #           (abs(new_alpha - alpha) - dalpha)/dalpha
 
+    alpha = np.arccos(v3_to_cos_angle(v3, lpl))
+    pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+    dPos = np.array([dX / 1000, dZ / 1000, dalpha])
 
-  alpha = np.arccos(v3_to_cos_angle(v3, lpl))
-  pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
-  dPos = np.array([dX/1000, dZ/1000, dalpha])
+    # en utilisant mat A :
+    A = mat_A(pts, v1, v2, v3, alpha)
+    dVa = A @ dPos
+    v1a = v1 + dVa[0] * 1000
+    v2a = v2 + dVa[1] * 1000
+    v3a = v3 + dVa[2] * 1000
+    print(direct_leg(v1a, v2a, v3a))
 
-  # en utilisant mat A :
-  A = mat_A(pts, v1, v2, v3, alpha)
-  dVa = A @ dPos
-  v1a = v1 + dVa[0]*1000
-  v2a = v2 + dVa[1]*1000
-  v3a = v3 + dVa[2]*1000
-  print(direct_leg(v1a, v2a, v3a))
+    # en séparant jacob 2D et v3
+    J = gen_jacob_2(pts, v1, v2)
+    dPos2d = np.array([dPos[0], dPos[1]])
+    dVj = J @ dPos2d
+    v1j = v1 + dVj[0] * 1000
+    v2j = v2 + dVj[1] * 1000
+    v3j = cos_angle_to_v3(np.cos(alpha + dalpha))
+    print(direct_leg(v1j, v2j, v3j))
 
-  # en séparant jacob 2D et v3
-  J = gen_jacob_2(pts, v1, v2)
-  dPos2d = np.array([dPos[0], dPos[1]])
-  dVj = J @ dPos2d
-  v1j = v1 + dVj[0]*1000
-  v2j = v2 + dVj[1]*1000
-  v3j = cos_angle_to_v3(np.cos(alpha + dalpha))
-  print(direct_leg(v1j, v2j, v3j))
 
 def test_jacob_2_direct():
     """
@@ -141,17 +144,19 @@ def test_jacob_2_direct():
     deltaV = np.array([5, -5, 5])
     V += deltaV
     deltaV2 = np.array([deltaV[0], deltaV[1]])
-    Jacob = gen_jacob_direct(kin.get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, ROBOT['legs'][leg_id]['lengths']), V[0] / 1000, V[1] / 1000)
+    Jacob = gen_jacob_direct(kin.get_leg_points_V1_V2(V[0] / 1000, V[1] / 1000, ROBOT['legs'][leg_id]['lengths']),
+                             V[0] / 1000, V[1] / 1000)
     deltaX = Jacob @ deltaV2
     calpha = v3_to_cos_angle(V[2])
     deltax = np.array([
-        deltaX[0] * np.sqrt(1-calpha**2),
+        deltaX[0] * np.sqrt(1 - calpha ** 2),
         deltaX[0] * calpha,
         deltaX[1]
     ])
-    print("position selon jacob_direct :", x0+deltax[0], y0+deltax[1], z0+deltax[2])
+    print("position selon jacob_direct :", x0 + deltax[0], y0 + deltax[1], z0 + deltax[2])
     print("position selon direct Julien :", direct_leg(V[0], V[1], V[2]))
     print("")
+
 
 def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     """
@@ -180,7 +185,8 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     print("real D :", pts_end['D'])
     print("jacob D :", D, "\n")
 
-    M_E = (ROBOT['legs'][FL]['lengths']['ae'] / (ROBOT['legs'][FL]['lengths']['ae'] - ROBOT['legs'][FL]['lengths']['de'])) * M_D
+    M_E = (ROBOT['legs'][FL]['lengths']['ae'] / (
+                ROBOT['legs'][FL]['lengths']['ae'] - ROBOT['legs'][FL]['lengths']['de'])) * M_D
     deltaE = M_E * dv1
     E = pts['E'] + deltaE
     print('initial E :', pts['E'])
@@ -198,7 +204,8 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     print("real F:", pts_end['F'])
     print("jacob F", F, "\n")
 
-    M_G = ((ROBOT['legs'][FL]['lengths']['ef'] + ROBOT['legs'][FL]['lengths']['fg']) / ROBOT['legs'][FL]['lengths']['ef']) * M_F
+    M_G = ((ROBOT['legs'][FL]['lengths']['ef'] + ROBOT['legs'][FL]['lengths']['fg']) / ROBOT['legs'][FL]['lengths'][
+        'ef']) * M_F
     deltaG = M_G * dv1
     G = pts['G'] + deltaG
     print('initial G:', pts['G'])
@@ -206,7 +213,7 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     print("jacob G", G, "\n")
 
     M_H = (BH / BF) * M_F
-    deltaH = M_H *  dv1
+    deltaH = M_H * dv1
     H = pts['H'] + deltaH
     print('initial H:', pts['H'])
     print("real H:", pts_end['H'])
@@ -237,6 +244,7 @@ def test_precision_jacobienne_en_direct(v1, v2, dv1, dv2, leg_id):
     print('initial J:', pts['J'])
     print("real J:", pts_end['J'])
     print("jacob J", J, "\n")
+
 
 def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
     """
@@ -269,88 +277,93 @@ def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
           kin.get_leg_points_V1_V2(v1 + dV[0], v2 + dV[1], lpl)['J'])
     print("\n")
 
+
 def gen_jacob_direct(pts, v1, v2):
-  """
-  Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
-  Prend en argument la position des points de la patte et l'élongation des verrins en m
+    """
+    Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
+    Prend en argument la position des points de la patte et l'élongation des verrins en m
 
-  >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([0, 0])
-  array([0., 0.])
-  """
-  x_E, y_E = pts['E']
-  x_F, y_F = pts['F']
-  x_G, y_G = pts['G']
-  x_H, y_H = pts['H']
-  x_I, y_I = pts['I']
+    >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([0, 0])
+    array([0., 0.])
+    """
+    x_E, y_E = pts['E']
+    x_F, y_F = pts['F']
+    x_G, y_G = pts['G']
+    x_H, y_H = pts['H']
+    x_I, y_I = pts['I']
 
-  A = distance_3_points(pts['D'], pts['A'], pts['C'])
-  B = np.array([0, 2*v1])
-  M_D = inv(A) @ B
+    A = distance_3_points(pts['D'], pts['A'], pts['C'])
+    B = np.array([0, 2 * v1])
+    M_D = inv(A) @ B
 
-  M_E = (ROBOT['legs'][FL]['lengths']['ae']/(ROBOT['legs'][FL]['lengths']['ae'] - ROBOT['legs'][FL]['lengths']['de'])) * M_D
+    M_E = (ROBOT['legs'][FL]['lengths']['ae'] / (
+                ROBOT['legs'][FL]['lengths']['ae'] - ROBOT['legs'][FL]['lengths']['de'])) * M_D
 
-  A = distance_3_points(pts['F'], pts['E'], pts['B'])
-  B = np.array([
-    [2*(x_F - x_E), 2*(y_F - y_E)],
-    [0, 0]])
-  M_F = (inv(A) @ B) @ M_E
+    A = distance_3_points(pts['F'], pts['E'], pts['B'])
+    B = np.array([
+        [2 * (x_F - x_E), 2 * (y_F - y_E)],
+        [0, 0]])
+    M_F = (inv(A) @ B) @ M_E
 
-  M_G =((ROBOT['legs'][FL]['lengths']['ef']+ROBOT['legs'][FL]['lengths']['fg']) / ROBOT['legs'][FL]['lengths']['ef']) * M_F
+    M_G = ((ROBOT['legs'][FL]['lengths']['ef'] + ROBOT['legs'][FL]['lengths']['fg']) / ROBOT['legs'][FL]['lengths'][
+        'ef']) * M_F
 
-  M_H = (BH/BF) * M_F
+    M_H = (BH / BF) * M_F
 
-  A = distance_3_points(pts['I'], pts['G'], pts['H'])
-  B = np.array([
-    [2*(x_I - x_G), 2*(y_I - y_G)],
-    [0, 0]])
-  C = np.array([
-    [0, 0],
-    [2*(x_I - x_H), 2*(y_I - y_H)]])
-  D = np.array([0, 2*v2])
-  V1 = inv(A) @ (B @ M_G + C @ M_H)
-  V2 = inv(A) @ D
-  M_I = np.array([
-    [V1[0], V2[0]],
-    [V1[1], V2[1]]])
+    A = distance_3_points(pts['I'], pts['G'], pts['H'])
+    B = np.array([
+        [2 * (x_I - x_G), 2 * (y_I - y_G)],
+        [0, 0]])
+    C = np.array([
+        [0, 0],
+        [2 * (x_I - x_H), 2 * (y_I - y_H)]])
+    D = np.array([0, 2 * v2])
+    V1 = inv(A) @ (B @ M_G + C @ M_H)
+    V2 = inv(A) @ D
+    M_I = np.array([
+        [V1[0], V2[0]],
+        [V1[1], V2[1]]])
 
-  return (ROBOT['legs'][FL]['lengths']['gj']/ROBOT['legs'][FL]['lengths']['gi']) * M_I
+    return (ROBOT['legs'][FL]['lengths']['gj'] / ROBOT['legs'][FL]['lengths']['gi']) * M_I
+
 
 def make_a_penalty(v1, v2, d, eps, leg_id):
-  lpl = ROBOT['legs'][leg_id]['lengths']
-  pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
-  X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
-  alpha = np.cos(np.pi / 4)
-  res = []
-
-  # drawing the shoot trajectoire
-  Lx = np.zeros(d//eps + 1)
-  Lz = np.zeros(d//eps + 1)
-  for k in range(d//eps + 1):
-    X = X0 + k * eps
-    Z = Z0
-    Lx[k], Lz[k] = X, Z
-  print(Lx, Lz)
-  # shooting that penalty
-  for k in range(1, d//eps + 1):
-    X, Z = Lx[k], Lz[k]
-    print("POSITION ______actual :",X0, Z0,"__________cible :", X, Z)
-    print("VERINS_________actual :", v1, v2)
-    dX = np.array([X - X0, Z - Z0])
-    J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
-    P = 2 * J.T @ J
-    q = J.T @ (np.array([X0 / 1000, Z0 / 1000]) - np.array([X / 1000, Z / 1000]))
-    lb = np.array([(450.0 - v1), (450.0 - v2)]) / 1000
-    ub = np.array([(650.0 - v1), (650.0 - v2)]) / 1000
-    dV = J @ dX
-    # print(dV)
-    # dV = solve_qp(P, q, lb=lb, ub=ub)
-    # print(dV)
-    v1 += dV[0]
-    v2 += dV[1]
-    res.append((v1, v2))
+    lpl = ROBOT['legs'][leg_id]['lengths']
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
     X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
-  return res
+    alpha = np.cos(np.pi / 4)
+    res = []
+
+    # drawing the shoot trajectoire
+    Lx = np.zeros(d // eps + 1)
+    Lz = np.zeros(d // eps + 1)
+    for k in range(d // eps + 1):
+        X = X0 + k * eps
+        Z = Z0
+        Lx[k], Lz[k] = X, Z
+    print(Lx, Lz)
+    # shooting that penalty
+    for k in range(1, d // eps + 1):
+        X, Z = Lx[k], Lz[k]
+        print("POSITION ______actual :", X0, Z0, "__________cible :", X, Z)
+        print("VERINS_________actual :", v1, v2)
+        dX = np.array([X - X0, Z - Z0])
+        J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
+        P = 2 * J.T @ J
+        q = J.T @ (np.array([X0 / 1000, Z0 / 1000]) - np.array([X / 1000, Z / 1000]))
+        lb = np.array([(450.0 - v1), (450.0 - v2)]) / 1000
+        ub = np.array([(650.0 - v1), (650.0 - v2)]) / 1000
+        dV = J @ dX
+        # print(dV)
+        # dV = solve_qp(P, q, lb=lb, ub=ub)
+        # print(dV)
+        v1 += dV[0]
+        v2 += dV[1]
+        res.append((v1, v2))
+        pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)
+        X0, Z0 = pts['J'][0] * 1000, pts['J'][1] * 1000
+    return res
+
 
 def test_circle_2(v1, v2, r, n, leg_id):
     """
@@ -363,11 +376,11 @@ def test_circle_2(v1, v2, r, n, leg_id):
     V2 = [v[1] for v in L]
     T = np.linspace(0, 1, len(L))
 
-
     # Positions du bout de la patte
-    Pos = list(map(lambda v1, v2, lpl: kin.get_leg_points_V1_V2(v1, v2, lpl)['J'], [v[0]/1000 for v in L], [v[1]/1000 for v in L], [lpl for v in L]))
-    Xp = [p[0]*1000 for p in Pos]
-    Yp = [p[1]*1000 for p in Pos]
+    Pos = list(map(lambda v1, v2, lpl: kin.get_leg_points_V1_V2(v1, v2, lpl)['J'], [v[0] / 1000 for v in L],
+                   [v[1] / 1000 for v in L], [lpl for v in L]))
+    Xp = [p[0] * 1000 for p in Pos]
+    Yp = [p[1] * 1000 for p in Pos]
 
     # Tracé de la position du bout de la patte
     fig = plt.figure()
@@ -383,7 +396,7 @@ def test_circle_2(v1, v2, r, n, leg_id):
     plt.plot(Lx, Lz)
 
     plt.scatter(Xp, Yp, label='Positions',
-               marker='.',s=3, c='red')  # Tracé des points 3D
+                marker='.', s=3, c='red')  # Tracé des points 3D
     plt.title("Trajectoire patte FL rotation circulaire dand le plan XZ")
 
     plt.xlabel('X')
@@ -392,12 +405,13 @@ def test_circle_2(v1, v2, r, n, leg_id):
     plt.show()
 
     # Tracé des positions des vérins
-    plt.plot(T, V1, label='V1' )
-    plt.plot(T, V2, label='V2' )
+    plt.plot(T, V1, label='V1')
+    plt.plot(T, V2, label='V2')
     plt.title("Elongations des vérins dans le mouvement")
     # plt.plot.set_xlabel('L (en mm)')
     # plt.plot.set_ylabel('T')
     plt.show()
+
 
 def draw_12(traj, V):
     """
@@ -433,11 +447,11 @@ def draw_12(traj, V):
     V12 = [v[11] for v in Ver]
     T = np.linspace(0, 1, len(Ver))
 
-    #Positions des bouts de patte
-    Pos0 = list(map(direct_robot, V1, V2, V3, [kin.FL for v in Ver]))
-    Pos1 = list(map(direct_robot, V4, V5, V6, [kin.FR for v in Ver]))
-    Pos2 = list(map(direct_robot, V7, V8, V9, [kin.RL for v in Ver]))
-    Pos3 = list(map(direct_robot, V10, V11, V12, [kin.RR for v in Ver]))
+    # Positions des bouts de patte
+    Pos0 = list(map(direct_robot_3, V1, V2, V3, [kin.FL for v in Ver]))
+    Pos1 = list(map(direct_robot_3, V4, V5, V6, [kin.FR for v in Ver]))
+    Pos2 = list(map(direct_robot_3, V7, V8, V9, [kin.RL for v in Ver]))
+    Pos3 = list(map(direct_robot_3, V10, V11, V12, [kin.RR for v in Ver]))
     Xp0 = [p[0] for p in Pos0]
     Yp0 = [p[1] for p in Pos0]
     Zp0 = [p[2] for p in Pos0]
@@ -487,6 +501,7 @@ def draw_12(traj, V):
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
 
+
 def draw(V):
     """
     Trace la trajectoire des extrémités des pattes du robot
@@ -506,23 +521,20 @@ def draw(V):
     V12 = [v[11] for v in V]
     T = np.linspace(0, 1, len(V))
 
-    #Positions des bouts de patte
-    Pos0 = list(map(direct_robot, V1, V2, V3, [kin.FL for v in V]))
-    Pos1 = list(map(direct_robot, V4, V5, V6, [kin.FR for v in V]))
-    Pos2 = list(map(direct_robot, V7, V8, V9, [kin.RL for v in V]))
-    Pos3 = list(map(direct_robot, V10, V11, V12, [kin.RR for v in V]))
-    Xp0 = [p[0] for p in Pos0]
-    Yp0 = [p[1] for p in Pos0]
-    Zp0 = [p[2] for p in Pos0]
-    Xp1 = [p[0] for p in Pos1]
-    Yp1 = [p[1] for p in Pos1]
-    Zp1 = [p[2] for p in Pos1]
-    Xp2 = [p[0] for p in Pos2]
-    Yp2 = [p[1] for p in Pos2]
-    Zp2 = [p[2] for p in Pos2]
-    Xp3 = [p[0] for p in Pos3]
-    Yp3 = [p[1] for p in Pos3]
-    Zp3 = [p[2] for p in Pos3]
+    # Positions des bouts de patte
+    Pos = list(map(direct_abs, V))
+    Xp0 = [p[0] for p in Pos]
+    Yp0 = [p[1] for p in Pos]
+    Zp0 = [p[2] for p in Pos]
+    Xp1 = [p[3] for p in Pos]
+    Yp1 = [p[4] for p in Pos]
+    Zp1 = [p[5] for p in Pos]
+    Xp2 = [p[6] for p in Pos]
+    Yp2 = [p[7] for p in Pos]
+    Zp2 = [p[8] for p in Pos]
+    Xp3 = [p[9] for p in Pos]
+    Yp3 = [p[10] for p in Pos]
+    Zp3 = [p[11] for p in Pos]
 
     # Tracé des trajectoires
     fig = plt.figure()
@@ -555,6 +567,7 @@ def draw(V):
     plt.plot(T, V12, label='V12')
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
+
 
 def draw_move_4_legs(traj, V, upgrade=False):
     """
@@ -591,10 +604,10 @@ def draw_move_4_legs(traj, V, upgrade=False):
     T = np.linspace(0, 1, len(Ver))
 
     # Positions du bout de la patte
-    Pos0 = list(map(direct_robot, [v for v in V01], [v for v in V02], [v for v in V03], [kin.FL for v in Ver]))
-    Pos1 = list(map(direct_robot, [v for v in V11], [v for v in V12], [v for v in V13], [kin.FR for v in Ver]))
-    Pos2 = list(map(direct_robot, [v for v in V21], [v for v in V22], [v for v in V23], [kin.RL for v in Ver]))
-    Pos3 = list(map(direct_robot, [v for v in V31], [v for v in V32], [v for v in V33], [kin.RR for v in Ver]))
+    Pos0 = list(map(direct_robot_3, [v for v in V01], [v for v in V02], [v for v in V03], [kin.FL for v in Ver]))
+    Pos1 = list(map(direct_robot_3, [v for v in V11], [v for v in V12], [v for v in V13], [kin.FR for v in Ver]))
+    Pos2 = list(map(direct_robot_3, [v for v in V21], [v for v in V22], [v for v in V23], [kin.RL for v in Ver]))
+    Pos3 = list(map(direct_robot_3, [v for v in V31], [v for v in V32], [v for v in V33], [kin.RR for v in Ver]))
     Xp0 = [p[0] for p in Pos0]
     Yp0 = [p[1] for p in Pos0]
     Zp0 = [p[2] for p in Pos0]
@@ -641,6 +654,7 @@ def draw_move_4_legs(traj, V, upgrade=False):
     plt.plot(T, V33, label='V33')
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
+
 
 def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False, anim=False):
     """
@@ -697,9 +711,11 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False, anim=Fa
     # plt.xlabel('steps')
     # plt.show()
 
-    Pos2 = list(map(lambda v1, v2:kin.get_leg_points_V1_V2(v1, v2, lpl), [v[0]/1000 for v in Ver], [v[1]/1000 for v in Ver]))
+    Pos2 = list(map(lambda v1, v2: kin.get_leg_points_V1_V2(v1, v2, lpl), [v[0] / 1000 for v in Ver],
+                    [v[1] / 1000 for v in Ver]))
     for i in range(len(traj)):
-        Pos2[i] = dict(map(lambda kv: (kv[0], d2_to_d3(kv[1][0]*1000, kv[1][1]*1000, v3_to_cos_angle(V3[i], lpl))), Pos2[i].items()))
+        Pos2[i] = dict(map(lambda kv: (kv[0], d2_to_d3(kv[1][0] * 1000, kv[1][1] * 1000, v3_to_cos_angle(V3[i], lpl))),
+                           Pos2[i].items()))
         # Pos2[i] = dict(map(lambda kv: (kv[0], kv[1]*1000), Pos2[i].items()))
 
     # print(Pos2[0]['A'][0])
@@ -713,30 +729,31 @@ def draw_move_leg(traj, v1, v2, v3, leg_id, upgrade=False, solved=False, anim=Fa
             ax.set_xbound(-500, 500)
             ax.set_ybound(-500, 500)
             ax.set_zbound(-500, 500)
-            ax.scatter(xs=0, ys=0, zs=0, s=40) # point 0
-            ax.scatter(xs=Xp[i], ys=Yp[i], zs=Zp[i], s=40, marker='o', c='red') # point J
-            ax.plot(xs=[0, Pos2[i]['A'][0]], ys=[0, Pos2[i]['A'][1]], zs=[0, Pos2[i]['A'][2]], c='black') # seg OA
+            ax.scatter(xs=0, ys=0, zs=0, s=40)  # point 0
+            ax.scatter(xs=Xp[i], ys=Yp[i], zs=Zp[i], s=40, marker='o', c='red')  # point J
+            ax.plot(xs=[0, Pos2[i]['A'][0]], ys=[0, Pos2[i]['A'][1]], zs=[0, Pos2[i]['A'][2]], c='black')  # seg OA
             ax.plot(xs=[Pos2[i]['A'][0], Pos2[i]['E'][0]], ys=[Pos2[0]['A'][1], Pos2[i]['E'][1]],
-                    zs=[Pos2[i]['A'][2], Pos2[i]['E'][2]], c='black') # segment AE
+                    zs=[Pos2[i]['A'][2], Pos2[i]['E'][2]], c='black')  # segment AE
             ax.plot(xs=[Pos2[i]['E'][0], Pos2[i]['G'][0]], ys=[Pos2[0]['E'][1], Pos2[i]['G'][1]],
-                    zs=[Pos2[i]['E'][2], Pos2[i]['G'][2]], c='black') # segment EG
+                    zs=[Pos2[i]['E'][2], Pos2[i]['G'][2]], c='black')  # segment EG
             ax.plot(xs=[Pos2[i]['G'][0], Pos2[i]['J'][0]], ys=[Pos2[0]['G'][1], Pos2[i]['J'][1]],
-                    zs=[Pos2[i]['G'][2], Pos2[i]['J'][2]], c='black') # segment GJ
+                    zs=[Pos2[i]['G'][2], Pos2[i]['J'][2]], c='black')  # segment GJ
             ax.plot(xs=[Pos2[i]['A'][0], Pos2[i]['B'][0]], ys=[Pos2[0]['A'][1], Pos2[i]['B'][1]],
-                    zs=[Pos2[i]['A'][2], Pos2[i]['B'][2]], c='black') # segment AB
+                    zs=[Pos2[i]['A'][2], Pos2[i]['B'][2]], c='black')  # segment AB
             ax.plot(xs=[Pos2[i]['B'][0], Pos2[i]['F'][0]], ys=[Pos2[0]['B'][1], Pos2[i]['F'][1]],
-                    zs=[Pos2[i]['B'][2], Pos2[i]['F'][2]], c='black') # segment BF
+                    zs=[Pos2[i]['B'][2], Pos2[i]['F'][2]], c='black')  # segment BF
             ax.plot(xs=[Pos2[i]['H'][0], Pos2[i]['I'][0]], ys=[Pos2[0]['H'][1], Pos2[i]['I'][1]],
-                    zs=[Pos2[i]['H'][2], Pos2[i]['I'][2]], c='red') # vérin v2
+                    zs=[Pos2[i]['H'][2], Pos2[i]['I'][2]], c='red')  # vérin v2
             ax.plot(xs=[Pos2[i]['B'][0], Pos2[i]['C'][0]], ys=[Pos2[0]['B'][1], Pos2[i]['C'][1]],
-                    zs=[Pos2[i]['B'][2], Pos2[i]['C'][2]], c='black') # segment BC
+                    zs=[Pos2[i]['B'][2], Pos2[i]['C'][2]], c='black')  # segment BC
             ax.plot(xs=[Pos2[i]['C'][0], Pos2[i]['D'][0]], ys=[Pos2[0]['C'][1], Pos2[i]['D'][1]],
-                    zs=[Pos2[i]['C'][2], Pos2[i]['D'][2]], c='red') # vérin v1
+                    zs=[Pos2[i]['C'][2], Pos2[i]['D'][2]], c='red')  # vérin v1
 
             for j in range(i):
                 pointJ = ax.scatter(xs=Xp[j], ys=Yp[j], zs=Zp[j], s=20, marker='o', c='grey')
             plt.pause(0.05)
             plt.gcf().clear()
+
 
 def test_circle_3(v1, v2, v3, r, n, leg_id):
     """
@@ -787,11 +804,12 @@ def test_circle_3(v1, v2, v3, r, n, leg_id):
     plt.show()
 
     # Tracé des positions des vérins
-    plt.plot(T, V1, label='V1' )
-    plt.plot(T, V2, label='V2' )
-    plt.plot(T, V3, label='V3' )
+    plt.plot(T, V1, label='V1')
+    plt.plot(T, V2, label='V2')
+    plt.plot(T, V3, label='V3')
     plt.title("Elongations des vérins dans le mouvement")
     plt.show()
+
 
 def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     """
@@ -804,11 +822,11 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     V2 = [v[1] for v in L]
     T = np.linspace(0, 1, len(L))
 
-
     # Positions du bout de la patte
-    Pos = list(map(lambda v1, v2, lpl: kin.get_leg_points_V1_V2(v1, v2, lpl)['J'], [v[0]/1000 for v in L], [v[1]/1000 for v in L], [lpl for v in L]))
-    Xp = [p[0]*1000 for p in Pos]
-    Yp = [p[1]*1000 for p in Pos]
+    Pos = list(map(lambda v1, v2, lpl: kin.get_leg_points_V1_V2(v1, v2, lpl)['J'], [v[0] / 1000 for v in L],
+                   [v[1] / 1000 for v in L], [lpl for v in L]))
+    Xp = [p[0] * 1000 for p in Pos]
+    Yp = [p[1] * 1000 for p in Pos]
 
     # Tracé de la position du bout de la patte
     fig = plt.figure()
@@ -825,7 +843,7 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     plt.plot(Lx, Lz)
 
     plt.scatter(Xp, Yp, label='Positions',
-                marker='.', c = 'red', s = 3)  # Tracé des points 3D
+                marker='.', c='red', s=3)  # Tracé des points 3D
     plt.title("Trajectoire rectiligne de la patte FL dans le plan XZ")
 
     plt.xlabel('X')
@@ -835,12 +853,13 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     plt.show()
 
     # Tracé des positions des vérins
-    plt.plot(T, V1, label='V1' )
-    plt.plot(T, V2, label='V2' )
+    plt.plot(T, V1, label='V1')
+    plt.plot(T, V2, label='V2')
     plt.title("Elongations des vérins dans le mouvement")
     # plt.plot.set_xlabel('L (en mm)')
     # plt.plot.set_ylabel('T')
     plt.show()
+
 
 def accessible(leg_id, point):
     """ Dans le repère 3D de la jambe """
@@ -849,7 +868,7 @@ def accessible(leg_id, point):
     x0, y0, z0 = direct_leg(v1, v2, v3)
     x0, y0, z0 = leg_ref_to_robot((x0, y0, z0), leg_id)
     x, y, z = point
-    dx, dy, dz = x-x0, y-y0, z-z0
+    dx, dy, dz = x - x0, y - y0, z - z0
     traj = []
     # print("X = ", x, x0, dx)
     for i in range(21):
@@ -867,6 +886,7 @@ def accessible(leg_id, point):
             acces = False
     return acces
 
+
 def test_zone_accessible(leg_id):
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
@@ -874,25 +894,43 @@ def test_zone_accessible(leg_id):
     for x in range(0, 2201, 200):
         for y in range(0, 2201, 200):
             for z in range(500, -1200, -200):
-                if not accessible(leg_id, (x, y, z)): # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
+                if not accessible(leg_id, (x, y, z)):  # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
                     ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
 
-
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    #ax.set_xbound(-1000, 2000)
-    #ax.set_ybound(-1000, 2000)
-    #ax.set_zbound(-1600, -200)
+    # ax.set_xbound(-1000, 2000)
+    # ax.set_ybound(-1000, 2000)
+    # ax.set_zbound(-1600, -200)
     plt.title("points accessibles pour la patte")
     plt.show()
+
+
+def test_get_last_leg():
+    init_pos_abs()
+    z_ini = direct_robot_12(get_verins_12())[2]
+    set_verins_3(600, 500, 500, 0)
+    pos_rel = direct_robot_12(get_verins_12())
+    pos_abs = [pos_rel[0], pos_rel[1], - (z_ini - pos_rel[2])]
+    set_leg_pos(pos_abs, 0)
+    set_og(0, 0)
+    for i in range(4):
+        print(ROBOT['legs'][i]['pos_abs'])
+    print(get_last_leg(0))
+
+
 ################################# TESTS ####################################
 
-draw(move_all_legs(traj(100, 200)))
+init_pos_abs()
+set_og(0, 0)
+traj = traj_sin(200, 100, 0)
+draw(move_all_legs(traj))
 # draw_12(shake_dat_ass_abs(20, 200))
-t_accessible = 1
+
+t_accessible = 0
 if t_accessible:
     test_zone_accessible(FL)
 
@@ -947,7 +985,7 @@ if t_jacob:
 
 t_a = 0
 if t_a:
-    print (test_A(1, -1, 0.1, V[0], V[1], V[2]))
+    print(test_A(1, -1, 0.1, V[0], V[1], V[2]))
 
 t_jacob_direct = 0
 if t_jacob_direct:
@@ -981,16 +1019,17 @@ if t_artificial_inverse:
         traj_RR[i] = ROBOT['legs'][3]['matrix'] @ traj_RR[i]
     traj_4_legs = np.array([traj_FL, traj_FR, traj_RL, traj_RR])
     V = np.array([[550, 600, 515],
-                 [550, 600, 515],
-                 [550, 600, 515],
-                 [550, 600, 515]])
+                  [550, 600, 515],
+                  [550, 600, 515],
+                  [550, 600, 515]])
     draw_move_4_legs(traj_4_legs, V)
 
 t_different_moves = 0
 if t_different_moves:
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=True)
     # draw_move_leg(draw_circle(150, 200, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=False, solved=False)
-    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True, anim=False)
+    draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=True,
+                  anim=False)
     # draw_move_leg(draw_circle(150, 100, 550, 600, 515, kin.FL), 550, 600, 515, kin.FL, upgrade=True, solved=False)
     # test_circle_2(450, 500, 200, 200, kin.FL)
     # test_circle_3(550, 600, 515, 200, 200, kin.FL)
@@ -1018,10 +1057,11 @@ if t_comp:
     print("L'algo de Julien prend ", t2 * 100, " us")
 
     print("direct v1 retourne : ", direct_v1(495, 585))
-    print("L'algo de Julien retourne :", kin.get_leg_points_V1_V2(495 / 1000, 585 / 1000, ROBOT['legs'][FR]['lengths'])['J'])
+    print("L'algo de Julien retourne :",
+          kin.get_leg_points_V1_V2(495 / 1000, 585 / 1000, ROBOT['legs'][FR]['lengths'])['J'])
 
 ############################################################################
 
 # V = [550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550, 550]
-# X_rel = direct_12(V)
+# X_rel = direct_robot_12(V)
 # print(gen_new_jacob(V, np.array([0, 0, 0]), X_rel))
