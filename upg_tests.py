@@ -320,10 +320,9 @@ if t_compute_traj:
     test_compute_traj((1, 0), 1)
     # test_furthest_pos((1, 0), 1)
 
-t_abs = 0
+t_abs = 1
 if t_abs:
     init_pos_abs()
-    print("PosIni : ", get_X())
     set_og(0, 0)
     traj = traj_abs_sin(200, 100, 0)
     draw_abs(move_abs_all_legs(traj))

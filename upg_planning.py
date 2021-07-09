@@ -104,7 +104,7 @@ def is_accessible(leg_id, point):
         print("y : ", y0, yt, traj[n-1][1], yf)
         print("z : ", z0, zt, traj[n-1][2], zf)
         print("V = ", res)
-        if distance(xt, yt, zt, xf, yf, zf) > 50:
+        if distance([xt, yt, zt], [xf, yf, zf]) > 50:
             acces = False
     return acces
 
@@ -122,9 +122,9 @@ def furthest_accessible(traj, leg_id):
     lpl = ROBOT['legs'][leg_id]['lengths']
     for i in range(1, len(traj)):
         # get data
-        x0, y0, z0 = direct_robot_3(v1, v2, v3, leg_id)
+        x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
         print(xt, x0, yt, y0, zt, z0)
-        if distance(x0, y0, z0, xt, yt, zt) > 100: # exit condition
+        if distance([x0, y0, z0], [xt, yt, zt]) > 100: # exit condition
             return i-1
         xt, yt, zt = traj[i][0], traj[i][1], traj[i][2]
         dX = np.array([xt - x0, yt - y0, zt - z0])
@@ -144,14 +144,12 @@ if __name__ == "__main__":
     doctest.testmod()
 
 ######################## DEPRECATED #############################
-def length(a, b):
-    return distance(b[0], b[1], x2=a[0], y2=a[1])
 
 def angle_between_linear(coef1, coef2):
     pointO = 0, 0
     pointA = 1, coef1
     pointB = 1, coef2
-    return al_kashi_angle(length(pointO, pointA), length(pointO, pointB), length(pointA, pointB))
+    return al_kashi_angle(distance(pointO, pointA), distance(pointO, pointB), distance(pointA, pointB))
 
 def to_ref_traj_next_step(alpha, dx, dy):
     return np.array([
@@ -181,15 +179,15 @@ def compute_trajs(traj):
         trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
         trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
 
-    trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
-    trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
-    for i in range(len(trajFL) - len(trajRL)):
-        trajRL.append(trajFL[i])
-        trajRR.append(trajFR[i])
-
-    for i in range(len(trajFL)):
-        traj.append(trajFL[i])
-        traj.append(trajFR[i])
-        traj.append(trajRL[i])
-        traj.append(trajRR[i])
+    # trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
+    # trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
+    # for i in range(len(trajFL) - len(trajRL)):
+    #     trajRL.append(trajFL[i])
+    #     trajRR.append(trajFR[i])
+    #
+    # for i in range(len(trajFL)):
+    #     traj.append(trajFL[i])
+    #     traj.append(trajFR[i])
+    #     traj.append(trajRL[i])
+    #     traj.append(trajRR[i])
 
