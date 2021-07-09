@@ -116,7 +116,6 @@ def gen_jacob_3(v1, v2, v3, alpha, lpl):
     pts = get_leg_points_V1_V2(v1, v2, lpl)
     A = mat_A(pts, lpl, v1, v2, v3, alpha)
     B = mat_B(pts, alpha)
-
     return A @ inv(B)
 
 

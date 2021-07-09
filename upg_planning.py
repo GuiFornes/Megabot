@@ -8,7 +8,7 @@ MAX_RADIUS = 15000
 
 INF = 100000
 
-TRAJ_ACCUR = 200
+TRAJ_ACCUR = 50
 
 def cmd_joystick(D, R):
     """
@@ -58,12 +58,8 @@ def compute_traj_form_joystick(joystick):
     r, r_max = [], 0
     V = get_verins_12()
     pos = direct_rel_12(V)
-    print("pos =", pos)
     for leg in range(4):
         rayon = np.sqrt((pos[leg * 3 + 0] - centre[0])**2 + (pos[leg * 3 + 1] - centre[1])**2)
-        print("r : ", rayon)
-        print("centre : ", centre)
-        print("pos = ", pos[leg * 3], pos[leg * 3+1])
         r.append(rayon)
         if r[leg] > r_max:
             r_max = r[leg]
@@ -112,24 +108,27 @@ def is_accessible(leg_id, point):
 def furthest_accessible(traj, leg_id):
     """
     Compute the maximum step size following the trajectory, depending on the accessible zone for the leg.
-    traj should be only the trajectory of one leg, not about the entire robot.
+    traj should be the trajectory of all elgs (basically returned by compute_traj_from_joystick)
     :param traj: trajectory to follow
     :param leg_id: ID of the leg
     :return: the furthest point accessible from the traj
     """
     v1, v2, v3 = get_verins_3(leg_id)
-    xt, yt, zt = traj[0][0], traj[0][1], traj[0][2]
+    xt, yt, zt = traj[0][leg_id*3 + 0], traj[0][leg_id * 3 + 1], traj[0][leg_id * 3 + 2]
     lpl = ROBOT['legs'][leg_id]['lengths']
     for i in range(1, len(traj)):
         # get data
-        x0, y0, z0 = direct_robot_3(v1, v2, v3, leg_id)
-        print(xt, x0, yt, y0, zt, z0)
-        if distance(x0, y0, z0, xt, yt, zt) > 100: # exit condition
+        x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
+        if leg_id == 3:
+            print("V = ", v1, v2, v3)
+            print("X0 = ", x0, y0, z0)
+            print("Xt = ", xt, yt, zt)
+        if distance(x0, y0, z0, xt, yt, zt) > 200: # exit condition
             return i-1
-        xt, yt, zt = traj[i][0], traj[i][1], traj[i][2]
+        xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
         dX = np.array([xt - x0, yt - y0, zt - z0])
         # solve
-        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
+        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl) @ ROBOT['legs'][leg_id]['matrix']
         P = inv(J).T @ inv(J)
         q = - inv(J).T @ dX
         lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
@@ -144,52 +143,52 @@ if __name__ == "__main__":
     doctest.testmod()
 
 ######################## DEPRECATED #############################
-def length(a, b):
-    return distance(b[0], b[1], x2=a[0], y2=a[1])
-
-def angle_between_linear(coef1, coef2):
-    pointO = 0, 0
-    pointA = 1, coef1
-    pointB = 1, coef2
-    return al_kashi_angle(length(pointO, pointA), length(pointO, pointB), length(pointA, pointB))
-
-def to_ref_traj_next_step(alpha, dx, dy):
-    return np.array([
-        [np.cos(alpha), - np.sin(alpha), dx],
-        [np.sin(alpha), np.cos(alpha), dy],
-        [0, 0, 1]
-    ])
-
-def compute_trajs(traj):
-    all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
-    V = get_verins_12()
-    Pos = direct_rel_12(V)
-    fl = (Pos[0], Pos[1], Pos[2])
-    fr = (Pos[3], Pos[4], Pos[5])
-    last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
-    if last_coef > 0.1:
-        print("Legs position aren't initialized")
-    legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
-
-    for i in range(1, len(traj)):
-        direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
-        current_coef = -1 / direction
-        alpha = angle_between_linear(last_coef, current_coef)
-        m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
-        step_fl = m_rota @ np.array([-legs_spacing, 0, 1])
-        step_fr = m_rota @ np.array([legs_spacing, 0, 1])
-        trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
-        trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
-
-    trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
-    trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
-    for i in range(len(trajFL) - len(trajRL)):
-        trajRL.append(trajFL[i])
-        trajRR.append(trajFR[i])
-
-    for i in range(len(trajFL)):
-        traj.append(trajFL[i])
-        traj.append(trajFR[i])
-        traj.append(trajRL[i])
-        traj.append(trajRR[i])
+# def length(a, b):
+#     return distance(b[0], b[1], x2=a[0], y2=a[1])
+#
+# def angle_between_linear(coef1, coef2):
+#     pointO = 0, 0
+#     pointA = 1, coef1
+#     pointB = 1, coef2
+#     return al_kashi_angle(length(pointO, pointA), length(pointO, pointB), length(pointA, pointB))
+#
+# def to_ref_traj_next_step(alpha, dx, dy):
+#     return np.array([
+#         [np.cos(alpha), - np.sin(alpha), dx],
+#         [np.sin(alpha), np.cos(alpha), dy],
+#         [0, 0, 1]
+#     ])
+#
+# def compute_trajs(traj):
+#     all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
+#     V = get_verins_12()
+#     Pos = direct_rel_12(V)
+#     fl = (Pos[0], Pos[1], Pos[2])
+#     fr = (Pos[3], Pos[4], Pos[5])
+#     last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
+#     if last_coef > 0.1:
+#         print("Legs position aren't initialized")
+#     legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
+#
+#     for i in range(1, len(traj)):
+#         direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
+#         current_coef = -1 / direction
+#         alpha = angle_between_linear(last_coef, current_coef)
+#         m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
+#         step_fl = m_rota @ np.array([-legs_spacing, 0, 1])
+#         step_fr = m_rota @ np.array([legs_spacing, 0, 1])
+#         trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
+#         trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
+#
+#     trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
+#     trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
+#     for i in range(len(trajFL) - len(trajRL)):
+#         trajRL.append(trajFL[i])
+#         trajRR.append(trajFR[i])
+#
+#     for i in range(len(trajFL)):
+#         traj.append(trajFL[i])
+#         traj.append(trajFR[i])
+#         traj.append(trajRL[i])
+#         traj.append(trajRR[i])
 

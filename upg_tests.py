@@ -188,12 +188,20 @@ def comp_rel(traj):
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
     ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.scatter(Xt0[0], Yt0[0], Zt0[0], c='black', s=60)
     ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
     ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.scatter(Xt1[0], Yt1[0], Zt1[0], c='black', s=60)
     ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=3, c='blue')  # Tracé des points réels
     ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.scatter(Xt2[0], Yt2[0], Zt2[0], c='black', s=60)
     ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
     ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    ax.scatter(Xt3[0], Yt3[0], Zt3[0], c='black', s=60)
+    ax.scatter(Xt3[1], Yt3[1], Zt3[1], c='blue', s=60)
+    print("XT3 : ", Xt3[0], Yt3[0])
+    print("Xp3 : ", Xp3[0], Yp3[0])
+    ax.scatter(Xp3[1], Yp3[1], Zp3[1], c='red', s=60)
     ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
     plt.title("Trajectoire du bout de la patte dans l'espace")
     ax.set_xlabel('X')
@@ -245,7 +253,6 @@ def test_zone_accessible(leg_id):
 
 def test_compute_traj(R, D):
     traj = compute_traj_form_joystick(cmd_joystick(R, D))
-    print(traj[0])
     V = get_verins_12()
 
     # Trajectoires
@@ -290,10 +297,12 @@ def test_compute_traj(R, D):
 def test_furthest_pos(D, R):
     traj = compute_traj_form_joystick(cmd_joystick(D, R))
     max_step = []
-    print(traj)
     for leg in range(4):
-        max_step.append(furthest_accessible(traj[leg], leg))
+        step = furthest_accessible(traj, leg)
+        max_step.append(step)
     print(max_step)
+    comp_rel(traj)
+
 
 
 def test_get_last_leg():
@@ -317,8 +326,8 @@ if t_accessible:
 
 t_compute_traj = 0
 if t_compute_traj:
-    test_compute_traj((1, 0), 1)
-    # test_furthest_pos((1, 0), 1)
+    # test_compute_traj((1, 0), 1)
+    test_furthest_pos((1, 0), 1)
 
 t_abs = 0
 if t_abs:
