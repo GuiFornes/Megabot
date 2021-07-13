@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d import axes3d  # Fonction pour la 3D
 import matplotlib.animation as animation
 import time
 
+import kinetic
 from upg_kinetic import *
 from upg_tools import *
 from upg_deprecated import *
@@ -197,11 +198,14 @@ def comp_rel(traj):
     ax.scatter(Xt2[0], Yt2[0], Zt2[0], c='black', s=60)
     ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
     ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+
     ax.scatter(Xt3[0], Yt3[0], Zt3[0], c='black', s=60)
-    ax.scatter(Xt3[1], Yt3[1], Zt3[1], c='blue', s=60)
-    # print("XT3 : ", Xt3[0], Yt3[0])
-    # print("Xp3 : ", Xp3[0], Yp3[0])
-    ax.scatter(Xp3[1], Yp3[1], Zp3[1], c='red', s=60)
+    ax.scatter(Xt3[6], Yt3[6], Zt3[6], c='blue', s=60)
+    ax.scatter(Xp3[6], Yp3[6], Zp3[6], c='red', s=60)
+    ax.scatter(Xt1[0], Yt1[0], Zt1[0], c='black', s=60)
+    ax.scatter(Xt1[6], Yt1[6], Zt1[6], c='blue', s=60)
+    ax.scatter(Xp1[6], Yp1[6], Zp1[6], c='red', s=60)
+
     ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
     plt.title("Trajectoire du bout de la patte dans l'espace")
     ax.set_xlabel('X')
@@ -235,8 +239,8 @@ def test_zone_accessible(leg_id):
 
     for x in range(300, 1701, 100):
         for y in range(300, 1701, 100):
-            for z in range(-200, -801, -100):
-                if not is_accessible(leg_id, (x, y, z)): # kin.inverse_kinetic_robot_ref(kin.LEGS, FL, [x, y, z])[0]:
+            for z in range(-100, -851, -100):
+                if not is_accessible(leg_id, (x, y, z))[0]:
                     x=x #ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
@@ -249,6 +253,8 @@ def test_zone_accessible(leg_id):
     # ax.set_zbound(-1600, -200)
     plt.title("points accessibles pour la patte")
     plt.show()
+    middle = (1080, 1065, -530)
+    print(is_accessible(leg_id, middle))
 
 
 def test_compute_traj(R, D):
@@ -300,9 +306,13 @@ def test_furthest_pos(D, R):
     for leg in range(4):
         step = furthest_accessible(traj, leg)
         max_step.append(step)
-    print(max_step)
+    print("maximum point of the trajectory reached for each leg : ", max_step)
+    min_value = min(max_step)
+    leg = max_step.index(min_value)
+    step_length = distance((traj[0][leg * 3 + 0], traj[0][leg * 3 + 1], traj[0][leg * 3 + 1]),
+                           (traj[min_value][leg * 3 + 0], traj[min_value][leg * 3 + 1], traj[min_value][leg * 3 + 1]))
+    print("resultant step length is ", step_length, " for leg n° ", leg)
     comp_rel(traj)
-
 
 
 def test_get_last_leg():
@@ -339,7 +349,11 @@ if t_accessible:
 t_compute_traj = 0
 if t_compute_traj:
     init()
-    # test_compute_traj((1, 0), 1)
+    test_compute_traj((0, 0), 1)
+    test_compute_traj((1, 0), 1)
+    test_compute_traj((0, 1), -1)
+    test_compute_traj((0, -1), 0)
+    test_compute_traj((np.sqrt(3)/2, 1/2), 1)
     test_furthest_pos((1, 0), 1)
 
 t_abs_1 = 0

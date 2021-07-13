@@ -227,7 +227,8 @@ def v3_to_cos_angle(v3, lpl):
     return (KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO) * MO / LO - np.sqrt(
         1 - ((KO ** 2 + LO ** 2 - v3 ** 2) / (2 * KO * LO)) ** 2) * np.sqrt(1 - (MO / LO) ** 2)
 
-def distance(pt1, pt2=[0,0,0]):
+
+def distance(pt1, pt2=(0, 0, 0)):
     """
     Calcule la distance à l'origine ou entre 2 points dans l'espace en 2 ou 3 dimensions
     (en fonction de la dimension des points donnés en paramètre et de leur nombre)
@@ -258,6 +259,7 @@ def al_kashi_longueur(a, b, alpha):
 
 
 def al_kashi_angle(a, b, c):
+    """ Retourne l'angle calculé par la formule d'al kashi dans le triangle de cotés de longueurs a, b et c """
     return np.arccos((a ** 2 + b ** 2 - c ** 2) / (2 * a * b))
 
 

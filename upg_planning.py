@@ -1,7 +1,6 @@
 from upg_kinetic import *
 from upg_tools import *
 import numpy as np
-import math
 
 MIN_RADIUS = 2500
 MAX_RADIUS = 15000
@@ -10,50 +9,76 @@ INF = 100000
 
 TRAJ_ACCUR = 50
 
-def cmd_joystick(D, R):
-    """
-    Traite les données reçues du controleur joystick pour les convertir en une translation dirigée et une rotation
 
-    :param D: couple de coord du joystick de déplacement
-    :param R: facteur de rotation du joystick de rotation
-    :return: position du centre de rotation, vecteur de direction de la marche
+def normal_vector(v):
+    """
+    compute the normal unitary vector
+
+    :param v: vector
+    :return: normal unitary vector
+    >>> normal_vector((1, 0))
+    (0, 1)
+    >>> normal_vector((-1, 0))
+    (0, -1)
+    >>> normal_vector((0, 1))
+    (-1, 0)
+    >>> normal_vector((0, -1))
+    (1, 0)
+    >>> normal_vector((0.3, -0.6))
+    (0.6, 0.3)
+    """
+    return -1 * v[1], v[0]
+
+
+def cmd_joystick(d, r):
+    """
+    Traite les données reçues des commandes joystick pour paramétrer les trajectoires des 4 jambes.
+
+    :param d: vecteur unitaire de direction
+    :param r: facteur de rotation (-1 < r < 1)
+    :return: centre de rotation, direction de déplacement.
     >>> cmd_joystick((1, 0), 0)
     ((0, 100000), (1, 0))
     >>> cmd_joystick((0, 1), 0)
     ((-100000, 0), (0, 1))
-    >>> cmd_joystick((0.51, 0.49), 0)
-    ((0, 100000), (1, 0))
-    >>> cmd_joystick((0.49, 0.51), 1)
-    ((-2499.999999999999, 0.0), (0, 1))
-    >>> cmd_joystick((0.49, -0.51), 1)
-    ((2499.999999999999, 0.0), (0, -1))
-
+    >>> cmd_joystick((1, 0), 1)
+    ((0, 2500), (1, 0))
+    >>> cmd_joystick((0, 1), -1)
+    ((2500, 0), (0, 1))
+    >>> cmd_joystick((0, 0), 0)
+    ((None, None), (None, None))
+    >>> cmd_joystick((np.sqrt(3)/2, 1/2), -0.5)
+    ((4375.0, -7577.722283113838), (0.8660254037844386, 0.5))
     """
-    if D[0] == 0 and D[1] == 0:
-        if abs(R) < 0.1:
-            # l'immobilité
-            return "erreur, pas de mouvement en entrée"
-        # Rotation sur lui-même
-        return (0, 0), (0, 0)
-
-    # Direction NSEW
-    if abs(D[0]) >= abs(D[1]):
-        direction = (D[0] > 0) - (D[0] < 0), 0
+    if d[0] == 0 and d[1] == 0:
+        if r == 0:
+            # aucun mouvement
+            c, d = (None, None), (None, None)
+        # rotation sur lui-même
+        else:
+            c = (0, 0)
+    elif r == 0:
+        # marche tout droit
+        n = normal_vector(d)
+        c = n[0]*INF, n[1]*INF
     else:
-        direction = 0, (D[1] > 0) - (D[1] < 0)
+        # marche courbe standard
+        n = normal_vector(d)
+        signe_r = (r > 0) - (r < 0)
+        c = signe_r * (n[0] * MAX_RADIUS - signe_r * r * n[0] * (MAX_RADIUS - MIN_RADIUS)), \
+            signe_r * (n[1] * MAX_RADIUS - signe_r * r * n[1] * (MAX_RADIUS - MIN_RADIUS))
+    return c, d
 
-    if abs(R) < 0.1:
-        # Marche rectiligne
-        centre = - direction[1] * INF, direction[0] * INF
-        return centre, direction
-
-    signeD = (R > 0) - (R < 0)
-    facteur = signeD * -7500 / 0.9 * abs(R) + 10000 + 750 / 0.9
-    centre = facteur * - direction[1], facteur * direction[0]
-    return centre, direction
 
 def compute_traj_form_joystick(joystick):
+    """
+    A partir des valeurs retournées par cmd_joystick, calcul les trajectoires circulaires de chacunes des pattes
+
+    :param joystick: position du centre de rotation, direction
+    :return: les quatres trajectoires
+    """
     centre,  direction = joystick[0], joystick[1]
+    print(joystick)
     traj = []
     r, r_max = [], 0
     V = get_verins_12()
@@ -64,22 +89,35 @@ def compute_traj_form_joystick(joystick):
         if r[leg] > r_max:
             r_max = r[leg]
     n = int(2 * np.pi * r_max / TRAJ_ACCUR)
-    for i in range(n):
+    for i in range(n-10):
         L=[]
         for leg in range(4):
-            alpha = np.arccos(pos[3 * leg + 0] / r[leg])
-            L = np.append(L, (pos[3*leg + 0] + r[leg] * np.cos((2 * i * np.pi)/n - alpha) + (centre[0] - pos[leg * 3 + 0]),
-                              pos[3*leg + 1] + r[leg] * np.sin((2 * i * np.pi)/n - alpha) + (centre[1] - pos[leg * 3 + 1]),
+            alpha = np.arccos(abs((centre[1] - pos[3 * leg + 1])) / r[leg])
+            signe_cx = (centre[0] - pos[leg * 3 + 0]) / abs(centre[0] - pos[leg * 3 + 0])
+            signe_cy = (centre[1] - pos[leg * 3 + 1]) / abs(centre[1] - pos[leg * 3 + 1])
+            if signe_cx < 0 and signe_cy < 0:
+                alpha = + np.pi/2 - alpha
+            if signe_cx > 0 and signe_cy < 0:
+                alpha = + np.pi/2 + alpha
+            if signe_cx < 0 and signe_cy > 0:
+                alpha = - np.pi/2 + alpha
+            if signe_cx > 0 and signe_cy > 0:
+                alpha = - np.pi/2 - alpha
+            L = np.append(L, (r[leg] * np.cos((2*i*np.pi)/n + alpha) + centre[0],
+                              r[leg] * np.sin((2*i*np.pi)/n + alpha) + centre[1],
                               pos[3*leg + 2]))
         traj.append(L)
-    # print("r = ", r, "r_max : ", r_max)
-    # print("pos init : ", pos)
-    # print(get_verins_12())
     return traj
 
 
 def is_accessible(leg_id, point):
-    """ Dans le repère 3D de la jambe """
+    """
+    Calcule l'accessibilité d'un point dans le repère 3D de la jambe.
+
+    :param leg_id: ID de la jambe
+    :param point: point cible
+    :return: True ou False + valeur des verins pour atteindre ce point
+    """
     lpl = ROBOT['legs'][leg_id]['lengths']
     v1, v2, v3 = 535, 615, 520
     x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
@@ -94,15 +132,14 @@ def is_accessible(leg_id, point):
     Verins = move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True)
     res = [Verins[n-1][0], Verins[n-1][1], Verins[n-1][2]]
     acces = True
-    for i in range(3):
-        xf, yf, zf = direct_rel_3(res[0], res[1], res[2], leg_id)
-        print("x : ", x0, xt, traj[n-1][0], xf)
-        print("y : ", y0, yt, traj[n-1][1], yf)
-        print("z : ", z0, zt, traj[n-1][2], zf)
-        print("V = ", res)
-        if distance([xt, yt, zt], [xf, yf, zf]) > 50:
-            acces = False
-    return acces
+    xf, yf, zf = direct_rel_3(res[0], res[1], res[2], leg_id)
+    # print("x : ", x0, xt, traj[n-1][0], xf)
+    # print("y : ", y0, yt, traj[n-1][1], yf)
+    # print("z : ", z0, zt, traj[n-1][2], zf)
+    # print("V = ", res)
+    if distance([xt, yt, zt], [xf, yf, zf]) > 50:
+        acces = False
+    return acces, res
 
 
 def furthest_accessible(traj, leg_id):
@@ -119,74 +156,126 @@ def furthest_accessible(traj, leg_id):
     for i in range(1, len(traj)):
         # get data
         x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
-        if leg_id == 3:
-            print("V = ", v1, v2, v3)
-            print("X0 = ", x0, y0, z0)
-            print("Xt = ", xt, yt, zt)
-        if distance(x0, y0, z0, xt, yt, zt) > 200: # exit condition
+        if distance((x0, y0, z0), (xt, yt, zt)) > 20: # exit condition
             return i-1
         xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
         dX = np.array([xt - x0, yt - y0, zt - z0])
         # solve
-        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl) @ ROBOT['legs'][leg_id]['matrix']
-        P = inv(J).T @ inv(J)
-        q = - inv(J).T @ dX
+        J = np.dot(gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl), ROBOT['legs'][leg_id]['matrix'])
+        P = np.dot(inv(J).T, inv(J))
+        q = - np.dot(inv(J).T, dX)
         lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
         ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3])
         dV = solve_qp(P, q, lb=lb, ub=ub)
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
     return len(traj)-1
 
+
+def get_joystick():
+    return (1, 0), 0
+
+
+def waaalkkk():
+    d, r = get_joystick()
+    traj = compute_traj_form_joystick(cmd_joystick(d, r))
+    for leg in range(4):
+        furthest_accessible(traj, leg)
+
 ############################################################################
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
 
 ######################## DEPRECATED #############################
 
-def angle_between_linear(coef1, coef2):
-    pointO = 0, 0
-    pointA = 1, coef1
-    pointB = 1, coef2
-    return al_kashi_angle(distance(pointO, pointA), distance(pointO, pointB), distance(pointA, pointB))
-
-def to_ref_traj_next_step(alpha, dx, dy):
-    return np.array([
-        [np.cos(alpha), - np.sin(alpha), dx],
-        [np.sin(alpha), np.cos(alpha), dy],
-        [0, 0, 1]
-    ])
-
-def compute_trajs(traj):
-    all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
-    V = get_verins_12()
-    Pos = direct_rel_12(V)
-    fl = (Pos[0], Pos[1], Pos[2])
-    fr = (Pos[3], Pos[4], Pos[5])
-    last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
-    if last_coef > 0.1:
-        print("Legs position aren't initialized")
-    legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
-
-    for i in range(1, len(traj)):
-        direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
-        current_coef = -1 / direction
-        alpha = angle_between_linear(last_coef, current_coef)
-        m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
-        step_fl = m_rota @ np.array([-legs_spacing, 0, 1])
-        step_fr = m_rota @ np.array([legs_spacing, 0, 1])
-        trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
-        trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
-
-    # trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
-    # trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
-    # for i in range(len(trajFL) - len(trajRL)):
-    #     trajRL.append(trajFL[i])
-    #     trajRR.append(trajFR[i])
-    #
-    # for i in range(len(trajFL)):
-    #     traj.append(trajFL[i])
-    #     traj.append(trajFR[i])
-    #     traj.append(trajRL[i])
-    #     traj.append(trajRR[i])
+# def cmd_joystick(D, R):
+#     """
+#     Traite les données reçues du controleur joystick pour les convertir en une translation dirigée et une rotation.
+#     Pour le moment la direction ne peut être que devant, derrière, avancer, reculer.
+#
+#     :param D: couple de coord du joystick de déplacement
+#     :param R: facteur de rotation du joystick de rotation
+#     :return: position du centre de rotation, vecteur de direction de la marche
+#     # >>> cmd_joystick((1, 0), 0)
+#     # ((0, 100000), (1, 0))
+#     # >>> cmd_joystick((0, 1), 0)
+#     # ((-100000, 0), (0, 1))
+#     # >>> cmd_joystick((0.51, 0.49), 0)
+#     # ((0, 100000), (1, 0))
+#     # >>> cmd_joystick((0.49, 0.51), 1)
+#     # ((-2500, 0.0), (0, 1))
+#     # >>> cmd_joystick((0.49, -0.51), 1)
+#     # ((2500, 0.0), (0, -1))
+#
+#     """
+#     if D[0] == 0 and D[1] == 0:
+#         if abs(R) < 0.1:
+#             # l'immobilité
+#             return "erreur, pas de mouvement en entrée"
+#         # Rotation sur lui-même
+#         return (0, 0), (0, 0)
+#
+#     # Direction NSEW
+#     if abs(D[0]) >= abs(D[1]):
+#         direction = (D[0] > 0) - (D[0] < 0), 0
+#     else:
+#         direction = 0, (D[1] > 0) - (D[1] < 0)
+#
+#     if abs(R) < 0.1:
+#         # Marche rectiligne
+#         centre = direction[1] * INF, direction[0] * INF
+#         return centre, direction
+#
+#     signeR = (R > 0) - (R < 0)
+#     facteur = signeR * (MAX_RADIUS - R * signeR * (MAX_RADIUS - MIN_RADIUS))
+#     print(R, signeR, facteur)
+#     centre = facteur * direction[1], facteur * direction[0]
+#     return centre, direction
+#
+# def angle_between_linear(coef1, coef2):
+#     pointO = 0, 0
+#     pointA = 1, coef1
+#     pointB = 1, coef2
+#     return al_kashi_angle(distance(pointO, pointA), distance(pointO, pointB), distance(pointA, pointB))
+#
+# def to_ref_traj_next_step(alpha, dx, dy):
+#     return np.array([
+#         [np.cos(alpha), - np.sin(alpha), dx],
+#         [np.sin(alpha), np.cos(alpha), dy],
+#         [0, 0, 1]
+#     ])
+#
+# def compute_trajs(traj):
+#     all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
+#     V = get_verins_12()
+#     Pos = direct_rel_12(V)
+#     fl = (Pos[0], Pos[1], Pos[2])
+#     fr = (Pos[3], Pos[4], Pos[5])
+#     last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
+#     if last_coef > 0.1:
+#         print("Legs position aren't initialized")
+#     legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
+#
+#     for i in range(1, len(traj)):
+#         direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
+#         current_coef = -1 / direction
+#         alpha = angle_between_linear(last_coef, current_coef)
+#         m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
+#         step_fl = np.dot(m_rota, np.array([-legs_spacing, 0, 1]))
+#         step_fr = np.dot(m_rota, np.array([legs_spacing, 0, 1]))
+#         trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
+#         trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
+#
+#     # trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
+#     # trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
+#     # for i in range(len(trajFL) - len(trajRL)):
+#     #     trajRL.append(trajFL[i])
+#     #     trajRR.append(trajFR[i])
+#     #
+#     # for i in range(len(trajFL)):
+#     #     traj.append(trajFL[i])
+#     #     traj.append(trajFR[i])
+#     #     traj.append(trajRL[i])
+#     #     traj.append(trajRR[i])
 
