@@ -297,7 +297,7 @@ def test_furthest_pos(D, R):
 
 
 def test_get_last_leg():
-    init_pos_abs()
+    init()
     z_ini = direct_rel_12(get_verins_12())[2]
     set_verins_3(600, 500, 500, 0)
     pos_rel = direct_rel_12(get_verins_12())
@@ -311,25 +311,45 @@ def test_get_last_leg():
 
 ################################# TESTS ####################################
 
+t_init = 0
+if t_init:
+    init()
+    print(get_X())
+    print(get_og(0))
+    print(get_og(1))
+    print(get_og(2))
+    print(get_og(3))
+    print(get_O())
+    print(get_omega())
+
 t_accessible = 0
 if t_accessible:
+    init()
     test_zone_accessible(FL)
 
 t_compute_traj = 0
 if t_compute_traj:
+    init()
     test_compute_traj((1, 0), 1)
     # test_furthest_pos((1, 0), 1)
 
-t_abs = 1
-if t_abs:
-    init_pos_abs()
+t_abs_1 = 0
+if t_abs_1:
+    init()
     set_og(0, 0)
-    traj = traj_abs_sin(200, 100, 0)
+    traj = traj_abs_sin_1(200, 100, 0)
+    draw_abs(move_abs_one_leg(traj, 0))
+
+t_abs_4 = 0
+if t_abs_4:
+    init()
+    set_og(0, 0)
+    traj = traj_abs_sin_4(200, 100, 0)
     draw_abs(move_abs_all_legs(traj))
 
 t_rel = 0
 if t_rel:
-    Ver = [535, 615, 520, 535, 615, 520, 535, 615, 520, 535, 615, 520]
-    traj = draw_circle_rel_12(30, 200, Ver)
+    init()
+    traj = draw_circle_rel_12(30, 200, get_verins_12())
     comp_rel(traj)
     draw_rel(shake_dat_ass_rel(30, 200))

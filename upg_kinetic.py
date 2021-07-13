@@ -1,9 +1,4 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
-import matplotlib.pyplot as plt
-import numpy as np
-from numpy.linalg import inv
-from qpsolvers import solve_qp
-from upg_tools import *
 from upg_jacobian import *
 
 
@@ -12,18 +7,35 @@ from upg_jacobian import *
 
 ################################ INIT ######################################
 
-def init_pos_abs():
+def init(n=100):
     """
-    Calcule la position absolue des pattes à l'initialisation, lorsque le robot est en (0, 0, 0),
-    et met à jour la structure ROBOT
+    Détermine les élongations des vérins initiales et inititalise la structure ROBOT
 
+    :param n: nombre d'itérations pour converger vers la position initiale
     :return: None
     """
-    global ROBOT
-    pos_rel = direct_rel_12(get_verins_12())
+    # Détermination de V0
+    pos_ini = [1100., 1100., -580.,
+               1100., -1100., -580.,
+               -1100., 1100., -580.,
+               -1100., -1100., -580.]
+    traj = [pos_ini for i in range(n)]
+    V0 = move_rel(traj, get_verins_12())[n - 1]
+    assert (direct_rel_12(V0) == pos_ini).all, \
+        "Initialisation des vérins impossible : augmentez le nombre d'itérations ou vérifiez l'accessibilité de la position initiale"
+
+    # Mise à jour de ROBOT
+    set_verins_12(V0)
+    pos_abs = [1100., 1100., 0.,
+               1100., -1100., 0.,
+               -1100., 1100., 0.,
+               -1100., -1100., 0.]
+    set_X(pos_abs)
     for i in range(4):
-        ROBOT['legs'][i]['pos_abs'][0] = pos_rel[3 * i]
-        ROBOT['legs'][i]['pos_abs'][1] = pos_rel[3 * i + 1]
+        set_og(1, i)
+    set_O([0., 0., 580.])
+    set_omega([0., 0., 0.])
+    return None
 
 
 def dist_2_legs(l1, l2, V):
@@ -46,13 +58,26 @@ def get_last_leg(leg_id, V):
     :param leg_id: ID de la patte levée
     :param V: élongation des vérins
     :return: coordonnées de la patte (absolue)
-    #
+
+    # >>> init_pos_abs()
     # >>> set_og(0, 0)
     # >>> V = get_verins_12()
     # >>> V[0] += 30
     # >>> pos_rel = direct_rel_12(V)
-    # >>> distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])
-    # 0
+    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])) < 0.001
+    # True
+    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(2)) - distance(pos_rel[0:3], pos_rel[6:9])) < 0.001
+    # True
+    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(3)) - distance(pos_rel[0:3], pos_rel[9:12])) < 0.001
+    # True
+    # >>> V[0] = 650
+    # >>> pos_rel = direct_rel_12(V)
+    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])) < 0.001
+    # True
+    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(2)) - distance(pos_rel[0:3], pos_rel[6:9])) < 0.001
+    # True
+    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(3)) - distance(pos_rel[0:3], pos_rel[9:12])) < 0.001
+    # True
     # >>> set_og(1, 0)
     """
     pts = []
@@ -77,6 +102,7 @@ def get_last_leg(leg_id, V):
     z_A2 = d[2] ** 2 - (x_A - pts[2][0]) ** 2 - (y_A - pts[2][1]) ** 2
     if z_A2 < 0:
         z_A = 0.0
+        print("Patte dans le sol !!!")
     else:
         z_A = np.sqrt(z_A2)
 
@@ -93,19 +119,30 @@ def direct_abs(V):
     :param V: élongation des vérins (vecteur 12)
     :return: coordonnées absolues des pattes (vecteur 12)
 
-    # >>> X0_rel = direct_rel_12([600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600])
-    # >>> X0_abs = direct_abs([600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600])
-    # >>> X1_rel = direct_rel_12([500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500])
-    # >>> X1_abs = direct_abs([500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500])
-    # >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs))
-    # 0.0
+    # >>> init_pos_abs()
+    # >>> set_og(0, 0)
+    # >>> V = get_verins_12()
+    # >>> V[0] += 30
+    # >>> X0_rel = direct_rel_12(V)
+    # >>> X0_abs = direct_abs(V)
+    # >>> V[0] = 650
+    # >>> X1_rel = direct_rel_12(V)
+    # >>> X1_abs = direct_abs(V)
+    # >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs)) < 1.5
+    # True
+    # >>> V[1] = 650
+    # >>> V[2] = 650
+    # >>> X1_rel = direct_rel_12(V)
+    # >>> X1_abs = direct_abs(V)
+    # >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs)) < 0.5
+    # True
+    # >>> set_og(1, 0)
     """
     X = get_X()
     for i in range(4):
         if not get_og(i):
             pos_abs = get_last_leg(i, V)
             X[3 * i:3 * i + 3] = pos_abs
-        else : print(i, " is on ground")
     return X
 
 
@@ -182,11 +219,11 @@ def direct_leg(v1, v2, v3, leg_id):
 
 ############################## INDIRECT ####################################
 
-def move_abs_one_leg(traj, leg_id, reg_val=0.01, max_Omega=10):
+def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10):
     """
     Détermine la liste des élongations successives des vérins permettant à l'extrémité de la patte leg_id, au centre
     du robot et à l'angle du châssis de suivre la trajectoire traj données
-    dP(OnAir), dO, dl -> dP(OnGround), dV, dm, dn
+    dP(OnAir), dO, dOmega -> dP(OnGround), dV, dO, dOmega
 
     :param traj: trajectoire de l'extrémité de la patte, du centre du robot et évolution de l'angle du châssis
     :param leg_id: patte dans les airs (qui bouge selon traj)
@@ -194,10 +231,62 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, max_Omega=10):
     :param max_Omega: angles maximaux permis au châssis (en m et n)
     :return: élongations des vérins
     """
-    return 0
+    V = get_verins_12()
+    O = get_O()
+    Omega = get_omega()
+    L = [V]
+
+    # Régularisation des dV (et plus)
+    # R = np.concatenate((np.concatenate((reg_val * np.eye(12), np.zeros((12, 15))), axis=1), np.zeros((15, 27))))
+    # R = reg_val * np.eye(27)
+    R = np.concatenate((np.concatenate((reg_val * np.eye(21), np.zeros((21, 6))), axis=1), np.zeros((6, 27))))
+
+    for i in range(1, len(traj)):
+        # Calcul de dX
+        X0 = direct_abs(V)
+        print(X0[0:3])
+        set_X(X0)
+        dX = traj[i] - np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega)
+
+        # Contraintes (soft)
+        lb = np.full(27, - np.inf)
+        ub = np.full(27, np.inf)
+        for j in range(12):
+            lb[j] = 450.0 - V[j]
+            ub[j] = 650.0 - V[j]
+        for j in range(3):
+            if const_omega:
+                lb[24 + j] = - max_omega * np.pi / 180 - Omega[j]
+                ub[24 + j] = max_omega * np.pi / 180 - Omega[j]
+            else:
+                lb[24 + j] = - np.pi
+                ub[24 + j] = np.pi
+
+        # Contraintes (hard)
+        A = np.concatenate((np.zeros((12, 27)),
+                            np.concatenate((np.zeros((9, 12)), np.eye(9), np.zeros((9, 6))), axis=1),
+                            np.zeros((6, 27))))
+        b = np.zeros(27)
+
+        # Application du solveur
+        M = jacob_dPf_dO_dOmega_to_dV_dPg_dO_dOmega(leg_id, V, Omega, direct_rel_12(V))
+        P = M.T @ M + R
+        q = np.reshape(- dX @ M, 27)
+        sol = solve_qp(P, q, lb=lb, ub=ub, A=A, b=b)
+        V = V + sol[0:12]
+        O = O + sol[21:24]
+        Omega = Omega + sol[24:27]
+
+        # Mise à jour des valeurs réelles
+        set_verins_12(V)
+        set_O(O)
+        set_omega(Omega)
+        for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        L.append(V)
+    return L
 
 
-def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=1):
+def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=10):
     """
     Détermine la liste des élongations successives des vérins permettant aux extrémités des pattes de suivre le
     trajectoire traj_legs exprimée dans le référentiel absolu
@@ -205,7 +294,7 @@ def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=1):
 
     :param traj_legs: trajectoire des extrémités des pattes en coordonnées absolues
     :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
-    :param max_Omega: angles maximaux permis au châssis
+    :param max_omega: angles maximaux permis au châssis
     :return: élongations des vérins
     """
     V = get_verins_12()
@@ -215,7 +304,7 @@ def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=1):
 
     # Régularisation des dV
     R = reg_val * np.eye(18)
-
+    print("V : ", V)
     X0_rel = direct_rel_12(V)
     X0_abs = direct_abs(V)
     for i in range(1, len(traj_legs)):
@@ -228,7 +317,7 @@ def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=1):
             print("diff abs : ", distance(X0_abs, X1_abs))
         set_X(X0)
         dX = traj_legs[i] - X0
-        print(dX[0:3])
+        # print(dX[0:3])
         # Contraintes
         lb = np.zeros(18)
         ub = np.zeros(18)
@@ -236,23 +325,26 @@ def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=1):
             lb[j] = 450.0 - V[j]
             ub[j] = 650.0 - V[j]
         for j in range(3):
-            lb[12 + j] = - 1 - O[j]
-            ub[12 + j] = 1 - O[j]
+            lb[12 + j] = - np.inf
+            ub[12 + j] = np.inf
             if const_omega:
                 lb[15 + j] = - max_omega * np.pi / 180 - Omega[j]
                 ub[15 + j] = max_omega * np.pi / 180 - Omega[j]
             else:
-                lb[15 + j] = - np.inf
-                ub[15 + j] = np.inf
+                lb[15 + j] = - np.pi
+                ub[15 + j] = np.pi
 
         # Application du solveur
         M = jacob_dX_to_dV_dO_dOmega(V, Omega, direct_rel_12(V))
         P = M.T @ M + R
         q = - M.T @ dX
+        # q = np.reshape(- dX @ M, 18)
         sol = solve_qp(P, q, lb=lb, ub=ub)
         V = V + sol[0:12]
         O = O + sol[12:15]
         Omega = Omega + sol[15:18]
+        print("O : ", O)
+        print("Omega : ", Omega)
 
         # Mise à jour des valeurs réelles
         set_verins_12(V)
@@ -282,8 +374,8 @@ def move_rel(traj, V, solved=True):
         dX = traj[i] - X0
         J = gen_jacob_12(V)
         if solved:  # Utilisation du solveur
-            P = inv(J).T @ inv(J)
-            q = - inv(J).T @ dX
+            P = J.T @ J
+            q = - J.T @ dX
             lb = np.array([450.0, 450.0, 450.0,
                            450.0, 450.0, 450.0,
                            450.0, 450.0, 450.0,
@@ -339,13 +431,13 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
             prev_T = T
         J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
         if solved:  # Utilisation du solveur
-            P = inv(J).T @ inv(J)
-            q = - inv(J).T @ dX
+            P = J.T @ J
+            q = - J.T @ dX
             lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
             ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3])
             dV = solve_qp(P, q, lb=lb, ub=ub)
         else:  # Utilisation de la jacobienne sans solveur
-            dV = J @ dX
+            dV = inv(J) @ dX
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
         set_verins_3(v1, v2, v3, leg_id)
         R.append((v1, v2, v3))
@@ -354,7 +446,28 @@ def move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True
 
 ################################ MOVE ######################################
 
-def traj_abs_sin(n, amp, leg_id):
+def traj_abs_sin_1(n, amp, leg_id):
+    """
+    Trajectoire permettant à la patte leg_id de tracer un sinus et autres pattes de rester fixes au sol
+    Les coordonnées sont exprimées dans le référentiel absolu
+
+    :param n: nombre de points
+    :param amp: amplitude du sinus
+    :param leg_id: ID de la patte
+    :return: trajectoire des 4 pattes (liste de vecteurs 12)
+    """
+    steps = np.linspace(0, np.pi, n)
+    traj = []
+    for i in range(n):
+        L = np.zeros((1, 9))
+        L[0][0] = ROBOT['legs'][leg_id]['pos_abs'][0]
+        L[0][1] = ROBOT['legs'][leg_id]['pos_abs'][1]
+        L[0][2] = amp * np.sin(steps[i])
+        traj.append(L)
+    return traj
+
+
+def traj_abs_sin_4(n, amp, leg_id):
     """
     Trajectoire permettant à la patte leg_id de tracer un sinus et autres pattes de rester fixes au sol
     Les coordonnées sont exprimées dans le référentiel absolu

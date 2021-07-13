@@ -1,8 +1,6 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
-
 import numpy as np
-from numpy.linalg import inv
-from qpsolvers import solve_qp
+
 from upg_tools import *
 
 
@@ -65,7 +63,7 @@ def gen_jacob_2(pts, lpl, v1, v2):
         [V1[0], V2[0]],
         [V1[1], V2[1]]])
 
-    Jacob = inv((lpl['gj'] / lpl['gi']) * M_I)
+    Jacob = (lpl['gj'] / lpl['gi']) * M_I
 
     return Jacob
 
@@ -86,7 +84,7 @@ def mat_A(pts, lpl, v1, v2, v3, alpha):
     A = np.array([
         [Jacob[0][0], Jacob[0][1], 0],
         [Jacob[1][0], Jacob[1][1], 0],
-        [0, 0, np.sin(alpha - np.arccos(MO / LO)) * (KO / 1000) * (LO / 1000) / v3]])
+        [0, 0, v3 / (np.sin(alpha - np.arccos(MO / LO)) * (KO / 1000) * (LO / 1000))]])
 
     return A
 
@@ -117,27 +115,22 @@ def gen_jacob_3(v1, v2, v3, alpha, lpl):
     A = mat_A(pts, lpl, v1, v2, v3, alpha)
     B = mat_B(pts, alpha)
 
-    return A @ inv(B)
+    return B @ A
 
 
 def gen_jacob_12(V):
-    J_12 = []
+    J = []
     for i in range(4):
         # Calcul de la jacobienne de la patte
         v1, v2, v3 = V[i * 3], V[i * 3 + 1], V[i * 3 + 2]
         lpl = ROBOT['legs'][i]['lengths']
         alpha = np.arccos(v3_to_cos_angle(v3, lpl))
-        J_3 = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl) @ ROBOT['legs'][i]['matrix']
+        J.append(ROBOT['legs'][i]['matrix'].T @ gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, alpha, lpl))
 
-        # Ajout à J_12
-        L = np.zeros((3, 12))
-        for j in range(3):
-            for k in range(3):
-                L[j][i * 3 + k] = J_3[j][k]
-        J_12.append(L[0])
-        J_12.append(L[1])
-        J_12.append(L[2])
-    return J_12
+    return np.concatenate((np.concatenate((J[0], np.zeros((3, 9))), axis=1),
+                           np.concatenate((np.zeros((3, 3)), J[1], np.zeros((3, 6))), axis=1),
+                           np.concatenate((np.zeros((3, 6)), J[2], np.zeros((3, 3))), axis=1),
+                           np.concatenate((np.zeros((3, 9)), J[3]), axis=1)))
 
 
 def gen_matrix_rota(angle, axis):
@@ -213,11 +206,38 @@ def jacob_dX_to_dV_dO_dOmega(V, Omega, X_rel):
                       [np.zeros((3, 3)), R, np.zeros((3, 6))],
                       [np.zeros((3, 6)), R, np.zeros((3, 3))],
                       [np.zeros((3, 9)), R]])
-    return np.concatenate((Big_R @ inv(J_12),
+    return np.concatenate((Big_R @ J_12,
                            np.concatenate((np.eye(3), np.eye(3), np.eye(3), np.eye(3))),
                            np.reshape(J_l, (12, 1)),
                            np.reshape(J_m, (12, 1)),
                            np.reshape(J_n, (12, 1))), axis=1)
+
+
+def jacob_dPf_dO_dOmega_to_dV_dPg_dO_dOmega(leg_id, V, Omega, X_rel):
+    v = []
+    Pf = np.zeros((3, 1))
+    for j in range(3):
+        v.append(V[3*leg_id+j])
+        Pf[j][0] = X_rel[3*leg_id+j]
+    lpl = ROBOT['legs'][leg_id]['lengths']
+    Jf = ROBOT['legs'][leg_id]['matrix'].T @ \
+         gen_jacob_3(v[0] / 1000, v[1] / 1000, v[2] / 1000, np.arccos(v3_to_cos_angle(v[2], lpl)), lpl)
+    R = gen_R(Omega[0], Omega[1], Omega[2])
+    dRdl = gen_dRdl(Omega[0], Omega[1], Omega[2])
+    dRdm = gen_dRdm(Omega[0], Omega[1], Omega[2])
+    dRdn = gen_dRdn(Omega[0], Omega[1], Omega[2])
+    if leg_id == 0:
+        JPf = np.concatenate((R @ Jf, np.zeros((3, 18)),
+                              np.eye(3), dRdl @ Pf, dRdm @ Pf, dRdn @ Pf), axis=1)
+    elif leg_id == 3:
+        JPf = np.concatenate((np.zeros((3, 9)), R @ Jf, np.zeros((3, 9)),
+                              np.eye(3), dRdl @ Pf, dRdm @ Pf, dRdn @ Pf), axis=1)
+    else:
+        JPf = np.concatenate((np.zeros((3, 3 * leg_id)), R @ Jf, np.zeros((3, 3 * (6 - leg_id))),
+                              np.eye(3), dRdl @ Pf, dRdm @ Pf, dRdn @ Pf), axis=1)
+    JO = np.concatenate((np.zeros((3, 21)), np.eye(3), np.zeros((3, 3))), axis=1)
+    JOmega = np.concatenate((np.zeros((3, 24)), np.eye(3)), axis=1)
+    return np.concatenate((JPf, JO, JOmega))
 
 
 # def gen_jacob_12x18(V, R, dRdl, dRdm, dRdn, X):
