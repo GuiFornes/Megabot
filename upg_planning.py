@@ -8,7 +8,7 @@ MAX_RADIUS = 15000
 
 INF = 100000
 
-TRAJ_ACCUR = 200
+TRAJ_ACCUR = 50
 
 def cmd_joystick(D, R):
     """
@@ -58,12 +58,8 @@ def compute_traj_form_joystick(joystick):
     r, r_max = [], 0
     V = get_verins_12()
     pos = direct_rel_12(V)
-    print("pos =", pos)
     for leg in range(4):
         rayon = np.sqrt((pos[leg * 3 + 0] - centre[0])**2 + (pos[leg * 3 + 1] - centre[1])**2)
-        print("r : ", rayon)
-        print("centre : ", centre)
-        print("pos = ", pos[leg * 3], pos[leg * 3+1])
         r.append(rayon)
         if r[leg] > r_max:
             r_max = r[leg]
@@ -112,24 +108,27 @@ def is_accessible(leg_id, point):
 def furthest_accessible(traj, leg_id):
     """
     Compute the maximum step size following the trajectory, depending on the accessible zone for the leg.
-    traj should be only the trajectory of one leg, not about the entire robot.
+    traj should be the trajectory of all elgs (basically returned by compute_traj_from_joystick)
     :param traj: trajectory to follow
     :param leg_id: ID of the leg
     :return: the furthest point accessible from the traj
     """
     v1, v2, v3 = get_verins_3(leg_id)
-    xt, yt, zt = traj[0][0], traj[0][1], traj[0][2]
+    xt, yt, zt = traj[0][leg_id*3 + 0], traj[0][leg_id * 3 + 1], traj[0][leg_id * 3 + 2]
     lpl = ROBOT['legs'][leg_id]['lengths']
     for i in range(1, len(traj)):
         # get data
         x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
-        print(xt, x0, yt, y0, zt, z0)
-        if distance([x0, y0, z0], [xt, yt, zt]) > 100: # exit condition
+        if leg_id == 3:
+            print("V = ", v1, v2, v3)
+            print("X0 = ", x0, y0, z0)
+            print("Xt = ", xt, yt, zt)
+        if distance(x0, y0, z0, xt, yt, zt) > 200: # exit condition
             return i-1
-        xt, yt, zt = traj[i][0], traj[i][1], traj[i][2]
+        xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
         dX = np.array([xt - x0, yt - y0, zt - z0])
         # solve
-        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
+        J = gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl) @ ROBOT['legs'][leg_id]['matrix']
         P = inv(J).T @ inv(J)
         q = - inv(J).T @ dX
         lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
