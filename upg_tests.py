@@ -357,7 +357,7 @@ if t_compute_traj:
     test_compute_traj((np.sqrt(3)/2, 1/2), 1)
     test_furthest_pos((1, 0), 1)
 
-t_abs_1 = 1
+t_abs_1 = 0
 if t_abs_1:
     init()
     set_og(0, 0)
@@ -365,7 +365,7 @@ if t_abs_1:
     LV, LO, LOmega = move_abs_one_leg(traj, 0)
     draw_abs(LV, LO, LOmega)
 
-t_abs_4 = 0
+t_abs_4 = 1
 if t_abs_4:
     init()
     # set_og(0, 0)
