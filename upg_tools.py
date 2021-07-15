@@ -168,8 +168,10 @@ def robot_ref_to_leg(point, leg_id):
 
 def leg_ref_to_robot(point, leg_id):
     """passer d'un point dans le référentiel de la jambe à celui du robot"""
-    point = point + ROBOT['body']['offset']
-    return ROBOT['legs'][leg_id]['matrix'].T @ point
+    new_point = [point[0] + ROBOT['body']['offset'][0],
+                 point[1] + ROBOT['body']['offset'][1],
+                 point[2] + ROBOT['body']['offset'][2]]
+    return ROBOT['legs'][leg_id]['matrix'].T @ new_point
 
 
 def d3_to_d2(x, y, z):

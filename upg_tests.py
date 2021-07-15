@@ -12,32 +12,33 @@ from upg_tools import *
 from upg_deprecated import *
 from upg_jacobian import *
 from upg_planning import *
+from upg_mass_center import *
 
 
 ############################# FONCTIONS DE TEST ################################
 
 
-def draw_abs(V):
+def draw_abs(LV, LO, LOmega):
     """
     Trace la trajectoire des extrémités des pattes du robot dans le repère absolu
     """
     # Elongations des vérins
-    V1 = [v[0] for v in V]
-    V2 = [v[1] for v in V]
-    V3 = [v[2] for v in V]
-    V4 = [v[3] for v in V]
-    V5 = [v[4] for v in V]
-    V6 = [v[5] for v in V]
-    V7 = [v[6] for v in V]
-    V8 = [v[7] for v in V]
-    V9 = [v[8] for v in V]
-    V10 = [v[9] for v in V]
-    V11 = [v[10] for v in V]
-    V12 = [v[11] for v in V]
-    T = np.linspace(0, 1, len(V))
+    V1 = [v[0] for v in LV]
+    V2 = [v[1] for v in LV]
+    V3 = [v[2] for v in LV]
+    V4 = [v[3] for v in LV]
+    V5 = [v[4] for v in LV]
+    V6 = [v[5] for v in LV]
+    V7 = [v[6] for v in LV]
+    V8 = [v[7] for v in LV]
+    V9 = [v[8] for v in LV]
+    V10 = [v[9] for v in LV]
+    V11 = [v[10] for v in LV]
+    V12 = [v[11] for v in LV]
+    T = np.linspace(0, 1, len(LV))
 
     # Positions des bouts de patte
-    Pos = list(map(direct_abs, V))
+    Pos = list(map(direct_abs, LV, LO, LOmega))
     Xp0 = [p[0] for p in Pos]
     Yp0 = [p[1] for p in Pos]
     Zp0 = [p[2] for p in Pos]
@@ -356,19 +357,37 @@ if t_compute_traj:
     test_compute_traj((np.sqrt(3)/2, 1/2), 1)
     test_furthest_pos((1, 0), 1)
 
-t_abs_1 = 0
+t_abs_1 = 1
 if t_abs_1:
     init()
     set_og(0, 0)
     traj = traj_abs_sin_1(200, 100, 0)
-    draw_abs(move_abs_one_leg(traj, 0))
+    LV, LO, LOmega = move_abs_one_leg(traj, 0)
+    draw_abs(LV, LO, LOmega)
 
 t_abs_4 = 0
 if t_abs_4:
     init()
-    set_og(0, 0)
-    traj = traj_abs_sin_4(200, 100, 0)
-    draw_abs(move_abs_all_legs(traj))
+    # set_og(0, 0)
+    traj = traj_abs_sin_4(50, 100, 0)
+    LV, LO, LOmega = move_abs_all_legs(traj)
+    draw_abs(LV, LO, LOmega)
+
+    traj = traj_abs_sin_4(300, 300, 0)
+    LV, LO, LOmega = move_abs_all_legs(traj)
+    draw_abs(LV, LO, LOmega)
+
+    traj = traj_abs_sin_4(300, 600, 0)
+    LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+    draw_abs(LV, LO, LOmega)
+
+    traj = traj_abs_sin_4(300, 600, 3)
+    LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+    draw_abs(LV, LO, LOmega)
+
+    traj = M_letter(100, direct_abs(get_verins_12(), get_O(), get_omega()))
+    LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+    draw_abs(LV, LO, LOmega)
 
 t_rel = 0
 if t_rel:
@@ -376,3 +395,8 @@ if t_rel:
     traj = draw_circle_rel_12(30, 200, get_verins_12())
     comp_rel(traj)
     draw_rel(shake_dat_ass_rel(30, 200))
+
+t_com = 0
+if t_com == 1:
+    init()
+    print(proj_center_of_mass_robot())

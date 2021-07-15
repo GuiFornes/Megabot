@@ -1,4 +1,6 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
+import numpy as np
+
 from upg_jacobian import *
 
 
@@ -31,138 +33,30 @@ def init(n=100):
                -1100., 1100., 0.,
                -1100., -1100., 0.]
     set_X(pos_abs)
-    for i in range(4):
-        set_og(1, i)
+    # for i in range(4):
+    #     set_og(1, i)
     set_O([0., 0., 580.])
     set_omega([0., 0., 0.])
     return None
 
 
-def dist_2_legs(l1, l2, V):
-    """
-    Calcule la distance entre 2 pattes pour une disposition des vérins donnée
-
-    :param l1: patte 1
-    :param l2: patte 2
-    :param V: élongation des vérins
-    :return: distance entre les 2 pattes
-    """
-    pos = direct_rel_12(V)
-    return distance(pos[l1 * 3:l1 * 3 + 3], pos[l2 * 3:l2 * 3 + 3])
-
-
-def get_last_leg(leg_id, V):
-    """
-    Retourne les coordonnées absolues de la 4ème patte lorsque les 3 autres sont au sol
-
-    :param leg_id: ID de la patte levée
-    :param V: élongation des vérins
-    :return: coordonnées de la patte (absolue)
-
-    # >>> init_pos_abs()
-    # >>> set_og(0, 0)
-    # >>> V = get_verins_12()
-    # >>> V[0] += 30
-    # >>> pos_rel = direct_rel_12(V)
-    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])) < 0.001
-    # True
-    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(2)) - distance(pos_rel[0:3], pos_rel[6:9])) < 0.001
-    # True
-    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(3)) - distance(pos_rel[0:3], pos_rel[9:12])) < 0.001
-    # True
-    # >>> V[0] = 650
-    # >>> pos_rel = direct_rel_12(V)
-    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])) < 0.001
-    # True
-    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(2)) - distance(pos_rel[0:3], pos_rel[6:9])) < 0.001
-    # True
-    # >>> abs(distance(get_last_leg(0, V), get_leg_pos(3)) - distance(pos_rel[0:3], pos_rel[9:12])) < 0.001
-    # True
-    # >>> set_og(1, 0)
-    """
-    pts = []
-    d = []
-    for i in range(4):
-        if i != leg_id:
-            pts.append(get_leg_pos(i))
-            d.append(dist_2_legs(i, leg_id, V))
-
-    C1 = pts[0][0] ** 2 + pts[0][1] ** 2 + pts[0][2] ** 2 - d[0] ** 2 - \
-         (pts[1][0] ** 2 + pts[1][1] ** 2 + pts[1][2] ** 2 - d[1] ** 2)
-
-    C2 = pts[0][0] ** 2 + pts[0][1] ** 2 + pts[0][2] ** 2 - d[0] ** 2 - \
-         (pts[2][0] ** 2 + pts[2][1] ** 2 + pts[2][2] ** 2 - d[2] ** 2)
-
-    x_A = ((pts[2][1] - pts[0][1]) * C1 + (pts[0][1] - pts[1][1]) * C2) / \
-          (2 * (pts[1][1] * pts[2][0] + pts[2][1] * pts[0][0] + pts[0][1] * pts[1][0] -
-                (pts[0][1] * pts[2][0] + pts[1][1] * pts[0][0] + pts[2][1] * pts[1][0])))
-
-    y_A = (2 * (pts[2][0] - pts[1][0]) * x_A + C2 - C1) / (2 * (pts[1][1] - pts[2][1]))
-
-    z_A2 = d[2] ** 2 - (x_A - pts[2][0]) ** 2 - (y_A - pts[2][1]) ** 2
-    if z_A2 < 0:
-        z_A = 0.0
-        print("Patte dans le sol !!!")
-    else:
-        z_A = np.sqrt(z_A2)
-
-    return np.array([x_A, y_A, z_A])
-
-
 ############################### DIRECT #####################################
 
-def direct_abs(V):
+def direct_abs(V, O, Omega):
     """
-    Calcule la nouvelle position absolue des pattes à partir de la position absolue initiale des pattes pour
-    la phase de déplacement en cours (une phase = un déplacement avec le même groupe de pattes au sol)
+        Calcule la position absolue des pattes à partir de l'élongation des vérins, de la position absolue
+        du centre O du robot et de son orientation Omega
 
-    :param V: élongation des vérins (vecteur 12)
-    :return: coordonnées absolues des pattes (vecteur 12)
-
-    # >>> init_pos_abs()
-    # >>> set_og(0, 0)
-    # >>> V = get_verins_12()
-    # >>> V[0] += 30
-    # >>> X0_rel = direct_rel_12(V)
-    # >>> X0_abs = direct_abs(V)
-    # >>> V[0] = 650
-    # >>> X1_rel = direct_rel_12(V)
-    # >>> X1_abs = direct_abs(V)
-    # >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs)) < 1.5
-    # True
-    # >>> V[1] = 650
-    # >>> V[2] = 650
-    # >>> X1_rel = direct_rel_12(V)
-    # >>> X1_abs = direct_abs(V)
-    # >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs)) < 0.5
-    # True
-    # >>> set_og(1, 0)
+        :param V: élongation des vérins (vecteur 12)
+        :param O: position du centre du robot (vecteur 3)
+        :param Omega: orientation du robot (vecteur 3)
+        :return: coordonnées absolues des pattes (vecteur 12)
     """
-    X = get_X()
+    R = gen_R(Omega[0], Omega[1], Omega[2])
+    X = []
     for i in range(4):
-        if not get_og(i):
-            pos_abs = get_last_leg(i, V)
-            X[3 * i:3 * i + 3] = pos_abs
+        X = np.append(X, O + R @ direct_rel_12(V)[i*3:i*3+3])
     return X
-
-
-# def direct_O(X_abs, V):
-#     """
-#     Cinématique directe dans le référentiel absolu
-#
-#     Ne marche pas
-#
-#     :param X_abs: x absolu
-#     :param V: liste des 12 élongations
-#     :return: position du centre dans le référentiel absolue
-#     """
-#     if ROBOT['legs'][0]['og'] and ROBOT['legs'][2]['og']:
-#         O0 = X_abs[0: 3] - direct_leg(V[0], V[1], V[2], 0)
-#         O2 = X_abs[6: 9] - ROBOT['legs'][2]['matrix'] @ direct_leg(V[6], V[7], V[8], 2)
-#         return 0.5 * (O0 + O2)
-#     O1 = X_abs[3: 6] - ROBOT['legs'][1]['matrix'] @ direct_leg(V[3], V[4], V[5], 1)
-#     O3 = X_abs[9: 12] - ROBOT['legs'][3]['matrix'] @ direct_leg(V[9], V[10], V[11], 3)
-#     return 0.5 * (O1 + O3)
 
 
 def direct_rel_12(V):
@@ -190,11 +84,8 @@ def direct_rel_3(v1, v2, v3, leg_id):
     :param leg_id: id de l patte
     :return: coordonnées du bout de la patte
     """
-    lpl = ROBOT['legs'][leg_id]['lengths']
-    X, Z = get_leg_points_V1_V2(v1 / 1000, v2 / 1000, lpl)['J']
-    calpha = v3_to_cos_angle(v3, lpl)
-    Pos = np.array([X * np.sqrt(1 - calpha ** 2) * 1000, X * calpha * 1000, Z * 1000])
-    return ROBOT['legs'][leg_id]['matrix'].T @ (Pos + ROBOT['body']['offset'])
+    pos_leg = direct_leg(v1, v2, v3, leg_id)
+    return ROBOT['legs'][leg_id]['matrix'].T @ (pos_leg + ROBOT['body']['offset'])
 
 
 def direct_leg(v1, v2, v3, leg_id):
@@ -214,7 +105,7 @@ def direct_leg(v1, v2, v3, leg_id):
     x = X * np.sqrt(1 - calpha ** 2) * 1000
     y = X * calpha * 1000
     z = Z * 1000
-    return x, y, z
+    return np.array([x, y, z])
 
 
 ############################## INDIRECT ####################################
@@ -234,17 +125,19 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10)
     V = get_verins_12()
     O = get_O()
     Omega = get_omega()
-    L = [V]
+    X_ini = get_X()
+    LV = [V]
+    LO = [O]
+    LOmega = [Omega]
 
     # Régularisation des dV (et plus)
     # R = np.concatenate((np.concatenate((reg_val * np.eye(12), np.zeros((12, 15))), axis=1), np.zeros((15, 27))))
-    # R = reg_val * np.eye(27)
-    R = np.concatenate((np.concatenate((reg_val * np.eye(21), np.zeros((21, 6))), axis=1), np.zeros((6, 27))))
+    R = reg_val * np.eye(27)
+    # R = np.concatenate((np.concatenate((reg_val * np.eye(21), np.zeros((21, 6))), axis=1), np.zeros((6, 27))))
 
     for i in range(1, len(traj)):
         # Calcul de dX
-        X0 = direct_abs(V)
-        print(X0[0:3])
+        X0 = direct_abs(V, O, Omega)
         set_X(X0)
         dX = traj[i] - np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega)
 
@@ -267,6 +160,14 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10)
                             np.concatenate((np.zeros((9, 12)), np.eye(9), np.zeros((9, 6))), axis=1),
                             np.zeros((6, 27))))
         b = np.zeros(27)
+        correction_X = X_ini - get_X()
+        k = 0
+        for j in range(4):
+            if j != leg_id:
+                b[12 + k * 3] = correction_X[j * 3]
+                b[13 + k * 3] = correction_X[j * 3 + 1]
+                b[14 + k * 3] = correction_X[j * 3 + 2]
+                k += 1
 
         # Application du solveur
         M = jacob_dPf_dO_dOmega_to_dV_dPg_dO_dOmega(leg_id, V, Omega, direct_rel_12(V))
@@ -282,51 +183,48 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10)
         set_O(O)
         set_omega(Omega)
         for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
-        L.append(V)
-    return L
+        LV.append(V)
+        LO.append(O)
+        LOmega.append(Omega)
+    return LV, LO, LOmega
 
 
 def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=10):
     """
-    Détermine la liste des élongations successives des vérins permettant aux extrémités des pattes de suivre le
-    trajectoire traj_legs exprimée dans le référentiel absolu
+    Détermine la liste des élongations des vérins, des positions du centre O du robot et des valeurs de Oméga
+    successives permettant aux extrémités des pattes de suivre la trajectoire traj_legs
+    exprimée dans le référentiel absolu
+
     dX -> dV, dO, dOmega
 
     :param traj_legs: trajectoire des extrémités des pattes en coordonnées absolues
     :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
     :param max_omega: angles maximaux permis au châssis
-    :return: élongations des vérins
+    :return: valeurs successives de (V, O, Oméga) au cours du déplacement
     """
     V = get_verins_12()
     O = get_O()
     Omega = get_omega()
-    L = [V]
+    LV = [V]
+    LO = [O]
+    LOmega = [Omega]
 
-    # Régularisation des dV
+    # Régularisation
     R = reg_val * np.eye(18)
-    print("V : ", V)
-    X0_rel = direct_rel_12(V)
-    X0_abs = direct_abs(V)
+
     for i in range(1, len(traj_legs)):
         # Calcul de dX
-        X0 = direct_abs(V)
-        if i == 2:
-            X1_rel = direct_rel_12(V)
-            X1_abs = direct_abs(V)
-            print("diff rel : ", distance(X0_rel, X1_rel))
-            print("diff abs : ", distance(X0_abs, X1_abs))
+        X0 = direct_abs(V, O, Omega)
         set_X(X0)
         dX = traj_legs[i] - X0
-        # print(dX[0:3])
+
         # Contraintes
-        lb = np.zeros(18)
-        ub = np.zeros(18)
+        lb = np.full(18, - np.inf)
+        ub = np.full(18, np.inf)
         for j in range(12):
             lb[j] = 450.0 - V[j]
             ub[j] = 650.0 - V[j]
         for j in range(3):
-            lb[12 + j] = - np.inf
-            ub[12 + j] = np.inf
             if const_omega:
                 lb[15 + j] = - max_omega * np.pi / 180 - Omega[j]
                 ub[15 + j] = max_omega * np.pi / 180 - Omega[j]
@@ -338,21 +236,20 @@ def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=10):
         M = jacob_dX_to_dV_dO_dOmega(V, Omega, direct_rel_12(V))
         P = M.T @ M + R
         q = - M.T @ dX
-        # q = np.reshape(- dX @ M, 18)
         sol = solve_qp(P, q, lb=lb, ub=ub)
         V = V + sol[0:12]
         O = O + sol[12:15]
         Omega = Omega + sol[15:18]
-        print("O : ", O)
-        print("Omega : ", Omega)
 
         # Mise à jour des valeurs réelles
         set_verins_12(V)
         set_O(O)
         set_omega(Omega)
         for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
-        L.append(V)
-    return L
+        LV.append(V)
+        LO.append(O)
+        LOmega.append(Omega)
+    return LV, LO, LOmega
 
 
 def move_rel(traj, V, solved=True):
@@ -459,10 +356,11 @@ def traj_abs_sin_1(n, amp, leg_id):
     steps = np.linspace(0, np.pi, n)
     traj = []
     for i in range(n):
-        L = np.zeros((1, 9))
-        L[0][0] = ROBOT['legs'][leg_id]['pos_abs'][0]
-        L[0][1] = ROBOT['legs'][leg_id]['pos_abs'][1]
-        L[0][2] = amp * np.sin(steps[i])
+        L = np.zeros(9)
+        L[0] = ROBOT['legs'][leg_id]['pos_abs'][0]
+        L[1] = ROBOT['legs'][leg_id]['pos_abs'][1]
+        L[2] = amp * np.sin(steps[i])
+        L[5] = 580
         traj.append(L)
     return traj
 
@@ -644,6 +542,22 @@ def shake_dat_ass_rel(n, amp):
              X[6], X[7], X[8] + amp * np.sin(l),
              X[9], X[10], X[11] + amp * np.sin(l)] for l in L]
     return move_rel(traj, V)
+
+
+def M_letter(n, pos_ini):
+    X = np.full(6 * n, pos_ini[0])
+    Y = np.full(2 * n, pos_ini[1])
+    Y = np.append(Y, np.linspace(pos_ini[1], pos_ini[1] - 200, n))
+    Y = np.append(Y, np.linspace(pos_ini[1] - 200, pos_ini[1] - 400, n))
+    Y = np.append(Y, np.full(2 * n, pos_ini[1] - 400))
+    Z = np.linspace(pos_ini[2], pos_ini[2] + 500, 2 * n)
+    Z = np.append(Z, np.linspace(pos_ini[2] + 500, pos_ini[2] + 300, n))
+    Z = np.append(Z, np.linspace(pos_ini[2] + 300, pos_ini[2] + 500, n))
+    Z = np.append(Z, np.linspace(pos_ini[2] + 500, pos_ini[2], 2 * n))
+    return [[x, y, z,
+            pos_ini[3], pos_ini[4], pos_ini[5],
+            pos_ini[6], pos_ini[7], pos_ini[8],
+            pos_ini[9], pos_ini[10], pos_ini[11]] for x, y, z in zip(X, Y, Z)]
 
 
 ############################## ROTATION ####################################

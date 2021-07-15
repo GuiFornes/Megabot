@@ -77,7 +77,7 @@ def center_of_mass(V, passenger=True, passenger_weight=80.0):
 
     for i in range(4):
         m, w = leg_center_of_mass(V[3 * i], V[3 * i + 1], i)
-        G += leg_ref_to_robot(d2_to_d3(m[0], m[1], v3_to_cos_angle(V[3 * i + 2], ROBOT['legs'][i]['lengths'])), i) * w
+        G = G + leg_ref_to_robot(d2_to_d3(m[0], m[1], v3_to_cos_angle(V[3 * i + 2], ROBOT['legs'][i]['lengths'])), i) * w
         total_weight += w
 
     return G / total_weight
@@ -150,7 +150,6 @@ def proj_center_of_mass_robot(passenger=True, passenger_weight=80.0):
     """
     return project(center_of_mass(get_verins_12(), passenger=passenger, passenger_weight=passenger_weight))
 
-print(proj_center_of_mass_robot())
 
 ############################################################################
 if __name__ == "__main__":
