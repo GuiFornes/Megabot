@@ -236,7 +236,6 @@ def comp_rel(traj):
 def test_zone_accessible(leg_id):
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
-
     for x in range(300, 1701, 100):
         for y in range(300, 1701, 100):
             for z in range(-100, -851, -100):
@@ -244,7 +243,6 @@ def test_zone_accessible(leg_id):
                     x=x #ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
-
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
@@ -255,6 +253,14 @@ def test_zone_accessible(leg_id):
     plt.show()
     middle = (1080, 1065, -530)
     print(is_accessible(leg_id, middle))
+
+def test_zone_accessible_abs(leg_id):
+    init()
+    V = get_verins_12()
+    x, y, z = direct_abs(V)
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
 
 
 def test_compute_traj(R, D):
@@ -315,6 +321,18 @@ def test_furthest_pos(D, R):
     comp_rel(traj)
 
 
+def test_furthest_all_legs(D, R):
+    traj = compute_traj_form_joystick(cmd_joystick(D, R))
+    max_step = furthest_accessible_real_step_all_legs(traj, 30)
+    print("maximum point of the trajectory reached for each leg : ", max_step)
+    min_value = min(max_step)
+    leg = max_step.index(min_value)
+    step_length = distance((traj[0][leg * 3 + 0], traj[0][leg * 3 + 1], traj[0][leg * 3 + 1]),
+                           (traj[min_value][leg * 3 + 0], traj[min_value][leg * 3 + 1], traj[min_value][leg * 3 + 1]))
+    print("resultant step length is ", step_length, " for leg n° ", leg)
+    comp_rel(traj)
+
+
 def test_get_last_leg():
     init()
     z_ini = direct_rel_12(get_verins_12())[2]
@@ -346,15 +364,16 @@ if t_accessible:
     init()
     test_zone_accessible(FL)
 
-t_compute_traj = 0
+t_compute_traj = 1
 if t_compute_traj:
     init()
-    test_compute_traj((0, 0), 1)
-    test_compute_traj((1, 0), 1)
-    test_compute_traj((0, 1), -1)
-    test_compute_traj((0, -1), 0)
-    test_compute_traj((np.sqrt(3)/2, 1/2), 1)
+    # test_compute_traj((0, 0), 1)
+    # test_compute_traj((1, 0), 1)
+    # test_compute_traj((0, 1), -1)
+    # test_compute_traj((0, -1), 0)
+    # test_compute_traj((np.sqrt(3)/2, 1/2), 1)
     test_furthest_pos((1, 0), 1)
+    test_furthest_all_legs((1, 0), 1)
 
 t_abs_1 = 0
 if t_abs_1:

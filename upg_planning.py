@@ -171,15 +171,64 @@ def furthest_accessible(traj, leg_id):
     return len(traj)-1
 
 
+def furthest_accessible_real_step_all_legs(traj, step_height):
+    V = get_verins_12()
+    n = step_height
+    for j in range(n):
+        traj.insert(0, traj[0])
+        for leg in range(4):
+            traj[j][leg * 3 + 2] += n
+
+    for k in range(n, len(traj)):
+        for leg in range(4):
+            traj[k][leg * 3 + 2] += step_height
+
+    max_step = []
+    for leg in range(4):
+        step = furthest_accessible(traj, leg)
+        max_step.append(step)
+    print(max_step)
+    return max_step
+
 def get_joystick():
     return (1, 0), 0
 
 
+def move_along(traj, step, leg_id):
+    v1, v2, v3 = get_verins_3(leg_id)
+    lpl = ROBOT['legs'][leg_id]['lengths']
+    verrins = []
+    for i in range(1, step):
+        # get data
+        x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
+        xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
+        dX = np.array([xt - x0, yt - y0, zt - z0])
+        # solve
+        J = np.dot(gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl),
+                   ROBOT['legs'][leg_id]['matrix'])
+        P = np.dot(inv(J).T, inv(J))
+        q = - np.dot(inv(J).T, dX)
+        lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
+        ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3])
+        dV = solve_qp(P, q, lb=lb, ub=ub)
+        v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
+        verrins.append((v1, v2, v3))
+    return verrins
+
+
+
 def waaalkkk():
+    """not for now yet"""
     d, r = get_joystick()
     traj = compute_traj_form_joystick(cmd_joystick(d, r))
+    max_step = []
     for leg in range(4):
-        furthest_accessible(traj, leg)
+        max_step.append(furthest_accessible(traj, leg))
+    step = max(max_step)
+
+    # Move front left leg
+    move_along(traj, step, FL)
+
 
 ############################################################################
 
