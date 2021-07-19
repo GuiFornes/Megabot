@@ -324,7 +324,9 @@ def test_furthest_pos(D, R):
 
 def test_furthest_all_legs(D, R):
     traj = compute_traj_form_joystick(cmd_joystick(D, R))
-    max_step = furthest_accessible_real_step_all_legs(traj, 30)
+    print(traj[0])
+    max_step, traj1 = furthest_accessible_real_step_all_legs(traj, 50)
+    print(traj[0])
     print("maximum point of the trajectory reached for each leg : ", max_step)
     min_value = min(max_step)
     leg = max_step.index(min_value)
@@ -376,7 +378,7 @@ if t_compute_traj:
     test_furthest_pos((1, 0), 1)
     test_furthest_all_legs((1, 0), 1)
 
-t_abs_1 = 1
+t_abs_1 = 0
 if t_abs_1:
     init()
     # set_og(0, 0)
