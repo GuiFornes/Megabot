@@ -2,7 +2,7 @@
 import numpy as np
 
 from upg_jacobian import *
-
+from upg_mass_center import center_of_mass
 
 # from com import wait_move, tell_controlers
 
@@ -14,7 +14,7 @@ def init(n=100):
     Détermine les élongations des vérins initiales et inititalise la structure ROBOT
 
     :param n: nombre d'itérations pour converger vers la position initiale
-    :return: None
+    :return:
     """
     # Détermination de V0
     pos_ini = [1100., 1100., -580.,
@@ -37,7 +37,7 @@ def init(n=100):
     #     set_og(1, i)
     set_O([0., 0., 580.])
     set_omega([0., 0., 0.])
-    return None
+    set_com(center_of_mass(V0))
 
 
 ############################### DIRECT #####################################

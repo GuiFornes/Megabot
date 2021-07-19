@@ -193,7 +193,7 @@ def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
         # print("POSITIONS ______actual :", X0, Z0,"__________cible :", Lx[k], Lz[k])
         # print("VERINS_________actual :", v1, v2)
         dX = np.array([Lx[k] - X0, Lz[k] - Z0])
-        J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
+        J = gen_MJ(pts, v1 / 1000, v2 / 1000)
 
         if solved:  # Utilisation du solveur
             P = 2 * J.T @ J
@@ -339,7 +339,7 @@ def solve_indirect_cyl(x, y, z, x0, y0, z0, v1, v2, v3, lpl, pts):
     X, Z, calpha = d3_to_d2(x0, y0, z0)
     X0 = np.array([X, Z]) / 1000
 
-    J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
+    J = gen_MJ(pts, v1 / 1000, v2 / 1000)
 
     P = 2 * J.T @ J
     q = J.T @ (X0 - Xt)

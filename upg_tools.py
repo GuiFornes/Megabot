@@ -57,8 +57,9 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
                   },
 
          'body': {'offset': [500, 500, 0],
-                  'center': [0.0, 0.0, 0.0],
-                  'omega': {'l': 0.0, 'm': 0.0, 'n': 0.0}},
+                  'center': [0, 0, 0],
+                  'omega': {'l': 0, 'm': 0, 'n': 0},
+                  'com': [0, 0, 0]},
 
          'idle_pos': {'verins': [535, 615, 520]}}
 
@@ -151,6 +152,16 @@ def set_og(bool, leg_id):
     global ROBOT
     ROBOT['legs'][leg_id]['og'] = bool
 
+
+def get_com():
+    """retourne de centre de masse du robot"""
+    return ROBOT['body']['com']
+
+
+def set_com(COM):
+    """retourne de centre de masse du robot"""
+    global ROBOT
+    ROBOT['body']['com'] = COM
 
 ###########################################################
 

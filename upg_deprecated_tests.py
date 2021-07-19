@@ -8,7 +8,7 @@ def test_jacob_2(v1, v2, dstep_x, dstep_y):
     """
     pts = kin.get_leg_points_V1_V2(v1 / 1000, v2 / 1000, ROBOT['legs'][FR]['lengths'])
     x, y = pts['J'][0], pts['J'][1]
-    Jacob = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
+    Jacob = gen_MJ(pts, v1 / 1000, v2 / 1000)
 
     Dpos = np.array([dstep_x / 1000, dstep_y / 1000])
     DV = Jacob @ Dpos
@@ -111,7 +111,7 @@ def test_A(dX, dZ, dalpha, v1, v2, v3):
     print(direct_leg(v1a, v2a, v3a))
 
     # en séparant jacob 2D et v3
-    J = gen_jacob_2(pts, v1, v2)
+    J = gen_MJ(pts, v1, v2)
     dPos2d = np.array([dPos[0], dPos[1]])
     dVj = J @ dPos2d
     v1j = v1 + dVj[0] * 1000
@@ -250,7 +250,7 @@ def test_comparaison_minimize_vs_jacob_indirect(v1, v2, dx, dy):
     print("selon minimize, V =", r[0], r[1], "________________________________position atteinte en x, y =",
           kin.get_leg_points_V1_V2(r[0], r[1], lpl)['J'])
 
-    J = gen_jacob_2(pts, v1, v2)
+    J = gen_MJ(pts, v1, v2)
     dV = J @ dX
     print("selon la methode jacobienne, V =", v1 + dV[0], v2 + dV[1], "___________________position atteinte en x, y =",
           kin.get_leg_points_V1_V2(v1 + dV[0], v2 + dV[1], lpl)['J'])
@@ -270,7 +270,7 @@ def gen_jacob_direct(pts, v1, v2):
     Retourne la Jacobienne correspondant au modèle cinématique indirect dans le plan de la patte
     Prend en argument la position des points de la patte et l'élongation des verrins en m
 
-    >>> gen_jacob_2(kin.get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([0, 0])
+    >>> gen_MJ(kin.get_leg_points_V1_V2(0.495, 0.585, ROBOT['legs'][FL]['lengths']), ROBOT['legs'][FL]['lengths'], 0.495, 0.585) @ np.array([0, 0])
     array([0., 0.])
     """
     x_E, y_E = pts['E']
@@ -335,7 +335,7 @@ def make_a_penalty(v1, v2, d, eps, leg_id):
         print("POSITION ______actual :", X0, Z0, "__________cible :", X, Z)
         print("VERINS_________actual :", v1, v2)
         dX = np.array([X - X0, Z - Z0])
-        J = gen_jacob_2(pts, v1 / 1000, v2 / 1000)
+        J = gen_MJ(pts, v1 / 1000, v2 / 1000)
         P = 2 * J.T @ J
         q = J.T @ (np.array([X0 / 1000, Z0 / 1000]) - np.array([X / 1000, Z / 1000]))
         lb = np.array([(450.0 - v1), (450.0 - v2)]) / 1000

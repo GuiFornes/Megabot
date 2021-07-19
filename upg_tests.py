@@ -1,18 +1,8 @@
-import numpy as np
-from numpy.linalg import inv
-from numpy import dot
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d  # Fonction pour la 3D
-import matplotlib.animation as animation
-import time
 
-import kinetic
-from upg_kinetic import *
-from upg_tools import *
 from upg_deprecated import *
-from upg_jacobian import *
-from upg_planning import *
 from upg_mass_center import *
+from upg_planning import *
 
 
 ############################# FONCTIONS DE TEST ################################
@@ -242,7 +232,7 @@ def test_zone_accessible(leg_id):
         for y in range(300, 1701, 100):
             for z in range(-100, -851, -100):
                 if not is_accessible(leg_id, (x, y, z))[0]:
-                    x=x #ax.scatter(x, y, z, marker='.', s=30, c='grey')
+                    x = x  # ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
 
@@ -297,7 +287,7 @@ def test_compute_traj(R, D):
     ax.set_ybound(-2000, 2000)
     ax.set_zbound(-1000, 1000)
     for i in range(4):
-        ax.scatter(traj[0][i*3+0], traj[0][i*3+1], traj[0][i*3+2], c='black', s=60)
+        ax.scatter(traj[0][i * 3 + 0], traj[0][i * 3 + 1], traj[0][i * 3 + 2], c='black', s=60)
     plt.show()
 
 
@@ -354,13 +344,26 @@ if t_compute_traj:
     test_compute_traj((1, 0), 1)
     test_compute_traj((0, 1), -1)
     test_compute_traj((0, -1), 0)
-    test_compute_traj((np.sqrt(3)/2, 1/2), 1)
+    test_compute_traj((np.sqrt(3) / 2, 1 / 2), 1)
     test_furthest_pos((1, 0), 1)
 
-t_abs_1 = 1
+t_com = 1
+if t_com:
+    init()
+    J_com = gen_J_com_abs(get_verins_12(), get_omega(), get_com())
+    print(J_com)
+    dV_dO_dOmega = [0, 0, 10,
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0]
+    print(J_com @ dV_dO_dOmega)
+
+
+t_abs_1 = 0
 if t_abs_1:
     init()
-    # set_og(0, 0)
     traj = traj_abs_sin_1(200, 100, 0)
     LV, LO, LOmega = move_abs_one_leg(traj, 0)
     draw_abs(LV, LO, LOmega)
@@ -368,7 +371,6 @@ if t_abs_1:
 t_abs_4 = 0
 if t_abs_4:
     init()
-    # set_og(0, 0)
     traj = traj_abs_sin_4(50, 100, 0)
     LV, LO, LOmega = move_abs_all_legs(traj)
     draw_abs(LV, LO, LOmega)
