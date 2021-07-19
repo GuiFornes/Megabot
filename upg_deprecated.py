@@ -1,9 +1,5 @@
 # L'ensemble des distances sont exprimées en mm : segments de patte et élongations des vérins
 
-import matplotlib.pyplot as plt
-import numpy as np
-from numpy.linalg import inv
-from qpsolvers import solve_qp
 import kinetic as kin
 from upg_kinetic import *
 
@@ -36,6 +32,146 @@ ori = np.array([[1, 1, -1, -1], [1, -1, -1, 1]])  # [[oritentation selon x][orie
 V = 460, 565, 500
 alpha = al_kashi_angle(AB, AC, BC)
 beta = np.arccos(MO / LO)
+
+
+def dist_2_legs(l1, l2, V):
+    """
+    Calcule la distance entre 2 pattes pour une disposition des vérins donnée
+
+    :param l1: patte 1
+    :param l2: patte 2
+    :param V: élongation des vérins
+    :return: distance entre les 2 pattes
+    """
+    pos = direct_rel_12(V)
+    return distance(pos[l1 * 3:l1 * 3 + 3], pos[l2 * 3:l2 * 3 + 3])
+
+
+def get_last_leg(leg_id, V):
+    """
+    Retourne les coordonnées absolues de la 4ème patte lorsque les 3 autres sont au sol
+
+    :param leg_id: ID de la patte levée
+    :param V: élongation des vérins
+    :return: coordonnées de la patte (absolue)
+
+    >>> init()
+    >>> set_og(0, 0)
+    >>> V = get_verins_12()
+    >>> V[0] += 30
+    >>> pos_rel = direct_rel_12(V)
+    >>> abs(distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])) < 0.001
+    True
+    >>> abs(distance(get_last_leg(0, V), get_leg_pos(2)) - distance(pos_rel[0:3], pos_rel[6:9])) < 0.001
+    True
+    >>> abs(distance(get_last_leg(0, V), get_leg_pos(3)) - distance(pos_rel[0:3], pos_rel[9:12])) < 0.001
+    True
+    >>> V[0] = 650
+    >>> pos_rel = direct_rel_12(V)
+    >>> abs(distance(get_last_leg(0, V), get_leg_pos(1)) - distance(pos_rel[0:3], pos_rel[3:6])) < 0.001
+    True
+    >>> abs(distance(get_last_leg(0, V), get_leg_pos(2)) - distance(pos_rel[0:3], pos_rel[6:9])) < 0.001
+    True
+    >>> abs(distance(get_last_leg(0, V), get_leg_pos(3)) - distance(pos_rel[0:3], pos_rel[9:12])) < 0.001
+    True
+    >>> set_og(1, 0)
+    """
+    pts = []
+    d = []
+    for i in range(4):
+        if i != leg_id:
+            pts.append(get_leg_pos(i))
+            d.append(dist_2_legs(i, leg_id, V))
+
+    C1 = pts[0][0] ** 2 + pts[0][1] ** 2 + pts[0][2] ** 2 - d[0] ** 2 - \
+         (pts[1][0] ** 2 + pts[1][1] ** 2 + pts[1][2] ** 2 - d[1] ** 2)
+
+    C2 = pts[0][0] ** 2 + pts[0][1] ** 2 + pts[0][2] ** 2 - d[0] ** 2 - \
+         (pts[2][0] ** 2 + pts[2][1] ** 2 + pts[2][2] ** 2 - d[2] ** 2)
+
+    x_A = ((pts[2][1] - pts[0][1]) * C1 + (pts[0][1] - pts[1][1]) * C2) / \
+          (2 * (pts[1][1] * pts[2][0] + pts[2][1] * pts[0][0] + pts[0][1] * pts[1][0] -
+                (pts[0][1] * pts[2][0] + pts[1][1] * pts[0][0] + pts[2][1] * pts[1][0])))
+
+    y_A = (2 * (pts[2][0] - pts[1][0]) * x_A + C2 - C1) / (2 * (pts[1][1] - pts[2][1]))
+
+    z_A2 = d[2] ** 2 - (x_A - pts[2][0]) ** 2 - (y_A - pts[2][1]) ** 2
+    if z_A2 < 0:
+        z_A = 0.
+        print("Patte dans le sol !!! z_A2 = ", z_A2)
+        print("d_AD : ", d[2])
+        print("d_ID : ", np.sqrt((x_A - pts[2][0]) ** 2 + (y_A - pts[2][1]) ** 2))
+        print("x_A : ", x_A)
+        print("x_D : ", pts[2][0])
+        print("y_A : ", y_A)
+        print("y_D : ", pts[2][1])
+    else:
+        z_A = np.sqrt(z_A2)
+
+    return np.array([x_A, y_A, z_A])
+
+
+def old_direct_abs(V):
+    """
+    Calcule la nouvelle position absolue des pattes à partir de la position absolue initiale des pattes pour
+    la phase de déplacement en cours (une phase = un déplacement avec le même groupe de pattes au sol)
+
+    :param V: élongation des vérins (vecteur 12)
+    :return: coordonnées absolues des pattes (vecteur 12)
+
+    >>> init()
+    >>> set_og(0, 0)
+    >>> V = get_verins_12()
+    >>> X0_rel_ini = direct_rel_12(V)[0:3]
+    >>> X0_abs_ini = old_direct_abs(V)[0:3]
+    >>> V[0] += 3
+    >>> X0_rel = direct_rel_12(V)[0:3]
+    >>> X0_abs = old_direct_abs(V)[0:3]
+    >>> abs(distance(X0_rel_ini, X0_rel) - distance(X0_abs_ini, X0_abs)) < 0.001
+    True
+    >>> V[0] += 30
+    >>> X0_rel = direct_rel_12(V)[0:3]
+    >>> X0_abs = old_direct_abs(V)[0:3]
+    >>> abs(distance(X0_rel_ini, X0_rel) - distance(X0_abs_ini, X0_abs)) < 0.001
+    True
+    >>> V[0] = 650
+    >>> X1_rel = direct_rel_12(V)[3:6]
+    >>> X1_abs = old_direct_abs(V)[3:6]
+    >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs)) < 0.001
+    True
+    >>> V[1] = 650
+    >>> V[2] = 650
+    >>> X1_rel = direct_rel_12(V)[3:6]
+    >>> X1_abs = old_direct_abs(V)[3:6]
+    >>> abs(distance(X0_rel, X1_rel) - distance(X0_abs, X1_abs)) < 0.001
+    True
+    >>> set_og(1, 0)
+    """
+    X = get_X()
+    for i in range(4):
+        if not get_og(i):
+            pos_abs = get_last_leg(i, V)
+            X[3 * i:3 * i + 3] = pos_abs
+    return X
+
+
+def direct_O(X_abs, V):
+    """
+    Cinématique directe dans le référentiel absolu
+
+    Ne marche pas
+
+    :param X_abs: x absolu
+    :param V: liste des 12 élongations
+    :return: position du centre dans le référentiel absolue
+    """
+    if ROBOT['legs'][0]['og'] and ROBOT['legs'][2]['og']:
+        O0 = X_abs[0: 3] - direct_leg(V[0], V[1], V[2], 0)
+        O2 = X_abs[6: 9] - ROBOT['legs'][2]['matrix'] @ direct_leg(V[6], V[7], V[8], 2)
+        return 0.5 * (O0 + O2)
+    O1 = X_abs[3: 6] - ROBOT['legs'][1]['matrix'] @ direct_leg(V[3], V[4], V[5], 1)
+    O3 = X_abs[9: 12] - ROBOT['legs'][3]['matrix'] @ direct_leg(V[9], V[10], V[11], 3)
+    return 0.5 * (O1 + O3)
 
 
 def draw_circle_2(v1, v2, r, n, leg_id, solved=False):
