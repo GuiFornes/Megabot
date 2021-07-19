@@ -190,22 +190,25 @@ def comp_rel(traj):
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
     ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
-    ax.scatter(Xt0[0], Yt0[0], Zt0[0], c='black', s=60)
     ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
     ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
-    ax.scatter(Xt1[0], Yt1[0], Zt1[0], c='black', s=60)
     ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=3, c='blue')  # Tracé des points réels
     ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
-    ax.scatter(Xt2[0], Yt2[0], Zt2[0], c='black', s=60)
     ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
     ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
 
-    ax.scatter(Xt3[0], Yt3[0], Zt3[0], c='black', s=60)
-    ax.scatter(Xt3[6], Yt3[6], Zt3[6], c='blue', s=60)
-    ax.scatter(Xp3[6], Yp3[6], Zp3[6], c='red', s=60)
+    ax.scatter(Xt0[0], Yt0[0], Zt0[0], c='black', s=60)
+    ax.scatter(Xt0[7], Yt0[7], Zt0[7], c='blue', s=60)
+    ax.scatter(Xp0[7], Yp0[7], Zp0[7], c='red', s=60)
     ax.scatter(Xt1[0], Yt1[0], Zt1[0], c='black', s=60)
-    ax.scatter(Xt1[6], Yt1[6], Zt1[6], c='blue', s=60)
-    ax.scatter(Xp1[6], Yp1[6], Zp1[6], c='red', s=60)
+    ax.scatter(Xt1[7], Yt1[7], Zt1[7], c='blue', s=60)
+    ax.scatter(Xp1[7], Yp1[7], Zp1[7], c='red', s=60)
+    ax.scatter(Xt2[0], Yt2[0], Zt2[0], c='black', s=60)
+    ax.scatter(Xt2[7], Yt2[7], Zt2[7], c='blue', s=60)
+    ax.scatter(Xp2[7], Yp2[7], Zp2[7], c='red', s=60)
+    ax.scatter(Xt3[0], Yt3[0], Zt3[0], c='black', s=60)
+    ax.scatter(Xt3[7], Yt3[7], Zt3[7], c='blue', s=60)
+    ax.scatter(Xp3[7], Yp3[7], Zp3[7], c='red', s=60)
 
     ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
     plt.title("Trajectoire du bout de la patte dans l'espace")
@@ -240,7 +243,7 @@ def test_zone_accessible(leg_id):
     for x in range(300, 1701, 100):
         for y in range(300, 1701, 100):
             for z in range(-100, -851, -100):
-                if not is_accessible(leg_id, (x, y, z))[0]:
+                if not is_accessible_rel(leg_id, (x, y, z))[0]:
                     x=x #ax.scatter(x, y, z, marker='.', s=30, c='grey')
                 else:
                     ax.scatter(x, y, z, marker='.', s=160, c='green')
@@ -253,19 +256,25 @@ def test_zone_accessible(leg_id):
     plt.title("points accessibles pour la patte")
     plt.show()
     middle = (1080, 1065, -530)
-    print(is_accessible(leg_id, middle))
+    print(is_accessible_rel(leg_id, middle))
+
 
 def test_zone_accessible_abs(leg_id):
     init()
     V = get_verins_12()
-    x, y, z = direct_abs(V)
+    x, y, z = direct_abs(V, get_O(), get_omega())
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
 
 
-def test_compute_traj(R, D):
-    traj = compute_traj_form_joystick(cmd_joystick(R, D))
+def test_compute_traj(R, D, abs=False):
+    init()
+    if abs:
+        traj = compute_traj_form_joystick_abs(cmd_joystick(R, D))
+    else:
+        traj = compute_traj_form_joystick_rel(cmd_joystick(R, D))
+
     V = get_verins_12()
 
     # Trajectoires
@@ -293,25 +302,37 @@ def test_compute_traj(R, D):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500))
-    pos = direct_rel_12(V)
-    ax.plot((500, pos[0]), (500, pos[1]), (0, pos[2]), c='red')
-    ax.plot((500, pos[3]), (-500, pos[4]), (0, pos[5]), c='blue')
-    ax.plot((-500, pos[6]), (500, pos[7]), (0, pos[8]), c='purple')
-    ax.plot((-500, pos[9]), (-500, pos[10]), (0, pos[11]), c='green')
-    ax.set_xbound(-2000, 2000)
-    ax.set_ybound(-2000, 2000)
-    ax.set_zbound(-1000, 1000)
+    if abs:
+        pos = direct_abs(V, get_O(), get_omega())
+        ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500), (580, 580, 580, 580, 580))
+        ax.plot((500, pos[0]), (500, pos[1]), (580, pos[2]), c='red')
+        ax.plot((500, pos[3]), (-500, pos[4]), (580, pos[5]), c='blue')
+        ax.plot((-500, pos[6]), (500, pos[7]), (580, pos[8]), c='purple')
+        ax.plot((-500, pos[9]), (-500, pos[10]), (580, pos[11]), c='green')
+        ax.set_xbound(-2000, 2000)
+        ax.set_ybound(-2000, 2000)
+        ax.set_zbound(-500, 1500)
+    else:
+        pos = direct_rel_12(V)
+        ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500))
+        ax.plot((500, pos[0]), (500, pos[1]), (0, pos[2]), c='red')
+        ax.plot((500, pos[3]), (-500, pos[4]), (0, pos[5]), c='blue')
+        ax.plot((-500, pos[6]), (500, pos[7]), (0, pos[8]), c='purple')
+        ax.plot((-500, pos[9]), (-500, pos[10]), (0, pos[11]), c='green')
+        ax.set_xbound(-2000, 2000)
+        ax.set_ybound(-2000, 2000)
+        ax.set_zbound(-1000, 1000)
     for i in range(4):
         ax.scatter(traj[0][i*3+0], traj[0][i*3+1], traj[0][i*3+2], c='black', s=60)
     plt.show()
 
 
 def test_furthest_pos(D, R):
-    traj = compute_traj_form_joystick(cmd_joystick(D, R))
+    init()
+    traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
     max_step = []
     for leg in range(4):
-        step = furthest_accessible(traj, leg)
+        step = furthest_accessible_rel(traj, leg)
         max_step.append(step)
     print("maximum point of the trajectory reached for each leg : ", max_step)
     min_value = min(max_step)
@@ -322,18 +343,34 @@ def test_furthest_pos(D, R):
     comp_rel(traj)
 
 
-def test_furthest_all_legs(D, R):
-    traj = compute_traj_form_joystick(cmd_joystick(D, R))
-    print(traj[0])
-    max_step, traj1 = furthest_accessible_real_step_all_legs(traj, 50)
-    print(traj[0])
-    print("maximum point of the trajectory reached for each leg : ", max_step)
-    min_value = min(max_step)
-    leg = max_step.index(min_value)
-    step_length = distance((traj[0][leg * 3 + 0], traj[0][leg * 3 + 1], traj[0][leg * 3 + 1]),
-                           (traj[min_value][leg * 3 + 0], traj[min_value][leg * 3 + 1], traj[min_value][leg * 3 + 1]))
-    print("resultant step length is ", step_length, " for leg n° ", leg)
-    comp_rel(traj)
+def test_furthest_all_legs(D, R, step_height, abs=False):
+    init()
+    if abs:
+        traj = compute_traj_form_joystick_abs(cmd_joystick(D, R))
+        # print("traj 0 :", traj[0])
+        max_step = furthest_accessible_all_legs_abs(traj)
+        min_value = min(max_step)
+        leg = max_step.index(min_value)
+        # print("traj max_step :", traj[max_step])
+        print("maximum point of the trajectory reached for each leg : ", max_step)
+        step_length = distance((traj[0][leg*3], traj[0][leg*3+1],
+                                traj[0][leg*3+2]),
+                               (traj[min_value][leg*3], traj[min_value][leg*3+2],
+                                traj[min_value][leg*3+2]))
+        print("resultant step length is ", step_length, " for leg n° ", leg)
+    else:
+        traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
+        max_step = furthest_accessible_step_all_legs_rel(traj, step_height)
+        print("maximum point of the trajectory reached for each leg : ", max_step)
+        min_value = min(max_step)
+        leg = max_step.index(min_value)
+        step_length = distance((traj[step_height+1][leg * 3 + 0], traj[step_height+1][leg * 3 + 1],
+                                traj[step_height+1][leg * 3 + 1]),
+                               (traj[min_value+step_height+1][leg * 3 + 0], traj[min_value+step_height+1][leg * 3 + 1],
+                                traj[min_value+step_height+1][leg * 3 + 1]))
+        print("resultant step length is ", step_length, " for leg n° ", leg)
+        # comp_rel(traj)
+    print("\n")
 
 
 def test_get_last_leg():
@@ -369,14 +406,21 @@ if t_accessible:
 
 t_compute_traj = 1
 if t_compute_traj:
-    init()
-    # test_compute_traj((0, 0), 1)
-    # test_compute_traj((1, 0), 1)
-    # test_compute_traj((0, 1), -1)
-    # test_compute_traj((0, -1), 0)
-    # test_compute_traj((np.sqrt(3)/2, 1/2), 1)
+    test_compute_traj((0, 0), 1, abs=True)
+    # test_compute_traj((1, 0), 1, abs=True)
+    # test_compute_traj((0, 1), -1, abs=True)
+    # test_compute_traj((0, -1), 0, abs=True)
+    # test_compute_traj((np.sqrt(3)/2, 1/2), 1, abs=True)
+
+t_furthest = 0
+if t_furthest:
     test_furthest_pos((1, 0), 1)
-    test_furthest_all_legs((1, 0), 1)
+    test_furthest_pos((np.sqrt(3)/2, 1/2), 1)
+    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 20, abs=True)
+    test_furthest_all_legs((1, 0), 1, 0)
+    test_furthest_all_legs((1, 0), 1, 0, abs=True)
+    test_furthest_all_legs((1, 0), 1, 25)
+    test_furthest_all_legs((1, 0), 1, 25, abs=True)
 
 t_abs_1 = 0
 if t_abs_1:
@@ -418,6 +462,6 @@ if t_rel:
     draw_rel(shake_dat_ass_rel(30, 200))
 
 t_com = 0
-if t_com == 1:
+if t_com:
     init()
     print(proj_center_of_mass_robot())
