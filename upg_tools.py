@@ -276,6 +276,26 @@ def al_kashi_angle(a, b, c):
     return np.arccos((a ** 2 + b ** 2 - c ** 2) / (2 * a * b))
 
 
+def normal_vector(v):
+    """
+    compute the normal unitary vector
+
+    :param v: vector
+    :return: normal unitary vector
+    >>> normal_vector((1, 0))
+    (0, 1)
+    >>> normal_vector((-1, 0))
+    (0, -1)
+    >>> normal_vector((0, 1))
+    (-1, 0)
+    >>> normal_vector((0, -1))
+    (1, 0)
+    >>> normal_vector((0.3, -0.6))
+    (0.6, 0.3)
+    """
+    return -1 * v[1], v[0]
+
+
 ############################################################################
 if __name__ == "__main__":
     import doctest
