@@ -119,8 +119,8 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10)
     :param traj: trajectoire de l'extrémité de la patte, du centre du robot et évolution de l'angle du châssis
     :param leg_id: patte dans les airs (qui bouge selon traj)
     :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
-    :param max_Omega: angles maximaux permis au châssis (en m et n)
-    :return: élongations des vérins
+    :param max_omega: angles maximaux permis au châssis (en m et n)
+    :return: valeurs successives de (V, O, Oméga) au cours du déplacement
     """
     V = get_verins_12()
     O = get_O()
@@ -140,6 +140,9 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10)
         X0 = direct_abs(V, O, Omega)
         set_X(X0)
         dX = traj[i] - np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega)
+        print("traj : ", traj[i])
+        print("X0 : ", np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega))
+        print("dX : ", dX)
 
         # Contraintes (soft)
         lb = np.full(27, - np.inf)
