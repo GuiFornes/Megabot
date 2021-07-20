@@ -1,6 +1,8 @@
 from upg_kinetic import *
 from upg_tools import *
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 MIN_RADIUS = 2500
 MAX_RADIUS = 15000
@@ -51,6 +53,7 @@ def cmd_joystick(d, r):
 
 
 ############################## RELATIVE WAY ##################################
+
 
 def compute_traj_form_joystick_rel(joystick):
     """
@@ -139,7 +142,7 @@ def furthest_accessible_rel(traj, leg_id):
         # get data
         x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
         if distance((x0, y0, z0), (xt, yt, zt)) > 20:  # exit condition
-            return i-1
+            return i
         xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
         dX = np.array([xt - x0, yt - y0, zt - z0])
         # solve
@@ -150,16 +153,16 @@ def furthest_accessible_rel(traj, leg_id):
         ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3])
         dV = solve_qp(P, q, lb=lb, ub=ub)
         v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
-    return len(traj)-1
+    return len(traj)
 
 
 def furthest_accessible_step_all_legs_rel(traj, step_height):
     V = get_verins_12()
     init = traj[0].copy()
-    for j in range(step_height + 1):
+    for j in range(step_height):
         traj.insert(0, init.copy())
         for leg in range(4):
-            traj[0][leg * 3 + 2] += step_height - j
+            traj[0][leg * 3 + 2] += step_height + 1 - j
     for k in range(step_height, len(traj)):
         for leg in range(4):
             traj[k][leg * 3 + 2] += step_height
@@ -172,6 +175,7 @@ def furthest_accessible_step_all_legs_rel(traj, step_height):
 
 
 ############################### ABSOLUTE WAY ##################################
+
 
 def compute_traj_form_joystick_abs(joystick):
     """
@@ -189,7 +193,7 @@ def compute_traj_form_joystick_abs(joystick):
         r.append(radius)
     r_max = max(r)
     n = int(2 * np.pi * r_max / TRAJ_ACCUR)
-    for i in range(n-50):
+    for i in range(n-250):
         L = []
         for leg in range(4):
             alpha = np.arccos(abs((centre[1] - pos[3 * leg + 1])) / r[leg])
@@ -210,30 +214,42 @@ def compute_traj_form_joystick_abs(joystick):
     return traj
 
 
-def furthest_accessible_abs(traj, leg_id, max_omega=10, const_omega=True, reg_val=0.01):
+def furthest_accessible_abs(traj, leg_id, max_omega=10, const_omega=True, reg_val=0.01, step_height=0):
     """
     Compute the maximum step size following the trajectory, depending on the accessible zone for the leg.
-    traj should be the trajectory of all elgs (basically returned by compute_traj_from_joystick)
+    traj should be the trajectory of all legs (basically returned by compute_traj_from_joystick)
     :param traj: trajectory to follow
     :param leg_id: ID of the leg
+    :param max_omega: maximum angle allowed for the body
+    :param const_omega: bool -> is there a constraint on angle
+    :param reg_val: regularisation value
+    :param step_height: height of one step
     :return: the furthest point accessible from the traj
     """
-    traj_leg = np.zeros((len(traj), 12))
+    temp = np.zeros(12)
+    traj_leg = [temp]*len(traj)
+    # traj_leg = np.zeros((len(traj), 12))
     for i in range(len(traj)):
-        traj_leg[i] = traj[0]
+        traj_leg[i] = traj[0].copy()
         traj_leg[i][leg_id*3:leg_id*3+3] = traj[i][leg_id*3:leg_id*3+3]
+    init = traj[0].copy()
+    for j in range(step_height):
+        traj_leg.insert(0, init.copy())
+        traj_leg[0][leg_id * 3 + 2] += step_height + 1 - j
+    for k in range(step_height, len(traj_leg)):
+        traj_leg[k][leg_id * 3 + 2] += step_height
     R = reg_val * np.eye(18)
     V = get_verins_12()
     O = get_O()
     omega = get_omega()
+    LV = [V]
+    LO = [O]
+    LOmega = [omega]
     for i in range(1, len(traj_leg)):
-        # get data
         # Calcul de dX
         X0 = direct_abs(V, O, omega)
-        # print("X0 : ", X0)
-        # print("traj[0] : " ,traj_leg[i], "\n")
         if distance(X0[leg_id * 3:leg_id * 3 + 3], traj_leg[i-1][leg_id * 3:leg_id * 3 + 3]) > 20:  # exit condition
-            return i
+            return i-step_height, (LV, LO, LOmega)
         set_X(X0)
         dX = traj_leg[i] - X0
         # Contraintes
@@ -258,16 +274,24 @@ def furthest_accessible_abs(traj, leg_id, max_omega=10, const_omega=True, reg_va
         V = V + sol[0:12]
         O = O + sol[12:15]
         omega = omega + sol[15:18]
-    return len(traj)-1
+        for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        LV.append(V)
+        LO.append(O)
+        LOmega.append(omega)
+    return len(traj_leg)-1, (LV, LO, LOmega)
 
 
-def furthest_accessible_all_legs_abs(traj):
-    max_step = []
+def furthest_accessible_all_legs_abs(traj, step_height=0):
+    max_step, data = [], []
     for leg in range(4):
-        max_step.append(furthest_accessible_abs(traj, leg, max_omega=1))
-    return max_step
+        step, data_leg = furthest_accessible_abs(traj, leg, step_height=step_height, max_omega=45)
+        max_step.append(step)
+        data.append((data_leg))
+    return max_step, data
+
 
 ################################ WALK -> SYL ##################################
+
 
 def get_joystick():
     return (1, 0), 0
