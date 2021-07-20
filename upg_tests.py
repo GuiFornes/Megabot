@@ -427,11 +427,11 @@ t_furthest = 1
 if t_furthest:
     # test_furthest_pos((1, 0), 1)
     # test_furthest_pos((np.sqrt(3)/2, 1/2), 1)
-    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 20, abs=True)
+    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 200, abs=True)
     # test_furthest_all_legs((1, 0), 1, 0)
-    test_furthest_all_legs((1, 0), 1, 0, abs=True)
+    test_furthest_all_legs((1, 0), 1, 200, abs=True)
     # test_furthest_all_legs((1, 0), 1, 25)
-    test_furthest_all_legs((1, 0), 1, 25, abs=True)
+    test_furthest_all_legs((1, 0), 1, 250, abs=True)
 
 t_com = 0
 if t_com:
