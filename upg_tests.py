@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
 
 from upg_deprecated import *
 from upg_mass_center import *
@@ -10,7 +9,7 @@ from upg_planning import *
 ############################# FONCTIONS DE TEST ################################
 
 
-def draw_abs(LV, LO, LOmega, Lcom=None):
+def draw_abs(LV, LO, LOmega, Lcom=None, traj=[]):
     """
     Trace la trajectoire des extrémités des pattes du robot dans le repère absolu
     """
@@ -47,10 +46,30 @@ def draw_abs(LV, LO, LOmega, Lcom=None):
     # Tracé des trajectoires
     fig = plt.figure()
     ax = fig.gca(projection='3d')  # Affichage en 3D
-    ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=3, c='red')  # Tracé des points réels
-    ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=3, c='blue')  # Tracé des points réels
-    ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=3, c='purple')  # Tracé des points réels
-    ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=3, c='green')  # Tracé des points réels
+    ax.scatter(Xp0, Yp0, Zp0, label='Positions', marker='.', s=15, c='red')  # Tracé des points réels
+    ax.scatter(Xp1, Yp1, Zp1, label='Positions', marker='.', s=15, c='blue')  # Tracé des points réels
+    ax.scatter(Xp2, Yp2, Zp2, label='Positions', marker='.', s=15, c='purple')  # Tracé des points réels
+    ax.scatter(Xp3, Yp3, Zp3, label='Positions', marker='.', s=15, c='green')  # Tracé des points réels
+
+    # Tracé de la trajectoire théorique
+    if len(traj) != 0:
+        Xt0 = [p[0] for p in traj]
+        Yt0 = [p[1] for p in traj]
+        Zt0 = [p[2] for p in traj]
+        Xt1 = [p[3] for p in traj]
+        Yt1 = [p[4] for p in traj]
+        Zt1 = [p[5] for p in traj]
+        Xt2 = [p[6] for p in traj]
+        Yt2 = [p[7] for p in traj]
+        Zt2 = [p[8] for p in traj]
+        Xt3 = [p[9] for p in traj]
+        Yt3 = [p[10] for p in traj]
+        Zt3 = [p[11] for p in traj]
+        ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral', ms=0.1)  # Tracé de la courbe théorique
+        ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan', ms=0.1)  # Tracé de la courbe théorique
+        ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink', ms=0.1)  # Tracé de la courbe théorique
+        ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse', ms=0.1)  # Tracé de la courbe théorique
+
     plt.title("Trajectoire du bout de la patte dans l'espace")
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -341,12 +360,12 @@ def test_furthest_pos(D, R):
     comp_rel(traj)
 
 
-def test_furthest_all_legs(D, R, step_height, abs=False):
+def test_furthest_all_legs(D, R, step_height=0, abs=False):
     init()
     if abs:
         traj = compute_traj_form_joystick_abs(cmd_joystick(D, R))
         # print("traj 0 :", traj[0])
-        max_step = furthest_accessible_all_legs_abs(traj)
+        max_step, data = furthest_accessible_all_legs_abs(traj, step_height)
         min_value = min(max_step)
         leg = max_step.index(min_value)
         # print("traj max_step :", traj[max_step])
@@ -356,6 +375,8 @@ def test_furthest_all_legs(D, R, step_height, abs=False):
                                (traj[min_value][leg*3], traj[min_value][leg*3+2],
                                 traj[min_value][leg*3+2]))
         print("resultant step length is ", step_length, " for leg n° ", leg)
+        for leg in range(4):
+            draw_abs(data[leg][0], data[leg][1], data[leg][2], traj)
     else:
         traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
         max_step = furthest_accessible_step_all_legs_rel(traj, step_height)
@@ -412,15 +433,15 @@ if t_compute_traj:
 
 t_furthest = 0
 if t_furthest:
-    test_furthest_pos((1, 0), 1)
-    test_furthest_pos((np.sqrt(3)/2, 1/2), 1)
-    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 20, abs=True)
-    test_furthest_all_legs((1, 0), 1, 0)
-    test_furthest_all_legs((1, 0), 1, 0, abs=True)
-    test_furthest_all_legs((1, 0), 1, 25)
-    test_furthest_all_legs((1, 0), 1, 25, abs=True)
+    # test_furthest_pos((1, 0), 1)
+    # test_furthest_pos((np.sqrt(3)/2, 1/2), 1)
+    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 200, abs=True)
+    # test_furthest_all_legs((1, 0), 1, 0)
+    test_furthest_all_legs((1, 0), 1, 200, abs=True)
+    # test_furthest_all_legs((1, 0), 1, 25)
+    test_furthest_all_legs((1, 0), 1, 250, abs=True)
 
-t_plan_com = 1
+t_plan_com = 0
 if t_plan_com:
     init()
     P = get_leg_pos(0)
