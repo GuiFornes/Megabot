@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 
 from upg_deprecated import *
 from upg_mass_center import *
@@ -8,7 +10,7 @@ from upg_planning import *
 ############################# FONCTIONS DE TEST ################################
 
 
-def draw_abs(LV, LO, LOmega):
+def draw_abs(LV, LO, LOmega, Lcom=None):
     """
     Trace la trajectoire des extrémités des pattes du robot dans le repère absolu
     """
@@ -56,6 +58,12 @@ def draw_abs(LV, LO, LOmega):
     ax.set_xbound(-2000, 2000)
     ax.set_ybound(-2000, 2000)
     ax.set_zbound(2000, -2000)
+
+    # Tracé du centre de masse
+    if Lcom is not None:
+        ax.scatter([com[0] for com in Lcom], [com[1] for com in Lcom], [com[2] for com in Lcom],
+                                      label='COM', marker='.', s=3, c='black')
+
     plt.show()
 
     # Tracé des élongations des vérins au cours du temps
@@ -412,7 +420,19 @@ if t_furthest:
     test_furthest_all_legs((1, 0), 1, 25)
     test_furthest_all_legs((1, 0), 1, 25, abs=True)
 
-t_com = 1
+t_plan_com = 1
+if t_plan_com:
+    init()
+    P = get_leg_pos(0)
+    L = np.linspace(0, np.pi, 100)
+    traj = [[P[0] + 200 * np.cos(l), P[1], P[2] + 200 * np.sin(l)] for l in L]
+    LV, LO, LOmega, Lcom= move_under_constraint(traj, 0)
+    draw_abs(LV, LO, LOmega, Lcom)
+    init(passenger=False)
+    LV, LO, LOmega, Lcom= move_under_constraint(traj, 0, passenger=False)
+    draw_abs(LV, LO, LOmega, Lcom)
+
+t_com = 0
 if t_com:
     init()
     J_com = gen_J_com_abs(get_verins_12(), get_omega(), get_com())
@@ -424,7 +444,6 @@ if t_com:
                     0, 0, 0,
                     0, 0, 0]
     print(J_com @ dV_dO_dOmega)
-
 
 t_abs_1 = 0
 if t_abs_1:

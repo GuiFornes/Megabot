@@ -230,25 +230,24 @@ def gen_J_com_leg(v1, v2, v3, leg_id):
     return J
 
 
-def gen_J_com_rel(V):
-    tot_weight = 4 * leg_tot_weight + body_weight
+def gen_J_com_rel(V, passenger_weight=80):
+    tot_weight = 4 * leg_tot_weight + body_weight + passenger_weight
     return np.concatenate((leg_tot_weight / tot_weight * gen_J_com_leg(V[0], V[1], V[2], 0),
                            leg_tot_weight / tot_weight * gen_J_com_leg(V[3], V[4], V[5], 1),
                            leg_tot_weight / tot_weight * gen_J_com_leg(V[6], V[7], V[8], 2),
                            leg_tot_weight / tot_weight * gen_J_com_leg(V[9], V[10], V[11], 3)), axis=1)
 
 
-def gen_J_com_abs(V, Omega, COM):
-    J_rel = gen_J_com_rel(V)
+def gen_J_com_abs(V, Omega, com, passenger_weight=80):
+    J_rel = gen_J_com_rel(V, passenger_weight=passenger_weight)
     return np.concatenate((gen_R(Omega[0], Omega[1], Omega[2]) @ J_rel,
                            np.eye(3),
-                           np.reshape(gen_dRdl(Omega[0], Omega[1], Omega[2]) @ COM, (3, 1)),
-                           np.reshape(gen_dRdm(Omega[0], Omega[1], Omega[2]) @ COM, (3, 1)),
-                           np.reshape(gen_dRdn(Omega[0], Omega[1], Omega[2]) @ COM, (3, 1))), axis=1)
+                           np.reshape(gen_dRdl(Omega[0], Omega[1], Omega[2]) @ com, (3, 1)),
+                           np.reshape(gen_dRdm(Omega[0], Omega[1], Omega[2]) @ com, (3, 1)),
+                           np.reshape(gen_dRdn(Omega[0], Omega[1], Omega[2]) @ com, (3, 1))), axis=1)
 
 
 ############################################################################
-
 
 if __name__ == "__main__":
     import doctest

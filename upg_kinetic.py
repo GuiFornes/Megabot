@@ -9,7 +9,7 @@ from upg_mass_center import center_of_mass
 
 ################################ INIT ######################################
 
-def init(n=100):
+def init(n=100, passenger=True, passenger_weight=80):
     """
     Détermine les élongations des vérins initiales et inititalise la structure ROBOT
 
@@ -37,7 +37,8 @@ def init(n=100):
     #     set_og(1, i)
     set_O([0., 0., 580.])
     set_omega([0., 0., 0.])
-    set_com(center_of_mass(V0))
+    com_rel = center_of_mass(V0, passenger=passenger, passenger_weight=passenger_weight)
+    set_com(robot_ref_to_abs(com_rel, [0., 0., 580.], [0., 0., 0.]))
 
 
 ############################### DIRECT #####################################
@@ -202,6 +203,7 @@ def move_abs_all_legs(traj_legs, reg_val=0.01, const_omega=True, max_omega=10):
 
     :param traj_legs: trajectoire des extrémités des pattes en coordonnées absolues
     :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
+    :param const_omega: booléen activant ou non la contrainte sur Omega
     :param max_omega: angles maximaux permis au châssis
     :return: valeurs successives de (V, O, Oméga) au cours du déplacement
     """

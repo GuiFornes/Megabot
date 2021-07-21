@@ -20,7 +20,7 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
                                            [0, 1, 0],
                                            [0, 0, 1]]),
                        'og': 1,
-                       'pos_abs': [0.0, 0.0, 0.0]},
+                       'pos_abs': np.array([0.0, 0.0, 0.0])},
                   FR: {'origin': (0.5, 0.5, 0),
                        'lengths': {'ao': 130.0, 'bo': 120.0, 'bcx': 300.0, 'bcy': 60.0,
                                    'ae': 500.0, 'de': 100.0, 'ef': 445.0, 'fg': 285.0,
@@ -31,7 +31,7 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
                                            [1, 0, 0],
                                            [0, 0, 1]]),
                        'og': 1,
-                       'pos_abs': [0.0, 0.0, 0.0]},
+                       'pos_abs': np.array([0.0, 0.0, 0.0])},
                   RL: {'origin': (-0.5, -0.5, 0),
                        'lengths': {'ao': 130.0, 'bo': 120.0, 'bcx': 295.0, 'bcy': 60.0,
                                    'ae': 495.0, 'de': 100.0, 'ef': 450.0, 'fg': 300.0,
@@ -53,7 +53,7 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
                                            [0, -1, 0],
                                            [0, 0, 1]]),
                        'og': 1,
-                       'pos_abs': [0.0, 0.0, 0.0]}
+                       'pos_abs': np.array([0.0, 0.0, 0.0])}
                   },
 
          'body': {'offset': [500, 500, 0],
@@ -64,7 +64,7 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
          'idle_pos': {'verins': [535, 615, 520]}}
 
 
-######################### ACCESS TO ROBOT ##########################
+######################### ACCES AU ROBOT ##########################
 
 def get_verins_3(leg_id):
     """retourne les valeurs des 3 vérins pour une jambe"""
@@ -126,7 +126,7 @@ def get_leg_pos(leg_id):
 
 def set_leg_pos(pos, leg_id):
     global ROBOT
-    ROBOT['legs'][leg_id]['pos_abs'] = pos
+    ROBOT['legs'][leg_id]['pos_abs'] = np.array(pos)
 
 
 def get_X():
@@ -158,12 +158,61 @@ def get_com():
     return ROBOT['body']['com']
 
 
-def set_com(COM):
+def set_com(com):
     """retourne de centre de masse du robot"""
     global ROBOT
-    ROBOT['body']['com'] = COM
+    ROBOT['body']['com'] = com
 
-###########################################################
+
+########################### ROTATIONS #############################
+
+def gen_matrix_rota(angle, axis):
+    if axis == 0:  # Rotation selon x
+        return np.array([[1, 0, 0],
+                         [0, np.cos(angle), -np.sin(angle)],
+                         [0, np.sin(angle), np.cos(angle)]])
+    elif axis == 1:  # Rotation selon y
+        return np.array([[np.cos(angle), 0, -np.sin(angle)],
+                         [0, 1, 0],
+                         [np.sin(angle), 0, np.cos(angle)]])
+    else:  # Rotation selon z
+        return np.array([[np.cos(angle), -np.sin(angle), 0],
+                         [np.sin(angle), np.cos(angle), 0],
+                         [0, 0, 1]])
+
+
+def gen_deriv_matrix_rota(angle, axis):
+    if axis == 0:  # Rotation selon x
+        return np.array([[0, 0, 0],
+                         [0, -np.sin(angle), -np.cos(angle)],
+                         [0, np.cos(angle), -np.sin(angle)]])
+    elif axis == 1:  # Rotation selon y
+        return np.array([[-np.sin(angle), 0, -np.cos(angle)],
+                         [0, 0, 0],
+                         [np.cos(angle), 0, -np.sin(angle)]])
+    else:  # Rotation selon z
+        return np.array([[-np.sin(angle), -np.cos(angle), 0],
+                         [np.cos(angle), -np.sin(angle), 0],
+                         [0, 0, 0]])
+
+
+def gen_R(l, m, n):
+    return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
+
+
+def gen_dRdl(l, m, n):
+    return gen_deriv_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
+
+
+def gen_dRdm(l, m, n):
+    return gen_matrix_rota(l, 2) @ gen_deriv_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
+
+
+def gen_dRdn(l, m, n):
+    return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_deriv_matrix_rota(n, 2)
+
+
+###################### CHGT DE REFERENTIEL ########################
 
 def robot_ref_to_leg(point, leg_id):
     """
@@ -185,6 +234,10 @@ def leg_ref_to_robot(point, leg_id):
     return ROBOT['legs'][leg_id]['matrix'].T @ new_point
 
 
+def robot_ref_to_abs(point, O, Omega):
+    return O + gen_R(Omega[0], Omega[1], Omega[2]) @ point
+
+
 def d3_to_d2(x, y, z):
     """
     Retourne (X, Z, alpha) les coordonnées cylindriques du bout de la patte
@@ -204,6 +257,8 @@ def d2_to_d3(X, Z, calpha):
     z = Z
     return x, y, z
 
+
+############################ GENERAL ##############################
 
 def cos_angle_to_v3(cangle, lpl):
     """
@@ -297,6 +352,7 @@ def normal_vector(v):
 
 
 ############################################################################
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

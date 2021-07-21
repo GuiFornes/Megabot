@@ -1,4 +1,5 @@
 from upg_kinetic import *
+from upg_mass_center import *
 from upg_tools import *
 import numpy as np
 
@@ -267,6 +268,7 @@ def furthest_accessible_all_legs_abs(traj):
         max_step.append(furthest_accessible_abs(traj, leg, max_omega=1))
     return max_step
 
+
 ################################ WALK -> SYL ##################################
 
 def get_joystick():
@@ -307,6 +309,150 @@ def waaalkkk():
     # Move front left leg
     move_along(traj, step, FL)
 
+
+def gen_G(l1, l2, l3, V, Omega, com, passenger=True, passenger_weight=80):
+    """
+    Calcule la matrice G associée à la contrainte G @ x < h dans le solveur de move_abs_all_legs() permettant
+    de garantir le maintien du centre du masse du robot au dessus du polygone de sustentation formé par ses pattes
+
+    :param l1: coordonnées de la 1ère patte au sol
+    :param l2: coordonnées de la 2nde patte au sol
+    :param l3: coordonnées de la 3ème patte au sol
+    :param V: élongations des vérins à l'itération précédente
+    :param Omega: valeurs de Omega à l'itération précédente
+    :param com: coordonnées du centre de masse à l'itération précédente
+    :return: G
+    """
+    M = [np.array([[0 if (l2 - l1)[1] == 0.0 else (l2 - l1)[1] / abs((l2 - l1)[1]), 0],
+                  [0, 0 if (l2 - l1)[0] == 0.0 else - (l2 - l1)[0] / abs((l2 - l1)[0])]]),
+         np.array([[0 if (l3 - l2)[1] == 0.0 else (l3 - l2)[1] / abs((l3 - l2)[1]), 0],
+                   [0, 0 if (l3 - l2)[0] == 0.0 else - (l3 - l2)[0] / abs((l3 - l2)[0])]]),
+         np.array([[0 if (l1 - l3)[1] == 0.0 else (l1 - l3)[1] / abs((l1 - l3)[1]), 0],
+                   [0, 0 if (l1 - l3)[0] == 0.0 else - (l1 - l3)[0] / abs((l1 - l3)[0])]])]
+    J_com = gen_J_com_abs(V, Omega, com, passenger_weight=passenger_weight)[0 : 2, 0 : 18] if passenger \
+        else gen_J_com_abs(V, Omega, com, passenger_weight=0)[0 : 2, 0 : 18]
+    return np.concatenate((M[0] @ J_com, M[1] @ J_com, M[2] @ J_com))
+
+
+def gen_h(l1, l2, l3, com):
+    """
+    Calcule la matrice h associée à la contrainte G @ x < h dans le solveur de move_abs_all_legs() permettant
+    de garantir le maintien du centre du masse du robot au dessus du polygone de sustentation formé par ses pattes
+
+    :param l1: coordonnées de la 1ère patte au sol
+    :param l2: coordonnées de la 2nde patte au sol
+    :param l3: coordonnées de la 3ème patte au sol
+    :param com: coordonnées du centre de masse à l'itération précédente
+    :return: h
+    """
+    return np.array([1 if (l2 - l1)[1] == 0.0 else (l2 - l1)[1] / abs((l2 - l1)[1]) *
+                                                   (((l2 - l1)[0] * (com - l1)[1] / (l2 - l1)[1]) + l1[0]),
+                     1 if (l2 - l1)[0] == 0.0 else - (l2 - l1)[0] / abs((l2 - l1)[0]) *
+                                                   (((l2 - l1)[1] * (com - l1)[0] / (l2 - l1)[0]) + l1[1]),
+                     1 if (l3 - l2)[1] == 0.0 else (l3 - l2)[1] / abs((l3 - l2)[1]) *
+                                                   (((l3 - l2)[0] * (com - l2)[1] / (l3 - l2)[1]) + l2[0]),
+                     1 if (l3 - l2)[0] == 0.0 else - (l3 - l2)[0] / abs((l3 - l2)[0]) *
+                                                   (((l3 - l2)[1] * (com - l2)[0] / (l3 - l2)[0]) + l2[1]),
+                     1 if (l1 - l3)[1] == 0.0 else (l1 - l3)[1] / abs((l1 - l3)[1]) *
+                                                   (((l1 - l3)[0] * (com - l3)[1] / (l1 - l3)[1]) + l3[0]),
+                     1 if (l1 - l3)[0] == 0.0 else - (l1 - l3)[0] / abs((l1 - l3)[0]) *
+                                                   (((l1 - l3)[1] * (com - l3)[0] / (l1 - l3)[0]) + l3[1])])
+
+
+def gen_traj_all_legs(traj_one_leg, leg_id, X0):
+    if leg_id == 0:
+        return [[pos[0], pos[1], pos[2], X0[3], X0[4], X0[5], X0[6], X0[7], X0[8], X0[9], X0[10], X0[11]]
+                for pos in traj_one_leg]
+    elif leg_id == 1:
+        return [[X0[0], X0[1], X0[2], pos[0], pos[1], pos[2], X0[6], X0[7], X0[8], X0[9], X0[10], X0[11]]
+                for pos in traj_one_leg]
+    elif leg_id == 2:
+        return [[X0[0], X0[1], X0[2], X0[3], X0[4], X0[5], pos[0], pos[1], pos[2], X0[9], X0[10], X0[11]]
+                for pos in traj_one_leg]
+    return [[X0[0], X0[1], X0[2], X0[3], X0[4], X0[5], X0[6], X0[7], X0[8], pos[0], pos[1], pos[2]]
+            for pos in traj_one_leg]
+
+
+def move_under_constraint(traj_leg, leg_id, reg_val=0.01, const_omega=True, max_omega=10, passenger=True, passenger_weight=80):
+    """
+    Copie de move_abs_all_legs() intégrant la contrainte de positionnement du projeté du centre de masse du robot
+    dans le polygone de sustentation formé par les pattes au sol
+
+    dX -> dV, dO, dOmega
+
+    :param traj_leg: trajectoire de l'extrémités de la patte leg_id en coordonnées absolues
+    :param leg_id: ID de la patte en l'air
+    :param reg_val: coefficient de la régularisation dans la minimisation de l'erreur quadratique de position
+    :param const_omega: booléen activant ou non la contrainte sur Omega
+    :param max_omega: angles maximaux permis au châssis
+    :return: valeurs successives de (V, O, Oméga) au cours du déplacement
+    """
+    V = get_verins_12()
+    O = get_O()
+    Omega = get_omega()
+    com = get_com()
+
+    LV = [V]
+    LO = [O]
+    LOmega = [Omega]
+    Lcom = [com]
+
+    # Construction de la trajectoire pour toutes les pattes
+    traj = gen_traj_all_legs(traj_leg, leg_id, direct_abs(V, O, Omega))
+
+    # Régularisation
+    R = reg_val * np.eye(18)
+
+    for i in range(1, len(traj)):
+        # Calcul de dX
+        X0 = direct_abs(V, O, Omega)
+        set_X(X0)
+        dX = traj[i] - X0
+
+        # Contraintes lb <= x <= ub (élongations des vérins et angle max du châssis)
+        lb = np.full(18, - np.inf)
+        ub = np.full(18, np.inf)
+        for j in range(12):
+            lb[j] = 450.0 - V[j]
+            ub[j] = 650.0 - V[j]
+        for j in range(3):
+            if const_omega:
+                lb[15 + j] = - max_omega * np.pi / 180 - Omega[j]
+                ub[15 + j] = max_omega * np.pi / 180 - Omega[j]
+            else:
+                lb[15 + j] = - np.pi
+                ub[15 + j] = np.pi
+
+        # Contraintes G @ x <= h (centre de masse)
+        legs_on_ground = []
+        for j in range(4):
+            if j != leg_id:
+                legs_on_ground.append(get_leg_pos(j))
+        G = gen_G(legs_on_ground[0], legs_on_ground[1], legs_on_ground[2], V, Omega, com,
+                  passenger=passenger, passenger_weight=passenger_weight)
+        h = gen_h(legs_on_ground[0], legs_on_ground[1], legs_on_ground[2], com)
+
+        # Application du solveur
+        M = jacob_dX_to_dV_dO_dOmega(V, Omega, direct_rel_12(V))
+        P = M.T @ M + R
+        q = - M.T @ dX
+        sol = solve_qp(P, q, lb=lb, ub=ub, G=G, h=h)
+        V = V + sol[0:12]
+        O = O + sol[12:15]
+        Omega = Omega + sol[15:18]
+        com = robot_ref_to_abs(center_of_mass(V), O, Omega)
+
+        # Mise à jour des valeurs réelles
+        set_verins_12(V)
+        set_O(O)
+        set_omega(Omega)
+        set_com(com)
+        for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        LV.append(V)
+        LO.append(O)
+        LOmega.append(Omega)
+        Lcom.append(com)
+    return LV, LO, LOmega, Lcom
 
 ############################################################################
 

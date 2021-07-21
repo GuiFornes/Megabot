@@ -144,52 +144,6 @@ def gen_jacob_12(V):
                            np.concatenate((np.zeros((3, 9)), J[3]), axis=1)))
 
 
-def gen_matrix_rota(angle, axis):
-    if axis == 0:  # Rotation selon x
-        return np.array([[1, 0, 0],
-                         [0, np.cos(angle), -np.sin(angle)],
-                         [0, np.sin(angle), np.cos(angle)]])
-    elif axis == 1:  # Rotation selon y
-        return np.array([[np.cos(angle), 0, -np.sin(angle)],
-                         [0, 1, 0],
-                         [np.sin(angle), 0, np.cos(angle)]])
-    else:  # Rotation selon z
-        return np.array([[np.cos(angle), -np.sin(angle), 0],
-                         [np.sin(angle), np.cos(angle), 0],
-                         [0, 0, 1]])
-
-
-def gen_deriv_matrix_rota(angle, axis):
-    if axis == 0:  # Rotation selon x
-        return np.array([[0, 0, 0],
-                         [0, -np.sin(angle), -np.cos(angle)],
-                         [0, np.cos(angle), -np.sin(angle)]])
-    elif axis == 1:  # Rotation selon y
-        return np.array([[-np.sin(angle), 0, -np.cos(angle)],
-                         [0, 0, 0],
-                         [np.cos(angle), 0, -np.sin(angle)]])
-    else:  # Rotation selon z
-        return np.array([[-np.sin(angle), -np.cos(angle), 0],
-                         [np.cos(angle), -np.sin(angle), 0],
-                         [0, 0, 0]])
-
-
-def gen_R(l, m, n):
-    return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
-
-
-def gen_dRdl(l, m, n):
-    return gen_deriv_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
-
-
-def gen_dRdm(l, m, n):
-    return gen_matrix_rota(l, 2) @ gen_deriv_matrix_rota(m, 0) @ gen_matrix_rota(n, 2)
-
-
-def gen_dRdn(l, m, n):
-    return gen_matrix_rota(l, 2) @ gen_matrix_rota(m, 0) @ gen_deriv_matrix_rota(n, 2)
-
-
 def jacob_dX_to_dV_dO_dOmega(V, Omega, X_rel):
     dRdl = gen_dRdl(Omega[0], Omega[1], Omega[2])
     dRdm = gen_dRdm(Omega[0], Omega[1], Omega[2])
