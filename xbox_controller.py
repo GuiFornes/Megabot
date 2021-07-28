@@ -2,7 +2,24 @@ import pygame.joystick
 import time
 from upg_planning import *
 
+""" TUTO : /// HOW TO CONNECT THE XBOX CONTROLLER ///
+If you want to use bluetooth :
+    To connect the xbox one controller on your linux computer, you need to disable ertm using the following command.
+    ~$ sudo bash -c "echo 1 > /sys/module/bluetooth/parameters/disable_ertm"
+    Then turn on the controller using the 'xbox' button and press for a few seconds on the small button on top of the 
+    controller and connect it normally to your computer bluetooth.
+If you use cable :
+    Just plug it
+
+To test if the controller works well, you can DL jstest-gtk using :
+~$ sudo apt-get install -y jstest-gtk 
+then launch it and you should see the controller.
+"""
+
+
+
 def get_joystick():
+    """ Return direction and rotation values of the linked controller """
     d = (- pygame.joystick.Joystick(0).get_axis(1), - pygame.joystick.Joystick(0).get_axis(0))
     r = - pygame.joystick.Joystick(0).get_axis(3)
     return d, r
@@ -16,7 +33,7 @@ if __name__ == "__main__":
     while True:
         d, r = get_joystick()
         print(d, r)
-        # traj = compute_traj_form_joystick_abs(d, r)
+        # traj = compute_traj_from_joystick_abs_equals_nb_points(d, r)
         if  0 == 1:# Tracé
             fig = plt.figure()
             ax = fig.gca(projection='3d')  # Affichage en 3D

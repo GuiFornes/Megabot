@@ -1,16 +1,16 @@
 from upg_kinetic import *
 from upg_mass_center import *
 from upg_tools import *
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 MIN_RADIUS = 2500
 MAX_RADIUS = 15000
 
 INF = 100000
 
-TRAJ_ACCUR = 50
+TRAJ_ACCUR = 50  # useless now
+DSTEP = 50
+STEP_HEIGHT = 0
+EPSILON = 20  # accuracy asked in movement
 
 
 def cmd_joystick(d, r):
@@ -43,7 +43,7 @@ def cmd_joystick(d, r):
     elif r == 0:
         # marche tout droit
         n = normal_vector(d)
-        c = n[0]*INF, n[1]*INF
+        c = n[0] * INF, n[1] * INF
     else:
         # marche courbe standard
         n = normal_vector(d)
@@ -63,7 +63,7 @@ def compute_traj_form_joystick_rel(joystick):
     :param joystick: position du centre de rotation, direction
     :return: les quatres trajectoires
     """
-    centre,  direction = joystick[0], joystick[1]
+    centre, direction = joystick[0], joystick[1]
     print(joystick)
     traj = []
     r = []
@@ -71,27 +71,27 @@ def compute_traj_form_joystick_rel(joystick):
     pos = direct_rel_12(V)
     # Computing radii
     for leg in range(4):
-        radius = np.sqrt((pos[leg * 3 + 0] - centre[0])**2 + (pos[leg * 3 + 1] - centre[1])**2)
+        radius = np.sqrt((pos[leg * 3 + 0] - centre[0]) ** 2 + (pos[leg * 3 + 1] - centre[1]) ** 2)
         r.append(radius)
     r_max = max(r)
     n = int(2 * np.pi * r_max / TRAJ_ACCUR)
     for i in range(n - 10):
-        L=[]
+        L = []
         for leg in range(4):
             alpha = np.arccos(abs((centre[1] - pos[3 * leg + 1])) / r[leg])
             signe_cx = (centre[0] - pos[leg * 3 + 0]) / abs(centre[0] - pos[leg * 3 + 0])
             signe_cy = (centre[1] - pos[leg * 3 + 1]) / abs(centre[1] - pos[leg * 3 + 1])
             if signe_cx < 0 and signe_cy < 0:
-                alpha = + np.pi/2 - alpha
+                alpha = + np.pi / 2 - alpha
             if signe_cx > 0 and signe_cy < 0:
-                alpha = + np.pi/2 + alpha
+                alpha = + np.pi / 2 + alpha
             if signe_cx < 0 and signe_cy > 0:
-                alpha = - np.pi/2 + alpha
+                alpha = - np.pi / 2 + alpha
             if signe_cx > 0 and signe_cy > 0:
-                alpha = - np.pi/2 - alpha
-            L = np.append(L, (r[leg] * np.cos((2*i*np.pi)/n + alpha) + centre[0],
-                              r[leg] * np.sin((2*i*np.pi)/n + alpha) + centre[1],
-                              pos[3*leg + 2]))
+                alpha = - np.pi / 2 - alpha
+            L = np.append(L, (r[leg] * np.cos((2 * i * np.pi) / n + alpha) + centre[0],
+                              r[leg] * np.sin((2 * i * np.pi) / n + alpha) + centre[1],
+                              pos[3 * leg + 2]))
         traj.append(L)
     return traj
 
@@ -108,7 +108,7 @@ def is_accessible_rel(leg_id, point):
     v1, v2, v3 = 535, 615, 520
     x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
     xt, yt, zt = point
-    dx, dy, dz = xt-x0, yt-y0, zt-z0
+    dx, dy, dz = xt - x0, yt - y0, zt - z0
     traj = []
     n = 40
     for i in range(n):
@@ -116,7 +116,7 @@ def is_accessible_rel(leg_id, point):
                               y0 + i * dy / n,
                               z0 + i * dz / n]))
     Verins = move_leg(traj, v1, v2, v3, leg_id, display=False, upgrade=False, solved=True)
-    res = [Verins[n-1][0], Verins[n-1][1], Verins[n-1][2]]
+    res = [Verins[n - 1][0], Verins[n - 1][1], Verins[n - 1][2]]
     acces = True
     xf, yf, zf = direct_rel_3(res[0], res[1], res[2], leg_id)
     # print("x : ", x0, xt, traj[n-1][0], xf)
@@ -137,7 +137,7 @@ def furthest_accessible_rel(traj, leg_id):
     :return: the furthest point accessible from the traj
     """
     v1, v2, v3 = get_verins_3(leg_id)
-    xt, yt, zt = traj[0][leg_id*3 + 0:leg_id * 3 + 3]
+    xt, yt, zt = traj[0][leg_id * 3 + 0:leg_id * 3 + 3]
     lpl = ROBOT['legs'][leg_id]['lengths']
     for i in range(1, len(traj)):
         # get data
@@ -147,7 +147,8 @@ def furthest_accessible_rel(traj, leg_id):
         xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
         dX = np.array([xt - x0, yt - y0, zt - z0])
         # solve
-        J = ROBOT['legs'][leg_id]['matrix'].T @ gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
+        J = ROBOT['legs'][leg_id]['matrix'].T @ gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000,
+                                                            np.arccos(v3_to_cos_angle(v3, lpl)), lpl)
         P = J.T @ J
         q = - J.T @ dX
         lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
@@ -178,160 +179,188 @@ def furthest_accessible_step_all_legs_rel(traj, step_height):
 ############################### ABSOLUTE WAY ##################################
 
 
-def compute_traj_form_joystick_abs(joystick):
+def compute_traj_from_joystick_leg_equals_distance(joystick, leg_id):
     """
+    Compute the trajectory for one leg with a constant distance between each points of the discretization
 
-    :param joystick:
+    :param joystick: ((rota_center_x, rota_center_y), (dir_x, dir_y))
+    :param leg_id: ID of the leg
     :return:
     """
     centre, direction = joystick[0], joystick[1]
+    pos = direct_abs(get_verins_12(), get_O(), get_omega())
+    radius = distance(pos[leg_id * 3 + 0:leg_id * 3 + 3], (centre[0], centre[1], 0))
+    n = int((2 * np.pi * radius) / DSTEP)
+    traj_leg = []
+    for i in range(n):
+        alpha = np.arccos(abs((centre[1] - pos[3 * leg_id + 1])) / radius)
+        signe_cx = (centre[0] - pos[leg_id * 3 + 0]) / abs(centre[0] - pos[leg_id * 3 + 0])
+        signe_cy = (centre[1] - pos[leg_id * 3 + 1]) / abs(centre[1] - pos[leg_id * 3 + 1])
+        if signe_cx < 0 and signe_cy < 0:
+            alpha = + np.pi / 2 - alpha
+        if signe_cx > 0 > signe_cy:
+            alpha = + np.pi / 2 + alpha
+        if signe_cx < 0 < signe_cy:
+            alpha = - np.pi / 2 + alpha
+        if signe_cx > 0 and signe_cy > 0:
+            alpha = - np.pi / 2 - alpha
+        traj_leg.append([radius * np.cos((2 * i * np.pi) / n + alpha) + centre[0],
+                         radius * np.sin((2 * i * np.pi) / n + alpha) + centre[1],
+                         pos[3 * leg_id + 2]])
+        # if len(traj_leg) == 0:
+        #     traj_leg = [radius * np.cos((2 * i * np.pi) / n + alpha) + centre[0],
+        #                 radius * np.sin((2 * i * np.pi) / n + alpha) + centre[1],
+        #                 pos[3 * leg_id + 2]]
+        # else:
+        #     traj_leg = np.vstack((traj_leg, (radius * np.cos((2 * i * np.pi) / n + alpha) + centre[0],
+        #                                      radius * np.sin((2 * i * np.pi) / n + alpha) + centre[1],
+        #                                      pos[3 * leg_id + 2])))
+    return traj_leg
+
+
+def compute_traj_form_joystick_abs_equal_dist(joystick):
+    """
+    Compute all 4 trajectories for each leg with a constant distance between each points of the discretization
+
+    :param joystick: ((rota_center_x, rota_center_y), (dir_x, dir_y))
+    :return:
+    """
     traj = []
     r = []
     pos = direct_abs(get_verins_12(), get_O(), get_omega())
-    # Computing radii
     for leg in range(4):
-        radius = distance(pos[leg*3+0:leg*3+3], (centre[0], centre[1], 0))
-        r.append(radius)
-    r_max = max(r)
-    n = int(2 * np.pi * r_max / TRAJ_ACCUR)
-    for i in range(n-250):
-        L = []
-        for leg in range(4):
-            alpha = np.arccos(abs((centre[1] - pos[3 * leg + 1])) / r[leg])
-            signe_cx = (centre[0] - pos[leg * 3 + 0]) / abs(centre[0] - pos[leg * 3 + 0])
-            signe_cy = (centre[1] - pos[leg * 3 + 1]) / abs(centre[1] - pos[leg * 3 + 1])
-            if signe_cx < 0 and signe_cy < 0:
-                alpha = + np.pi / 2 - alpha
-            if signe_cx > 0 > signe_cy:
-                alpha = + np.pi / 2 + alpha
-            if signe_cx < 0 < signe_cy:
-                alpha = - np.pi / 2 + alpha
-            if signe_cx > 0 and signe_cy > 0:
-                alpha = - np.pi / 2 - alpha
-            L = np.append(L, (r[leg] * np.cos((2 * i * np.pi) / n + alpha) + centre[0],
-                              r[leg] * np.sin((2 * i * np.pi) / n + alpha) + centre[1],
-                              pos[3 * leg + 2]))
+        L = compute_traj_from_joystick_leg_equals_distance(joystick, leg)
         traj.append(L)
     return traj
 
 
-def furthest_accessible_abs(traj, leg_id, max_omega=10, const_omega=True, reg_val=0.01, step_height=0):
+def compute_step(traj, leg_id, max_omega=10, const_omega=True, reg_val=0.01):
     """
-    Compute the maximum step size following the trajectory, depending on the accessible zone for the leg.
-    traj should be the trajectory of all legs (basically returned by compute_traj_from_joystick)
-    :param traj: trajectory to follow
+    Assuming that traj[0] is the actual position of the leg, compute the maximum step possible following its trajectory
+
+    :param traj: trajectory of the leg
     :param leg_id: ID of the leg
-    :param max_omega: maximum angle allowed for the body
-    :param const_omega: bool -> is there a constraint on angle
-    :param reg_val: regularisation value
-    :param step_height: height of one step
-    :return: the furthest point accessible from the traj
+    :return: list of cylinder's elongations and O, omega displacement
     """
-    temp = np.zeros(12)
-    traj_leg = [temp]*len(traj)
-    # traj_leg = np.zeros((len(traj), 12))
-    for i in range(len(traj)):
-        traj_leg[i] = traj[0].copy()
-        traj_leg[i][leg_id*3:leg_id*3+3] = traj[i][leg_id*3:leg_id*3+3]
-    init = traj[0].copy()
-    for j in range(step_height):
-        traj_leg.insert(0, init.copy())
-        traj_leg[0][leg_id * 3 + 2] += step_height + 1 - j
-    for k in range(step_height, len(traj_leg)):
-        traj_leg[k][leg_id * 3 + 2] += step_height
-    R = reg_val * np.eye(18)
-    V = get_verins_12()
-    O = get_O()
-    omega = get_omega()
-    LV = [V]
-    LO = [O]
-    LOmega = [omega]
-    for i in range(1, len(traj_leg)):
-        # Calcul de dX
-        X0 = direct_abs(V, O, omega)
-        if distance(X0[leg_id * 3:leg_id * 3 + 3], traj_leg[i-1][leg_id * 3:leg_id * 3 + 3]) > 20:  # exit condition
-            return i-step_height, (LV, LO, LOmega)
-        set_X(X0)
-        dX = traj_leg[i] - X0
-        # Contraintes
-        lb = np.full(18, - np.inf)
-        ub = np.full(18, np.inf)
-        for j in range(12):
-            lb[j] = 450.0 - V[j]
-            ub[j] = 650.0 - V[j]
-        for j in range(3):
-            if const_omega:
-                lb[15 + j] = - max_omega * np.pi / 180 - omega[j]
-                ub[15 + j] = max_omega * np.pi / 180 - omega[j]
+    n_step = len(traj[leg_id])
+    traj_leg = [np.zeros(12)] * n_step
+    for i in range(n_step):
+        for leg in range(4):
+            if leg != leg_id:
+                traj_leg[leg*3:leg*3+3] = [0, 0, 0]
             else:
-                lb[15 + j] = - np.pi
-                ub[15 + j] = np.pi
-        # solve
-        M = jacob_dX_to_dV_dO_dOmega(V, omega, direct_rel_12(V))
-        P = M.T @ M + R
-        q = - M.T @ dX
-        sol = solve_qp(P, q, lb=lb, ub=ub)
-        # Mise à jour des valeurs réelles
-        V = V + sol[0:12]
-        O = O + sol[12:15]
-        omega = omega + sol[15:18]
-        for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
-        LV.append(V)
-        LO.append(O)
-        LOmega.append(omega)
-    return len(traj_leg)-1, (LV, LO, LOmega)
+                traj_leg[leg*3:leg*3+3] = traj[leg_id][i]
+                traj_leg[leg*3+2] += STEP_HEIGHT
+
+    LV, LO, LOmega = move_abs_one_leg(traj_leg, leg_id)
+    step_len = len(LV)
+    print(step_len)
+    # R = reg_val * np.eye(18)
+    # V = get_verins_12()
+    # O = get_O()
+    # omega = get_omega()
+    # LV = [V]
+    # LO = [O]
+    # target = np.concatenate((traj_leg[0][0], traj_leg[1][0], traj_leg[2][0], traj_leg[3][0]))
+    # for i in range(1, len(traj_leg[0])):
+    #     # Computing dX
+    #     X0 = direct_abs(V, O, omega)
+    #     print("\nX0 =", X0)
+    #     if distance(X0[leg_id * 3:leg_id * 3 + 3],
+    #                 target[leg_id * 3:leg_id * 3 + 3]) > EPSILON:  # exit condition
+    #         print("\nto far from original trajectory")
+    #         print("distance = ", distance(X0[leg_id * 3:leg_id * 3 + 3],
+    #               target[leg_id * 3:leg_id * 3 + 3]))
+    #         break
+    #     target = np.concatenate((traj_leg[0][i], traj_leg[1][i], traj_leg[2][i], traj_leg[3][i]))
+    #     dX = target - X0
+    #     print("target =", target)
+    #     print("dX : ", dX)
+    #     # Contraintes
+    #     lb = np.full(18, - np.inf)
+    #     ub = np.full(18, np.inf)
+    #     for j in range(12):
+    #         lb[j] = 450.0 - V[j]
+    #         ub[j] = 650.0 - V[j]
+    #     for j in range(3):
+    #         if const_omega:
+    #             lb[15 + j] = - max_omega * np.pi / 180 - omega[j]
+    #             ub[15 + j] = max_omega * np.pi / 180 - omega[j]
+    #         else:
+    #             lb[15 + j] = - np.pi
+    #             ub[15 + j] = np.pi
+    #     # solve
+    #     M = jacob_dX_to_dV_dO_dOmega(V, omega, direct_rel_12(V))
+    #     P = M.T @ M + R
+    #     q = - M.T @ dX
+    #     sol = solve_qp(P, q, lb=lb, ub=ub)
+    #     # Mise à jour des valeurs réelles
+    #     V = V + sol[0:12]
+    #     O = O + sol[12:15]
+    #     omega = omega + sol[15:18]
+    #     for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+    #     LV.append(V)
+    #     LO.append(O)
+    #     LOmega.append(omega)
+    # # retour en position basse
+    # step_len = len(LV)
+    # print(step_len)
+    # # print("\n0 : ", traj_leg[0])
+    # # print("\n1 : ", traj_leg[1])
+    # # print("\n2 : ", traj_leg[2])
+    # # print("\n3 : ", traj_leg[3])
+    # traj_leg = np.stack((traj_leg[0][0:step_len], traj_leg[1][0:step_len],
+    #                            traj_leg[2][0:step_len], traj_leg[3][0:step_len]))
+    # # print("\n0 : ", traj_leg[0])
+    # # print("\n1 : ", traj_leg[1])
+    # # print("\n2 : ", traj_leg[2])
+    # # print("\n3 : ", traj_leg[3])
+    # for leg in range(4):
+    #     temp = traj_leg[leg][step_len].copy()
+    #     for i in range(1, int(STEP_HEIGHT/20)):
+    #         np.append(traj_leg[leg], temp.copy())
+    #         print(i)
+    #         traj_leg[leg][step_len+int(i/20)][2] -= i
+
+    # for i in range(step_len + 1, len(traj_leg[0])):
+    #     # Calcul de dX
+    #     X0 = direct_abs(V, O, omega)
+    #     target = np.concatenate((traj_leg[0][i], traj_leg[1][i], traj_leg[2][i], traj_leg[3][i]))
+    #     if distance(X0[leg_id * 3:leg_id * 3 + 3],
+    #                 target[i - 1][leg_id * 3:leg_id * 3 + 3]) > EPSILON:  # exit condition
+    #         print("\n ALERTE, IMPOSSIBLE DE REDESCENDRE EN ETANT ASSEZ PRECIS !!! \n")
+    #         assert(1 == 2)
+    #     dX = target - X0
+    #     # Contraintes
+    #     lb = np.full(18, - np.inf)
+    #     ub = np.full(18, np.inf)
+    #     for j in range(12):
+    #         lb[j] = 450.0 - V[j]
+    #         ub[j] = 650.0 - V[j]
+    #     for j in range(3):
+    #         if const_omega:
+    #             lb[15 + j] = - max_omega * np.pi / 180 - omega[j]
+    #             ub[15 + j] = max_omega * np.pi / 180 - omega[j]
+    #         else:
+    #             lb[15 + j] = - np.pi
+    #             ub[15 + j] = np.pi
+    #     # solve
+    #     M = jacob_dX_to_dV_dO_dOmega(V, omega, direct_rel_12(V))
+    #     P = M.T @ M + R
+    #     q = - M.T @ dX
+    #     sol = solve_qp(P, q, lb=lb, ub=ub)
+    #     # Mise à jour des valeurs réelles
+    #     V = V + sol[0:12]
+    #     O = O + sol[12:15]
+    #     omega = omega + sol[15:18]
+    #     for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+    #     LV.append(V)
+    #     LO.append(O)
+    #     LOmega.append(omega)
+    return LV, LO, LOmega, traj_leg
 
 
-def furthest_accessible_all_legs_abs(traj, step_height=0):
-    max_step, data = [], []
-    for leg in range(4):
-        step, data_leg = furthest_accessible_abs(traj, leg, step_height=step_height, max_omega=45)
-        max_step.append(step)
-        data.append((data_leg))
-    return max_step, data
-
-
-
-################################ WALK -> SYL ##################################
-
-
-def get_joystick():
-    return (1, 0), 0
-
-
-def move_along(traj, step, leg_id):
-    v1, v2, v3 = get_verins_3(leg_id)
-    lpl = ROBOT['legs'][leg_id]['lengths']
-    verrins = []
-    for i in range(1, step):
-        # get data
-        x0, y0, z0 = direct_rel_3(v1, v2, v3, leg_id)
-        xt, yt, zt = traj[i][leg_id * 3 + 0], traj[i][leg_id * 3 + 1], traj[i][leg_id * 3 + 2]
-        dX = np.array([xt - x0, yt - y0, zt - z0])
-        # solve
-        J = np.dot(gen_jacob_3(v1 / 1000, v2 / 1000, v3 / 1000, np.arccos(v3_to_cos_angle(v3, lpl)), lpl),
-                   ROBOT['legs'][leg_id]['matrix'])
-        P = np.dot(inv(J).T, inv(J))
-        q = - np.dot(inv(J).T, dX)
-        lb = np.array([450.0 - v1, 450.0 - v2, 450.0 - v3])
-        ub = np.array([650.0 - v1, 650.0 - v2, 650.0 - v3])
-        dV = solve_qp(P, q, lb=lb, ub=ub)
-        v1, v2, v3 = v1 + dV[0], v2 + dV[1], v3 + dV[2]
-        verrins.append((v1, v2, v3))
-    return verrins
-
-
-def waaalkkk():
-    """not for now yet"""
-    d, r = get_joystick()
-    traj = compute_traj_form_joystick_rel(cmd_joystick(d, r))
-    max_step = []
-    for leg in range(4):
-        max_step.append(furthest_accessible_rel(traj, leg))
-    step = max(max_step)
-
-    # Move front left leg
-    move_along(traj, step, FL)
+################################ COM CONTROL ##################################
 
 
 def gen_G(l1, l2, l3, V, Omega, com, passenger=True, passenger_weight=80):
@@ -348,13 +377,13 @@ def gen_G(l1, l2, l3, V, Omega, com, passenger=True, passenger_weight=80):
     :return: G
     """
     M = [np.array([[0 if (l2 - l1)[1] == 0.0 else (l2 - l1)[1] / abs((l2 - l1)[1]), 0],
-                  [0, 0 if (l2 - l1)[0] == 0.0 else - (l2 - l1)[0] / abs((l2 - l1)[0])]]),
+                   [0, 0 if (l2 - l1)[0] == 0.0 else - (l2 - l1)[0] / abs((l2 - l1)[0])]]),
          np.array([[0 if (l3 - l2)[1] == 0.0 else (l3 - l2)[1] / abs((l3 - l2)[1]), 0],
                    [0, 0 if (l3 - l2)[0] == 0.0 else - (l3 - l2)[0] / abs((l3 - l2)[0])]]),
          np.array([[0 if (l1 - l3)[1] == 0.0 else (l1 - l3)[1] / abs((l1 - l3)[1]), 0],
                    [0, 0 if (l1 - l3)[0] == 0.0 else - (l1 - l3)[0] / abs((l1 - l3)[0])]])]
-    J_com = gen_J_com_abs(V, Omega, com, passenger_weight=passenger_weight)[0 : 2, 0 : 18] if passenger \
-        else gen_J_com_abs(V, Omega, com, passenger_weight=0)[0 : 2, 0 : 18]
+    J_com = gen_J_com_abs(V, Omega, com, passenger_weight=passenger_weight)[0: 2, 0: 18] if passenger \
+        else gen_J_com_abs(V, Omega, com, passenger_weight=0)[0: 2, 0: 18]
     return np.concatenate((M[0] @ J_com, M[1] @ J_com, M[2] @ J_com))
 
 
@@ -384,6 +413,13 @@ def gen_h(l1, l2, l3, com):
 
 
 def gen_traj_all_legs(traj_one_leg, leg_id, X0):
+    """
+
+    :param traj_one_leg:
+    :param leg_id:
+    :param X0:
+    :return:
+    """
     if leg_id == 0:
         return [[pos[0], pos[1], pos[2], X0[3], X0[4], X0[5], X0[6], X0[7], X0[8], X0[9], X0[10], X0[11]]
                 for pos in traj_one_leg]
@@ -397,7 +433,8 @@ def gen_traj_all_legs(traj_one_leg, leg_id, X0):
             for pos in traj_one_leg]
 
 
-def move_under_constraint(traj_leg, leg_id, reg_val=0.01, const_omega=True, max_omega=10, passenger=True, passenger_weight=80):
+def move_under_constraint(traj_leg, leg_id, reg_val=0.01, const_omega=True, max_omega=10, passenger=True,
+                          passenger_weight=80):
     """
     Copie de move_abs_all_legs() intégrant la contrainte de positionnement du projeté du centre de masse du robot
     dans le polygone de sustentation formé par les pattes au sol
@@ -478,10 +515,159 @@ def move_under_constraint(traj_leg, leg_id, reg_val=0.01, const_omega=True, max_
         Lcom.append(com)
     return LV, LO, LOmega, Lcom
 
+
+################################ DEPRECATED ##################################
+
+
+def compute_traj_from_joystick_abs_equals_nb_points(joystick):
+    """
+    Compute all 4 trajectories from joystick input with the same number of point for each discretization
+
+    :param joystick: ((rota_center_x, rota_center_y), (dir_x, dir_y))
+    :return: traj[step_of_traj][12_coords_(->_4_points)]
+    """
+    centre, direction = joystick[0], joystick[1]
+    traj = []
+    r = []
+    pos = direct_abs(get_verins_12(), get_O(), get_omega())
+    # Computing radii
+    for leg in range(4):
+        radius = distance(pos[leg * 3 + 0:leg * 3 + 3], (centre[0], centre[1], 0))
+        r.append(radius)
+    r_max = max(r)
+    n = int(2 * np.pi * r_max / TRAJ_ACCUR)
+    for i in range(n - 100):
+        L = []
+        for leg in range(4):
+            alpha = np.arccos(abs((centre[1] - pos[3 * leg + 1])) / r[leg])
+            signe_cx = (centre[0] - pos[leg * 3 + 0]) / abs(centre[0] - pos[leg * 3 + 0])
+            signe_cy = (centre[1] - pos[leg * 3 + 1]) / abs(centre[1] - pos[leg * 3 + 1])
+            if signe_cx < 0 and signe_cy < 0:
+                alpha = + np.pi / 2 - alpha
+            if signe_cx > 0 > signe_cy:
+                alpha = + np.pi / 2 + alpha
+            if signe_cx < 0 < signe_cy:
+                alpha = - np.pi / 2 + alpha
+            if signe_cx > 0 and signe_cy > 0:
+                alpha = - np.pi / 2 - alpha
+            L = np.append(L, (r[leg] * np.cos((2 * i * np.pi) / n + alpha) + centre[0],
+                              r[leg] * np.sin((2 * i * np.pi) / n + alpha) + centre[1],
+                              pos[3 * leg + 2]))
+        traj.append(L)
+    return traj
+
+
+def furthest_accessible_abs(traj, leg_id, max_omega=10, const_omega=True, reg_val=0.01, step_height=0):
+    """
+    Compute the furthest point reachable of the trajectory for one leg
+    traj should be the trajectory of all legs (basically returned by compute_traj_from_joystick)
+    :param traj: trajectory to follow
+    :param leg_id: ID of the leg
+    :param max_omega: maximum angle allowed for the body
+    :param const_omega: bool -> is there a constraint on angle
+    :param reg_val: regularisation value
+    :param step_height: height of one step
+    :return: the furthest point accessible from the traj
+    """
+    temp = np.zeros(12)
+    traj_leg = [temp] * len(traj)
+    # traj_leg = np.zeros((len(traj), 12))
+    for i in range(len(traj)):
+        traj_leg[i] = traj[0].copy()
+        traj_leg[i][leg_id * 3:leg_id * 3 + 3] = traj[i][leg_id * 3:leg_id * 3 + 3]
+    init = traj[0].copy()
+    for j in range(step_height):
+        traj_leg.insert(0, init.copy())
+        traj_leg[0][leg_id * 3 + 2] += step_height + 1 - j
+    for k in range(step_height, len(traj_leg)):
+        traj_leg[k][leg_id * 3 + 2] += step_height
+    R = reg_val * np.eye(18)
+    V = get_verins_12()
+    O = get_O()
+    omega = get_omega()
+    LV = [V]
+    LO = [O]
+    LOmega = [omega]
+    for i in range(1, len(traj_leg)):
+        # Calcul de dX
+        X0 = direct_abs(V, O, omega)
+        if distance(X0[leg_id * 3:leg_id * 3 + 3], traj_leg[i - 1][leg_id * 3:leg_id * 3 + 3]) > 20:  # exit condition
+            return i - step_height, (LV, LO, LOmega)
+        set_X(X0)
+        dX = traj_leg[i] - X0
+        # Contraintes
+        lb = np.full(18, - np.inf)
+        ub = np.full(18, np.inf)
+        for j in range(12):
+            lb[j] = 450.0 - V[j]
+            ub[j] = 650.0 - V[j]
+        for j in range(3):
+            if const_omega:
+                lb[15 + j] = - max_omega * np.pi / 180 - omega[j]
+                ub[15 + j] = max_omega * np.pi / 180 - omega[j]
+            else:
+                lb[15 + j] = - np.pi
+                ub[15 + j] = np.pi
+        # solve
+        M = jacob_dX_to_dV_dO_dOmega(V, omega, direct_rel_12(V))
+        P = M.T @ M + R
+        q = - M.T @ dX
+        sol = solve_qp(P, q, lb=lb, ub=ub)
+        # Mise à jour des valeurs réelles
+        V = V + sol[0:12]
+        O = O + sol[12:15]
+        omega = omega + sol[15:18]
+        for v in V: assert 449.9 < v < 650.1, 'Elongation de vérin invalide'
+        LV.append(V)
+        LO.append(O)
+        LOmega.append(omega)
+    return len(traj_leg) - 1, (LV, LO, LOmega)
+
+
+def furthest_accessible_all_legs_abs(traj, step_height=0):
+    """
+
+    :param traj:
+    :param step_height:
+    :return:
+    """
+    max_step, data = [], []
+    for leg in range(4):
+        step, data_leg = furthest_accessible_abs(traj, leg, step_height=step_height, max_omega=45)
+        max_step.append(step)
+        data.append((data_leg))
+    return max_step, data
+
+
 ############################################################################
 
 if __name__ == "__main__":
+    init()
+    X0 = direct_abs(get_verins_12(), get_O(), get_omega())
+    a = [1, 2, 3]
+    b = [0, 0, 0]
+    c = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+
+    test = [[[np.array([1, 2, 3]), np.array([4, 5, 6])],
+             [np.array([1, 2, 3]), np.array([4, 5, 6])]],
+            [[np.array([1, 2, 3]), np.array([4, 5, 6])],
+             [np.array([1, 2, 3]), np.array([4, 5, 6])]],
+            [[np.array([1, 2, 3]), np.array([4, 5, 6])],
+             [np.array([1, 2, 3]), np.array([4, 5, 6])]]]
+    temp = np.array([1, 2, 3])
+    temp = [temp.copy] * 2
+    test = [temp.copy()] * 4
+    print(test)
+    print("\n")
+    print(test[0])
+    print("\n")
+    print(test[0][0])
+    print("\n")
+    test[0].insert(0, np.array([7, 8, 9]))
+    print(test)
+
     import doctest
+
     doctest.testmod()
 
 ######################## DEPRECATED #############################
@@ -575,4 +761,3 @@ if __name__ == "__main__":
 #     #     traj.append(trajFR[i])
 #     #     traj.append(trajRL[i])
 #     #     traj.append(trajRR[i])
-

@@ -1,5 +1,5 @@
 from upg_tests import *
-
+import time
 
 def test_jacob_2(v1, v2, dstep_x, dstep_y):
     """
@@ -692,6 +692,116 @@ def test_penalty_move_XZ(v1, v2, d, eps, leg_id):
     plt.show()
 
 
+def test_compute_traj(R, D, abs=False):
+    init()
+    if abs:
+        traj = compute_traj_from_joystick_abs_equals_nb_points(cmd_joystick(R, D))
+    else:
+        traj = compute_traj_form_joystick_rel(cmd_joystick(R, D))
+
+    V = get_verins_12()
+
+    # Trajectoires
+    Xt0 = [p[0] for p in traj]
+    Yt0 = [p[1] for p in traj]
+    Zt0 = [p[2] for p in traj]
+    Xt1 = [p[3] for p in traj]
+    Yt1 = [p[4] for p in traj]
+    Zt1 = [p[5] for p in traj]
+    Xt2 = [p[6] for p in traj]
+    Yt2 = [p[7] for p in traj]
+    Zt2 = [p[8] for p in traj]
+    Xt3 = [p[9] for p in traj]
+    Yt3 = [p[10] for p in traj]
+    Zt3 = [p[11] for p in traj]
+
+    # Tracé des trajectoires
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.scatter(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.scatter(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.scatter(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.scatter(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    if abs:
+        pos = direct_abs(V, get_O(), get_omega())
+        ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500), (580, 580, 580, 580, 580))
+        ax.plot((500, pos[0]), (500, pos[1]), (580, pos[2]), c='red')
+        ax.plot((500, pos[3]), (-500, pos[4]), (580, pos[5]), c='blue')
+        ax.plot((-500, pos[6]), (500, pos[7]), (580, pos[8]), c='purple')
+        ax.plot((-500, pos[9]), (-500, pos[10]), (580, pos[11]), c='green')
+        ax.set_xbound(-2000, 2000)
+        ax.set_ybound(-2000, 2000)
+        ax.set_zbound(-500, 1500)
+    else:
+        pos = direct_rel_12(V)
+        ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500))
+        ax.plot((500, pos[0]), (500, pos[1]), (0, pos[2]), c='red')
+        ax.plot((500, pos[3]), (-500, pos[4]), (0, pos[5]), c='blue')
+        ax.plot((-500, pos[6]), (500, pos[7]), (0, pos[8]), c='purple')
+        ax.plot((-500, pos[9]), (-500, pos[10]), (0, pos[11]), c='green')
+        ax.set_xbound(-2000, 2000)
+        ax.set_ybound(-2000, 2000)
+        ax.set_zbound(-1000, 1000)
+    for i in range(4):
+        ax.scatter(traj[0][i * 3 + 0], traj[0][i * 3 + 1], traj[0][i * 3 + 2], c='black', s=60)
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(2000, -2000)
+    plt.show()
+
+
+def test_furthest_pos(D, R):
+    init()
+    traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
+    max_step = []
+    for leg in range(4):
+        step = furthest_accessible_rel(traj, leg)
+        max_step.append(step)
+    print("maximum point of the trajectory reached for each leg : ", max_step)
+    min_value = min(max_step)
+    leg = max_step.index(min_value)
+    step_length = distance((traj[0][leg * 3 + 0], traj[0][leg * 3 + 1], traj[0][leg * 3 + 1]),
+                           (traj[min_value][leg * 3 + 0], traj[min_value][leg * 3 + 1], traj[min_value][leg * 3 + 1]))
+    print("resultant step length is ", step_length, " for leg n° ", leg)
+    comp_rel(traj)
+
+
+def test_furthest_all_legs(D, R, step_height=0, abs=False):
+    init()
+    if abs:
+        traj = compute_traj_from_joystick_abs_equals_nb_points(cmd_joystick(D, R))
+        # print("traj 0 :", traj[0])
+        max_step, data = furthest_accessible_all_legs_abs(traj, step_height)
+        min_value = min(max_step)
+        leg = max_step.index(min_value)
+        # print("traj max_step :", traj[max_step])
+        print("maximum point of the trajectory reached for each leg : ", max_step)
+        step_length = distance((traj[0][leg*3], traj[0][leg*3+1],
+                                traj[0][leg*3+2]),
+                               (traj[min_value][leg*3], traj[min_value][leg*3+2],
+                                traj[min_value][leg*3+2]))
+        print("resultant step length is ", step_length, " for leg n° ", leg)
+        for leg in range(4):
+            draw_abs(data[leg][0], data[leg][1], data[leg][2], traj=traj)
+    else:
+        traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
+        max_step = furthest_accessible_step_all_legs_rel(traj, step_height)
+        print("maximum point of the trajectory reached for each leg : ", max_step)
+        min_value = min(max_step)
+        leg = max_step.index(min_value)
+        step_length = distance((traj[step_height+1][leg * 3 + 0], traj[step_height+1][leg * 3 + 1],
+                                traj[step_height+1][leg * 3 + 1]),
+                               (traj[min_value+step_height+1][leg * 3 + 0], traj[min_value+step_height+1][leg * 3 + 1],
+                                traj[min_value+step_height+1][leg * 3 + 1]))
+        print("resultant step length is ", step_length, " for leg n° ", leg)
+        # comp_rel(traj)
+    print("\n")
+
+
 ############################################################################
 
 t_move = 0
@@ -808,3 +918,21 @@ if t_comp:
     print("direct v1 retourne : ", direct_v1(495, 585))
     print("L'algo de Julien retourne :",
           kin.get_leg_points_V1_V2(495 / 1000, 585 / 1000, ROBOT['legs'][FR]['lengths'])['J'])
+
+t_compute_traj = 1
+if t_compute_traj:
+    test_compute_traj((0, 0), 1, abs=True)
+    test_compute_traj((1, 0), 1, abs=True)
+    # test_compute_traj((0, 1), -1, abs=True)
+    # test_compute_traj((0, -1), 0, abs=True)
+    test_compute_traj((np.sqrt(3)/2, 1/2), 1, abs=True)
+
+t_furthest = 0
+if t_furthest:
+    # test_furthest_pos((1, 0), 1)
+    # test_furthest_pos((np.sqrt(3)/2, 1/2), 1)
+    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 200, abs=True)
+    # test_furthest_all_legs((1, 0), 1, 0)
+    # test_furthest_all_legs((1, 0), 1, 200, abs=True)
+    # test_furthest_all_legs((1, 0), 1, 25)
+    # test_furthest_all_legs((1, 0), 1, 250, abs=True)

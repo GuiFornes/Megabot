@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 from upg_deprecated import *
@@ -85,6 +86,7 @@ def draw_abs(LV, LO, LOmega, Lcom=None, traj=[]):
 
     plt.show()
 
+    # print(np.shape(T), np.shape(V1))
     # Tracé des élongations des vérins au cours du temps
     plt.plot(T, V1, label='V1')
     plt.plot(T, V2, label='V2')
@@ -285,113 +287,6 @@ def test_zone_accessible_abs(leg_id):
     ax = fig.gca(projection='3d')  # Affichage en 3D
 
 
-def test_compute_traj(R, D, abs=False):
-    init()
-    if abs:
-        traj = compute_traj_form_joystick_abs(cmd_joystick(R, D))
-    else:
-        traj = compute_traj_form_joystick_rel(cmd_joystick(R, D))
-
-    V = get_verins_12()
-
-    # Trajectoires
-    Xt0 = [p[0] for p in traj]
-    Yt0 = [p[1] for p in traj]
-    Zt0 = [p[2] for p in traj]
-    Xt1 = [p[3] for p in traj]
-    Yt1 = [p[4] for p in traj]
-    Zt1 = [p[5] for p in traj]
-    Xt2 = [p[6] for p in traj]
-    Yt2 = [p[7] for p in traj]
-    Zt2 = [p[8] for p in traj]
-    Xt3 = [p[9] for p in traj]
-    Yt3 = [p[10] for p in traj]
-    Zt3 = [p[11] for p in traj]
-
-    # Tracé des trajectoires
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')  # Affichage en 3D
-    ax.plot(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
-    ax.plot(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
-    ax.plot(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
-    ax.plot(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
-    plt.title("Trajectoire du bout de la patte dans l'espace")
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    if abs:
-        pos = direct_abs(V, get_O(), get_omega())
-        ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500), (580, 580, 580, 580, 580))
-        ax.plot((500, pos[0]), (500, pos[1]), (580, pos[2]), c='red')
-        ax.plot((500, pos[3]), (-500, pos[4]), (580, pos[5]), c='blue')
-        ax.plot((-500, pos[6]), (500, pos[7]), (580, pos[8]), c='purple')
-        ax.plot((-500, pos[9]), (-500, pos[10]), (580, pos[11]), c='green')
-        ax.set_xbound(-2000, 2000)
-        ax.set_ybound(-2000, 2000)
-        ax.set_zbound(-500, 1500)
-    else:
-        pos = direct_rel_12(V)
-        ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500))
-        ax.plot((500, pos[0]), (500, pos[1]), (0, pos[2]), c='red')
-        ax.plot((500, pos[3]), (-500, pos[4]), (0, pos[5]), c='blue')
-        ax.plot((-500, pos[6]), (500, pos[7]), (0, pos[8]), c='purple')
-        ax.plot((-500, pos[9]), (-500, pos[10]), (0, pos[11]), c='green')
-        ax.set_xbound(-2000, 2000)
-        ax.set_ybound(-2000, 2000)
-        ax.set_zbound(-1000, 1000)
-    for i in range(4):
-        ax.scatter(traj[0][i * 3 + 0], traj[0][i * 3 + 1], traj[0][i * 3 + 2], c='black', s=60)
-    plt.show()
-
-
-def test_furthest_pos(D, R):
-    init()
-    traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
-    max_step = []
-    for leg in range(4):
-        step = furthest_accessible_rel(traj, leg)
-        max_step.append(step)
-    print("maximum point of the trajectory reached for each leg : ", max_step)
-    min_value = min(max_step)
-    leg = max_step.index(min_value)
-    step_length = distance((traj[0][leg * 3 + 0], traj[0][leg * 3 + 1], traj[0][leg * 3 + 1]),
-                           (traj[min_value][leg * 3 + 0], traj[min_value][leg * 3 + 1], traj[min_value][leg * 3 + 1]))
-    print("resultant step length is ", step_length, " for leg n° ", leg)
-    comp_rel(traj)
-
-
-def test_furthest_all_legs(D, R, step_height=0, abs=False):
-    init()
-    if abs:
-        traj = compute_traj_form_joystick_abs(cmd_joystick(D, R))
-        # print("traj 0 :", traj[0])
-        max_step, data = furthest_accessible_all_legs_abs(traj, step_height)
-        min_value = min(max_step)
-        leg = max_step.index(min_value)
-        # print("traj max_step :", traj[max_step])
-        print("maximum point of the trajectory reached for each leg : ", max_step)
-        step_length = distance((traj[0][leg*3], traj[0][leg*3+1],
-                                traj[0][leg*3+2]),
-                               (traj[min_value][leg*3], traj[min_value][leg*3+2],
-                                traj[min_value][leg*3+2]))
-        print("resultant step length is ", step_length, " for leg n° ", leg)
-        for leg in range(4):
-            draw_abs(data[leg][0], data[leg][1], data[leg][2], traj)
-    else:
-        traj = compute_traj_form_joystick_rel(cmd_joystick(D, R))
-        max_step = furthest_accessible_step_all_legs_rel(traj, step_height)
-        print("maximum point of the trajectory reached for each leg : ", max_step)
-        min_value = min(max_step)
-        leg = max_step.index(min_value)
-        step_length = distance((traj[step_height+1][leg * 3 + 0], traj[step_height+1][leg * 3 + 1],
-                                traj[step_height+1][leg * 3 + 1]),
-                               (traj[min_value+step_height+1][leg * 3 + 0], traj[min_value+step_height+1][leg * 3 + 1],
-                                traj[min_value+step_height+1][leg * 3 + 1]))
-        print("resultant step length is ", step_length, " for leg n° ", leg)
-        # comp_rel(traj)
-    print("\n")
-
-
 def test_get_last_leg():
     init()
     z_ini = direct_rel_12(get_verins_12())[2]
@@ -403,6 +298,101 @@ def test_get_last_leg():
     for i in range(4):
         print(ROBOT['legs'][i]['pos_abs'])
     print(get_last_leg(0))
+
+
+def test_compute_traj(d, r):
+    init()
+    traj = compute_traj_form_joystick_abs_equal_dist(cmd_joystick(d, r))
+    print(traj[0])
+    V = get_verins_12()
+
+    # Trajectoires
+    Xt0 = [p[0] for p in traj[0]]
+    Yt0 = [p[1] for p in traj[0]]
+    Zt0 = [p[2] for p in traj[0]]
+    Xt1 = [p[0] for p in traj[1]]
+    Yt1 = [p[1] for p in traj[1]]
+    Zt1 = [p[2] for p in traj[1]]
+    Xt2 = [p[0] for p in traj[2]]
+    Yt2 = [p[1] for p in traj[2]]
+    Zt2 = [p[2] for p in traj[2]]
+    Xt3 = [p[0] for p in traj[3]]
+    Yt3 = [p[1] for p in traj[3]]
+    Zt3 = [p[2] for p in traj[3]]
+
+    # Tracé des trajectoires
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.scatter(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.scatter(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.scatter(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.scatter(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    pos = direct_abs(V, get_O(), get_omega())
+    ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500), (580, 580, 580, 580, 580))
+    ax.plot((500, pos[0]), (500, pos[1]), (580, pos[2]), c='red')
+    ax.plot((500, pos[3]), (-500, pos[4]), (580, pos[5]), c='blue')
+    ax.plot((-500, pos[6]), (500, pos[7]), (580, pos[8]), c='purple')
+    ax.plot((-500, pos[9]), (-500, pos[10]), (580, pos[11]), c='green')
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(-500, 1500)
+    for leg in range(4):
+        ax.scatter(traj[leg][0][0], traj[leg][0][1], traj[leg][0][2], c='black', s=60)
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(2000, -2000)
+    plt.show()
+
+
+def test_compute_step(d, r):
+    init()
+    traj = compute_traj_form_joystick_abs_equal_dist(cmd_joystick(d, r))
+    LV, LO, Lomega, traj_leg = compute_step(traj, 0)
+    # Trajectoires
+    Xt0 = [p[0] for p in traj_leg[0]]
+    Yt0 = [p[1] for p in traj_leg[0]]
+    Zt0 = [p[2] for p in traj_leg[0]]
+    Xt1 = [p[0] for p in traj_leg[1]]
+    Yt1 = [p[1] for p in traj_leg[1]]
+    Zt1 = [p[2] for p in traj_leg[1]]
+    Xt2 = [p[0] for p in traj_leg[2]]
+    Yt2 = [p[1] for p in traj_leg[2]]
+    Zt2 = [p[2] for p in traj_leg[2]]
+    Xt3 = [p[0] for p in traj_leg[3]]
+    Yt3 = [p[1] for p in traj_leg[3]]
+    Zt3 = [p[2] for p in traj_leg[3]]
+
+    # Tracé des trajectoires
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')  # Affichage en 3D
+    ax.scatter(Xt0, Yt0, Zt0, label='Théorique', c='coral')  # Tracé de la courbe théorique
+    ax.scatter(Xt1, Yt1, Zt1, label='Théorique', c='cyan')  # Tracé de la courbe théorique
+    ax.scatter(Xt2, Yt2, Zt2, label='Théorique', c='deeppink')  # Tracé de la courbe théorique
+    ax.scatter(Xt3, Yt3, Zt3, label='Théorique', c='chartreuse')  # Tracé de la courbe théorique
+    plt.title("Trajectoire du bout de la patte dans l'espace")
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    pos = direct_abs(V, get_O(), get_omega())
+    ax.plot((-500, -500, 500, 500, -500), (-500, 500, 500, -500, -500), (580, 580, 580, 580, 580))
+    ax.plot((500, pos[0]), (500, pos[1]), (580, pos[2]), c='red')
+    ax.plot((500, pos[3]), (-500, pos[4]), (580, pos[5]), c='blue')
+    ax.plot((-500, pos[6]), (500, pos[7]), (580, pos[8]), c='purple')
+    ax.plot((-500, pos[9]), (-500, pos[10]), (580, pos[11]), c='green')
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(-500, 1500)
+    for leg in range(4):
+        ax.scatter(traj[leg][0][0], traj[leg][0][1], traj[leg][0][2], c='black', s=60)
+    ax.set_xbound(-2000, 2000)
+    ax.set_ybound(-2000, 2000)
+    ax.set_zbound(2000, -2000)
+    plt.show()
+    draw_abs(LV, LO, LOmega, traj=traj_leg)
 
 
 ################################# TESTS ####################################
@@ -425,21 +415,13 @@ if t_accessible:
 
 t_compute_traj = 0
 if t_compute_traj:
-    test_compute_traj((0, 0), 1, abs=True)
-    # test_compute_traj((1, 0), 1, abs=True)
-    # test_compute_traj((0, 1), -1, abs=True)
-    # test_compute_traj((0, -1), 0, abs=True)
-    # test_compute_traj((np.sqrt(3)/2, 1/2), 1, abs=True)
+    test_compute_traj((1, 0), 1)
+    # test_compute_traj((0, 0), -1)
+    # test_compute_traj((np.sqrt(3)/2, 1/2), 1)
 
-t_furthest = 0
-if t_furthest:
-    # test_furthest_pos((1, 0), 1)
-    # test_furthest_pos((np.sqrt(3)/2, 1/2), 1)
-    test_furthest_all_legs((np.sqrt(3)/2, 1/2), 1, 200, abs=True)
-    # test_furthest_all_legs((1, 0), 1, 0)
-    test_furthest_all_legs((1, 0), 1, 200, abs=True)
-    # test_furthest_all_legs((1, 0), 1, 25)
-    test_furthest_all_legs((1, 0), 1, 250, abs=True)
+t_compute_step = 1
+if t_compute_step:
+    test_compute_step((1, 0), 1)
 
 t_plan_com = 0
 if t_plan_com:
@@ -480,21 +462,21 @@ if t_abs_4:
     LV, LO, LOmega = move_abs_all_legs(traj)
     draw_abs(LV, LO, LOmega)
 
-    traj = traj_abs_sin_4(300, 300, 0)
-    LV, LO, LOmega = move_abs_all_legs(traj)
-    draw_abs(LV, LO, LOmega)
+    # traj = traj_abs_sin_4(300, 300, 0)
+    # LV, LO, LOmega = move_abs_all_legs(traj)
+    # draw_abs(LV, LO, LOmega)
 
-    traj = traj_abs_sin_4(300, 600, 0)
-    LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
-    draw_abs(LV, LO, LOmega)
+    # traj = traj_abs_sin_4(300, 600, 0)
+    # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+    # draw_abs(LV, LO, LOmega)
 
-    traj = traj_abs_sin_4(300, 600, 3)
-    LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
-    draw_abs(LV, LO, LOmega)
+    # traj = traj_abs_sin_4(300, 600, 3)
+    # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+    # draw_abs(LV, LO, LOmega)
 
-    traj = M_letter(100, direct_abs(get_verins_12(), get_O(), get_omega()))
-    LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
-    draw_abs(LV, LO, LOmega)
+    # traj = M_letter(100, direct_abs(get_verins_12(), get_O(), get_omega()))
+    # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+    # draw_abs(LV, LO, LOmega)
 
 t_rel = 0
 if t_rel:
