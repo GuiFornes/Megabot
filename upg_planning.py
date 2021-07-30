@@ -64,6 +64,7 @@ def compute_traj_form_joystick_rel(joystick):
     :return: les quatres trajectoires
     """
     centre, direction = joystick[0], joystick[1]
+    direction = unitary_vec(direction)
     print(joystick)
     traj = []
     r = []
@@ -132,6 +133,7 @@ def furthest_accessible_rel(traj, leg_id):
     """
     Compute the maximum step size following the trajectory, depending on the accessible zone for the leg.
     traj should be the trajectory of all elgs (basically returned by compute_traj_from_joystick)
+
     :param traj: trajectory to follow
     :param leg_id: ID of the leg
     :return: the furthest point accessible from the traj
@@ -159,6 +161,13 @@ def furthest_accessible_rel(traj, leg_id):
 
 
 def furthest_accessible_step_all_legs_rel(traj, step_height):
+    """
+    Search for the furthest points of trajectories accessible for each legs, taking into account the height of the step
+
+    :param traj: trajectory of the 4 legs
+    :param step_height: height of one step
+    :return: array of the 4 index of traj
+    """
     V = get_verins_12()
     init = traj[0].copy()
     for j in range(step_height):
@@ -188,6 +197,7 @@ def compute_traj_from_joystick_leg_equals_distance(joystick, leg_id):
     :return:
     """
     centre, direction = joystick[0], joystick[1]
+    direction = unitary_vec(direction)
     pos = direct_abs(get_verins_12(), get_O(), get_omega())
     radius = distance(pos[leg_id * 3 + 0:leg_id * 3 + 3], (centre[0], centre[1], 0))
     n = int((2 * np.pi * radius) / DSTEP)
@@ -237,21 +247,23 @@ def compute_traj_form_joystick_abs_equal_dist(joystick):
 def compute_step(traj, leg_id, max_omega=10, const_omega=True, reg_val=0.01):
     """
     Assuming that traj[0] is the actual position of the leg, compute the maximum step possible following its trajectory
+    !!! DON'T WORK !!!
 
     :param traj: trajectory of the leg
     :param leg_id: ID of the leg
-    :return: list of cylinder's elongations and O, omega displacement
+    :return: list of cylinder's elongations and O, omega displacement, and modified trajectory raising the leg
     """
-    n_step = len(traj[leg_id])
-    traj_leg = [np.zeros(12)] * n_step
-    for i in range(n_step):
-        for leg in range(4):
-            if leg != leg_id:
-                traj_leg[leg*3:leg*3+3] = [0, 0, 0]
-            else:
-                traj_leg[leg*3:leg*3+3] = traj[leg_id][i]
-                traj_leg[leg*3+2] += STEP_HEIGHT
-
+    # n_step = len(traj[leg_id])
+    # traj_leg = [np.zeros(12)] * n_step
+    # for i in range(n_step):
+    #     for leg in range(4):
+    #         if leg != leg_id:
+    #             traj_leg[leg*3:leg*3+3] = [0, 0, 0]
+    #         else:
+    #             traj_leg[leg*3:leg*3+3] = traj[leg_id][i]
+    #             traj_leg[leg*3+2] += STEP_HEIGHT
+    # print(traj_leg)
+    traj_leg = gen_traj_all_legs(traj[leg_id].copy(), leg_id, get_X())
     LV, LO, LOmega = move_abs_one_leg(traj_leg, leg_id)
     step_len = len(LV)
     print(step_len)
@@ -414,11 +426,12 @@ def gen_h(l1, l2, l3, com):
 
 def gen_traj_all_legs(traj_one_leg, leg_id, X0):
     """
+    Retourne les trajectoires des 4 jambes à partir de la trajectoire de la jambe en mouvement
 
-    :param traj_one_leg:
-    :param leg_id:
-    :param X0:
-    :return:
+    :param traj_one_leg: trajectoire de la jambe en mouvement
+    :param leg_id: ID de la jambe
+    :param X0: position initiale
+    :return: structure contenant les 4 trajectoires
     """
     if leg_id == 0:
         return [[pos[0], pos[1], pos[2], X0[3], X0[4], X0[5], X0[6], X0[7], X0[8], X0[9], X0[10], X0[11]]
@@ -527,6 +540,7 @@ def compute_traj_from_joystick_abs_equals_nb_points(joystick):
     :return: traj[step_of_traj][12_coords_(->_4_points)]
     """
     centre, direction = joystick[0], joystick[1]
+    direction = unitary_vec(direction)
     traj = []
     r = []
     pos = direct_abs(get_verins_12(), get_O(), get_omega())
@@ -642,122 +656,6 @@ def furthest_accessible_all_legs_abs(traj, step_height=0):
 ############################################################################
 
 if __name__ == "__main__":
-    init()
-    X0 = direct_abs(get_verins_12(), get_O(), get_omega())
-    a = [1, 2, 3]
-    b = [0, 0, 0]
-    c = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
-
-    test = [[[np.array([1, 2, 3]), np.array([4, 5, 6])],
-             [np.array([1, 2, 3]), np.array([4, 5, 6])]],
-            [[np.array([1, 2, 3]), np.array([4, 5, 6])],
-             [np.array([1, 2, 3]), np.array([4, 5, 6])]],
-            [[np.array([1, 2, 3]), np.array([4, 5, 6])],
-             [np.array([1, 2, 3]), np.array([4, 5, 6])]]]
-    temp = np.array([1, 2, 3])
-    temp = [temp.copy] * 2
-    test = [temp.copy()] * 4
-    print(test)
-    print("\n")
-    print(test[0])
-    print("\n")
-    print(test[0][0])
-    print("\n")
-    test[0].insert(0, np.array([7, 8, 9]))
-    print(test)
-
     import doctest
-
     doctest.testmod()
 
-######################## DEPRECATED #############################
-
-# def cmd_joystick(D, R):
-#     """
-#     Traite les données reçues du controleur joystick pour les convertir en une translation dirigée et une rotation.
-#     Pour le moment la direction ne peut être que devant, derrière, avancer, reculer.
-#
-#     :param D: couple de coord du joystick de déplacement
-#     :param R: facteur de rotation du joystick de rotation
-#     :return: position du centre de rotation, vecteur de direction de la marche
-#     # >>> cmd_joystick((1, 0), 0)
-#     # ((0, 100000), (1, 0))
-#     # >>> cmd_joystick((0, 1), 0)
-#     # ((-100000, 0), (0, 1))
-#     # >>> cmd_joystick((0.51, 0.49), 0)
-#     # ((0, 100000), (1, 0))
-#     # >>> cmd_joystick((0.49, 0.51), 1)
-#     # ((-2500, 0.0), (0, 1))
-#     # >>> cmd_joystick((0.49, -0.51), 1)
-#     # ((2500, 0.0), (0, -1))
-#
-#     """
-#     if D[0] == 0 and D[1] == 0:
-#         if abs(R) < 0.1:
-#             # l'immobilité
-#             return "erreur, pas de mouvement en entrée"
-#         # Rotation sur lui-même
-#         return (0, 0), (0, 0)
-#
-#     # Direction NSEW
-#     if abs(D[0]) >= abs(D[1]):
-#         direction = (D[0] > 0) - (D[0] < 0), 0
-#     else:
-#         direction = 0, (D[1] > 0) - (D[1] < 0)
-#
-#     if abs(R) < 0.1:
-#         # Marche rectiligne
-#         centre = direction[1] * INF, direction[0] * INF
-#         return centre, direction
-#
-#     signeR = (R > 0) - (R < 0)
-#     facteur = signeR * (MAX_RADIUS - R * signeR * (MAX_RADIUS - MIN_RADIUS))
-#     print(R, signeR, facteur)
-#     centre = facteur * direction[1], facteur * direction[0]
-#     return centre, direction
-#
-# def angle_between_linear(coef1, coef2):
-#     pointO = 0, 0
-#     pointA = 1, coef1
-#     pointB = 1, coef2
-#     return al_kashi_angle(distance(pointO, pointA), distance(pointO, pointB), distance(pointA, pointB))
-#
-# def to_ref_traj_next_step(alpha, dx, dy):
-#     return np.array([
-#         [np.cos(alpha), - np.sin(alpha), dx],
-#         [np.sin(alpha), np.cos(alpha), dy],
-#         [0, 0, 1]
-#     ])
-#
-# def compute_trajs(traj):
-#     all_trajs, trajFL, trajFR, trajRL, trajRR = [], [], [], [], []
-#     V = get_verins_12()
-#     Pos = direct_rel_12(V)
-#     fl = (Pos[0], Pos[1], Pos[2])
-#     fr = (Pos[3], Pos[4], Pos[5])
-#     last_coef = (fr[1] - fl[1]) / (fr[0] - fl[0])
-#     if last_coef > 0.1:
-#         print("Legs position aren't initialized")
-#     legs_spacing = (abs(fr[1]) + abs(fl[1])) / 2
-#
-#     for i in range(1, len(traj)):
-#         direction = (traj[1][0] - traj[0][0]) / (traj[1][1] - traj[0][1])
-#         current_coef = -1 / direction
-#         alpha = angle_between_linear(last_coef, current_coef)
-#         m_rota = to_ref_traj_next_step(alpha, traj[1][0] - traj[0][0], traj[1][1] - traj[0][1])
-#         step_fl = np.dot(m_rota, np.array([-legs_spacing, 0, 1]))
-#         step_fr = np.dot(m_rota, np.array([legs_spacing, 0, 1]))
-#         trajFL.append(np.array([step_fl[0], step_fl[1], traj[i][i % 4][2]]))
-#         trajFR.append(np.array([step_fr[0], step_fr[1], traj[i][i % 4][2]]))
-#
-#     # trajRL.append(draw_line_3(V[6], V[7], V[8], Pos[0] - Pos[6], Pos[1] - Pos[7], Pos[2] - Pos[8], 20, 2))
-#     # trajRR.append(draw_line_3(V[9], V[10], V[11], Pos[3] - Pos[9], Pos[4] - Pos[10], Pos[5] - Pos[11], 20, 2))
-#     # for i in range(len(trajFL) - len(trajRL)):
-#     #     trajRL.append(trajFL[i])
-#     #     trajRR.append(trajFR[i])
-#     #
-#     # for i in range(len(trajFL)):
-#     #     traj.append(trajFL[i])
-#     #     traj.append(trajFR[i])
-#     #     traj.append(trajRL[i])
-#     #     traj.append(trajRR[i])

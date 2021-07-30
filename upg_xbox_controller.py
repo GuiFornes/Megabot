@@ -19,7 +19,9 @@ then launch it and you should see the controller.
 
 
 def get_joystick():
-    """ Return direction and rotation values of the linked controller """
+    """
+    Return the direction and rotation values of the linked controller
+    """
     d = (- pygame.joystick.Joystick(0).get_axis(1), - pygame.joystick.Joystick(0).get_axis(0))
     r = - pygame.joystick.Joystick(0).get_axis(3)
     return d, r

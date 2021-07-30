@@ -303,7 +303,7 @@ def test_get_last_leg():
 def test_compute_traj(d, r):
     init()
     traj = compute_traj_form_joystick_abs_equal_dist(cmd_joystick(d, r))
-    print(traj[0])
+    # print(traj[0])
     V = get_verins_12()
 
     # Trajectoires
@@ -396,91 +396,91 @@ def test_compute_step(d, r):
 
 
 ################################# TESTS ####################################
+if __name__ == '__main__':
+    t_init = 0
+    if t_init:
+        init()
+        print(get_X())
+        print(get_og(0))
+        print(get_og(1))
+        print(get_og(2))
+        print(get_og(3))
+        print(get_O())
+        print(get_omega())
 
-t_init = 0
-if t_init:
-    init()
-    print(get_X())
-    print(get_og(0))
-    print(get_og(1))
-    print(get_og(2))
-    print(get_og(3))
-    print(get_O())
-    print(get_omega())
+    t_accessible = 0
+    if t_accessible:
+        init()
+        test_zone_accessible(FL)
 
-t_accessible = 0
-if t_accessible:
-    init()
-    test_zone_accessible(FL)
+    t_compute_traj = 1
+    if t_compute_traj:
+        test_compute_traj((1, 0), 1)
+        # test_compute_traj((0, 0), -1)
+        # test_compute_traj((np.sqrt(3)/2, 1/2), 1)
 
-t_compute_traj = 0
-if t_compute_traj:
-    test_compute_traj((1, 0), 1)
-    # test_compute_traj((0, 0), -1)
-    # test_compute_traj((np.sqrt(3)/2, 1/2), 1)
+    t_compute_step = 0
+    if t_compute_step:
+        test_compute_step((1, 0), 1)
 
-t_compute_step = 1
-if t_compute_step:
-    test_compute_step((1, 0), 1)
+    t_plan_com = 0
+    if t_plan_com:
+        init()
+        P = get_leg_pos(0)
+        L = np.linspace(0, np.pi, 100)
+        traj = [[P[0] + 200 * np.cos(l), P[1], P[2] + 200 * np.sin(l)] for l in L]
+        LV, LO, LOmega, Lcom= move_under_constraint(traj, 0)
+        draw_abs(LV, LO, LOmega, Lcom)
+        init(passenger=False)
+        LV, LO, LOmega, Lcom= move_under_constraint(traj, 0, passenger=False)
+        draw_abs(LV, LO, LOmega, Lcom)
 
-t_plan_com = 0
-if t_plan_com:
-    init()
-    P = get_leg_pos(0)
-    L = np.linspace(0, np.pi, 100)
-    traj = [[P[0] + 200 * np.cos(l), P[1], P[2] + 200 * np.sin(l)] for l in L]
-    LV, LO, LOmega, Lcom= move_under_constraint(traj, 0)
-    draw_abs(LV, LO, LOmega, Lcom)
-    init(passenger=False)
-    LV, LO, LOmega, Lcom= move_under_constraint(traj, 0, passenger=False)
-    draw_abs(LV, LO, LOmega, Lcom)
+    t_com = 0
+    if t_com:
+        init()
+        J_com = gen_J_com_abs(get_verins_12(), get_omega(), get_com())
+        print(J_com)
+        dV_dO_dOmega = [0, 0, 10,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0,
+                        0, 0, 0]
+        print(J_com @ dV_dO_dOmega)
 
-t_com = 0
-if t_com:
-    init()
-    J_com = gen_J_com_abs(get_verins_12(), get_omega(), get_com())
-    print(J_com)
-    dV_dO_dOmega = [0, 0, 10,
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0,
-                    0, 0, 0]
-    print(J_com @ dV_dO_dOmega)
+    t_abs_1 = 0
+    if t_abs_1:
+        init()
+        traj = traj_abs_sin_1(200, 100, 0)
+        LV, LO, LOmega = move_abs_one_leg(traj, 0)
+        draw_abs(LV, LO, LOmega)
 
-t_abs_1 = 0
-if t_abs_1:
-    init()
-    traj = traj_abs_sin_1(200, 100, 0)
-    LV, LO, LOmega = move_abs_one_leg(traj, 0)
-    draw_abs(LV, LO, LOmega)
+    t_abs_4 = 0
+    if t_abs_4:
+        init()
+        traj = traj_abs_sin_4(50, 100, 0)
+        LV, LO, LOmega = move_abs_all_legs(traj)
+        draw_abs(LV, LO, LOmega)
 
-t_abs_4 = 0
-if t_abs_4:
-    init()
-    traj = traj_abs_sin_4(50, 100, 0)
-    LV, LO, LOmega = move_abs_all_legs(traj)
-    draw_abs(LV, LO, LOmega)
+        # traj = traj_abs_sin_4(300, 300, 0)
+        # LV, LO, LOmega = move_abs_all_legs(traj)
+        # draw_abs(LV, LO, LOmega)
 
-    # traj = traj_abs_sin_4(300, 300, 0)
-    # LV, LO, LOmega = move_abs_all_legs(traj)
-    # draw_abs(LV, LO, LOmega)
+        # traj = traj_abs_sin_4(300, 600, 0)
+        # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+        # draw_abs(LV, LO, LOmega)
 
-    # traj = traj_abs_sin_4(300, 600, 0)
-    # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
-    # draw_abs(LV, LO, LOmega)
+        # traj = traj_abs_sin_4(300, 600, 3)
+        # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+        # draw_abs(LV, LO, LOmega)
 
-    # traj = traj_abs_sin_4(300, 600, 3)
-    # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
-    # draw_abs(LV, LO, LOmega)
+        # traj = M_letter(100, direct_abs(get_verins_12(), get_O(), get_omega()))
+        # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
+        # draw_abs(LV, LO, LOmega)
 
-    # traj = M_letter(100, direct_abs(get_verins_12(), get_O(), get_omega()))
-    # LV, LO, LOmega = move_abs_all_legs(traj, max_omega=45)
-    # draw_abs(LV, LO, LOmega)
-
-t_rel = 0
-if t_rel:
-    init()
-    traj = draw_circle_rel_12(30, 200, get_verins_12())
-    comp_rel(traj)
-    draw_rel(shake_dat_ass_rel(30, 200))
+    t_rel = 0
+    if t_rel:
+        init()
+        traj = draw_circle_rel_12(30, 200, get_verins_12())
+        comp_rel(traj)
+        draw_rel(shake_dat_ass_rel(30, 200))

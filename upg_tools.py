@@ -67,13 +67,22 @@ ROBOT = {'legs': {FL: {'origin': (-0.5, 0.5, 0),
 ######################### ACCES AU ROBOT ##########################
 
 def get_verins_3(leg_id):
-    """retourne les valeurs des 3 vérins pour une jambe"""
+    """
+    Retourne les valeurs des 3 vérins pour une jambe
+
+    :param leg_id: ID de la patte
+    """
     return ROBOT['legs'][leg_id]['verins']
 
 
 def set_verins_3(v1, v2, v3, leg_id):
     """
     actualise les valeurs de vérins courantes stockées dans la structure ROBOT avec celles entrées en paramètre.
+
+    :param v1: élongation de v1
+    :param v2: élongation de v2
+    :param v3: élongation de v3
+    :param leg_id: ID de la patte
     """
     global ROBOT
     ROBOT['legs'][leg_id]['verins'][0] = v1
@@ -93,7 +102,11 @@ def get_verins_12():
 
 
 def set_verins_12(V):
-    """actualise les 12 vérins"""
+    """
+    actualise les 12 vérins
+
+    :param V: Liste des élongations des 12 vérins (en mm)
+    """
     for i in range(0, len(V), 3):
         set_verins_3(V[i], V[i + 1], V[i + 2], i / 3)
 
@@ -104,32 +117,53 @@ def get_O():
 
 
 def set_O(O):
+    """
+    actualise les coordonnées du centre du robot
+
+    :param O: coordonnées de O
+    """
     global ROBOT
     ROBOT['body']['center'] = O
 
 
 def get_omega():
-    """retourne les angles que forme le châssis par rapport au repère fixe"""
+    """Retourne les angles que forme le châssis par rapport au repère fixe"""
     return np.array([ROBOT['body']['omega']['l'], ROBOT['body']['omega']['m'], ROBOT['body']['omega']['n']])
 
 
 def set_omega(Omega):
-    """actualise omega"""
+    """
+    Actualise les valeurs des angles du robot par rapport au repère absolu
+
+    :param Omega: Valeur des angles
+    """
     global ROBOT
     for i in range(3):
         ROBOT['body']['omega'][i] = Omega[i]
 
 
 def get_leg_pos(leg_id):
+    """
+    Renvoie la position absolue d'une patte
+
+    :param leg_id: ID de la patte
+    """
     return ROBOT['legs'][leg_id]['pos_abs']
 
 
 def set_leg_pos(pos, leg_id):
+    """
+    Actualise la position absolue d'une patte
+
+    :param pos: coordonnées du bout de la patte
+    :param leg_id: ID de la patte
+    """
     global ROBOT
     ROBOT['legs'][leg_id]['pos_abs'] = np.array(pos)
 
 
 def get_X():
+    """Renvoie la position de la position"""
     X = []
     for i in range(4):
         X = np.append(X, get_leg_pos(i))
@@ -137,29 +171,47 @@ def get_X():
 
 
 def set_X(X):
+    """
+    Actualise la valeur de la position
+
+    :param X: coordonnées des 12 pattes
+    """
     global ROBOT
     for i in range(4):
         set_leg_pos(X[3 * i:3 * i + 3], i)
 
 
 def get_og(leg_id):
-    """renvoie 1 si la patte est au sol, 0 sinon"""
+    """
+    Renvoie 1 si la patte est au sol, 0 sinon
+
+    :param leg_id: ID de la patte
+    """
     return ROBOT['legs'][leg_id]['og']
 
 
 def set_og(bool, leg_id):
-    """actualise la valeur de OnGround pour la patte leg_id dans ROBOT"""
+    """
+    Actualise la valeur de OnGround pour la patte leg_id dans ROBOT
+
+    :param bool: booléen
+    :param leg_id: ID de la patte
+    """
     global ROBOT
     ROBOT['legs'][leg_id]['og'] = bool
 
 
 def get_com():
-    """retourne de centre de masse du robot"""
+    """Retourne de centre de masse du robot"""
     return ROBOT['body']['com']
 
 
 def set_com(com):
-    """retourne de centre de masse du robot"""
+    """
+    actualise la position du centre de masse du robot
+
+    :param com: coordonnées du COM
+    """
     global ROBOT
     ROBOT['body']['com'] = com
 
@@ -216,7 +268,8 @@ def gen_dRdn(l, m, n):
 
 def robot_ref_to_leg(point, leg_id):
     """
-    faire passer un points du référentiel du robot à celui de la patte
+    Calcul les coordonnées de point en effectuant un changement de référentiel, du robot à celui de la patte
+
     :param point: coordonées du point
     :param leg_id: ID de la patte
     :return: coords dans le ref de la patte
@@ -227,7 +280,12 @@ def robot_ref_to_leg(point, leg_id):
 
 
 def leg_ref_to_robot(point, leg_id):
-    """passer d'un point dans le référentiel de la jambe à celui du robot"""
+    """
+    Passer d'un point dans le référentiel de la jambe à celui du robot
+
+    :param point: coordonnées du point
+    :param leg_id: ID de la patte
+    """
     new_point = [point[0] + ROBOT['body']['offset'][0],
                  point[1] + ROBOT['body']['offset'][1],
                  point[2] + ROBOT['body']['offset'][2]]
@@ -241,6 +299,10 @@ def robot_ref_to_abs(point, O, Omega):
 def d3_to_d2(x, y, z):
     """
     Retourne (X, Z, alpha) les coordonnées cylindriques du bout de la patte
+
+    :param x: coordonnée en x
+    :param y: coordonnée en y
+    :param z: coordonnée en z
     """
     X = np.sqrt(x ** 2 + y ** 2)
     Z = z
@@ -251,6 +313,10 @@ def d3_to_d2(x, y, z):
 def d2_to_d3(X, Z, calpha):
     """
     Retourne (x, y, z) les coordonnées cartésiennes du bout de la patte
+
+    :param X: coordonnée en X
+    :param Z: coordonnée en Z
+    :param calpha: valeur de l'angle alpha
     """
     x = X * np.sqrt(1 - calpha ** 2)
     y = X * calpha
@@ -350,6 +416,40 @@ def normal_vector(v):
     """
     return -1 * v[1], v[0]
 
+
+def norm2(v):
+    """
+    calcul la norme 2 du vecteur en paramètre
+
+    :param v: vecteur
+    :return: norme 2
+    """
+    n=0
+    for x in v:
+        n+=x**2
+    return n
+
+
+def norm(v):
+    """
+    calcul la norme d'un vecteur
+
+    :param v: vecteur
+    :return: norme
+    """
+    return np.sqrt(norm2(v))
+
+
+def unitary_vec(v):
+    """
+    Calcul le vecteur unitaire/normalisé du vecteur en paramètre
+
+    :param v: vecteur
+    :return: vecteur unitaire
+    """
+    n=norm(v)
+    assert(n!=0)
+    return tuple([a/n for a in v])
 
 ############################################################################
 

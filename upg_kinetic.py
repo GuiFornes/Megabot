@@ -140,9 +140,9 @@ def move_abs_one_leg(traj, leg_id, reg_val=0.01, const_omega=True, max_omega=10)
         # Calcul de dX
         X0 = direct_abs(V, O, Omega)
         set_X(X0)
-        dX = traj[i] - np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega)
         print("traj : ", traj[i])
         print("X0 : ", np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega))
+        dX = traj[i] - np.append(np.append(X0[leg_id * 3: leg_id * 3 + 3], O), Omega)
         print("dX : ", dX)
 
         # Contraintes (soft)
